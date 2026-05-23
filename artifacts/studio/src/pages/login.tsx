@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 const USERS = [
-  { username: "directora", displayName: "Directora Editorial", role: "Admin", initial: "DE" },
-  { username: "disenador", displayName: "Diseñador Sr", role: "Editor", initial: "DS" },
-  { username: "qa", displayName: "QA Specialist", role: "Reviewer", initial: "QA" },
-  { username: "exportacion", displayName: "Exportación Lead", role: "Exporter", initial: "EL" },
+  { username: "directora", displayName: "Directora Editorial", role: "Admin",    initial: "DE" },
+  { username: "disenador", displayName: "Diseñador Sr",        role: "Editor",   initial: "DS" },
+  { username: "qa",        displayName: "QA Specialist",       role: "Reviewer", initial: "QA" },
+  { username: "exportacion", displayName: "Exportación Lead",  role: "Exporter", initial: "EL" },
 ];
 
 export default function Login() {
@@ -32,40 +32,46 @@ export default function Login() {
           login(result.user, result.token);
           setLocation("/biblioteca");
         },
-        onError: () => {
-          setError("PIN incorrecto. Intenta de nuevo.");
-        },
+        onError: () => setError("PIN incorrecto. Intenta de nuevo."),
       }
     );
   }
 
   return (
     <div className="min-h-screen flex">
-      {/* Left panel — brand identity */}
-      <div className="hidden lg:flex w-72 bg-[#0d1629] flex-col items-center justify-center px-10 shrink-0 relative overflow-hidden">
-        {/* Subtle grid pattern */}
-        <div className="absolute inset-0 opacity-[0.04]"
+      {/* Left panel — CloudBooks brand identity */}
+      <div className="hidden lg:flex w-80 bg-[#080f24] flex-col items-center justify-center px-10 shrink-0 relative overflow-hidden">
+        {/* Subtle grid texture */}
+        <div className="absolute inset-0 opacity-[0.035]"
           style={{
-            backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
-            backgroundSize: "32px 32px"
+            backgroundImage: "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
+            backgroundSize: "40px 40px"
           }} />
-        {/* Brand mark */}
-        <div className="relative z-10 flex flex-col items-center gap-6">
-          <img src="/cloudbooks-wordmark.svg" alt="CloudBooks" width={200} height={48}
-            className="drop-shadow-lg" />
-          <div className="w-12 h-px bg-gradient-to-r from-transparent via-blue-400/40 to-transparent" />
-          <div className="text-center space-y-1.5">
-            <p className="text-[10px] text-blue-300/60 uppercase tracking-[3px] font-medium">
+
+        {/* Logo — full PNG, blends with navy bg */}
+        <div className="relative z-10 flex flex-col items-center gap-5">
+          <img
+            src="/cloudbooks-logo.png"
+            alt="CloudBooks"
+            className="w-56 drop-shadow-[0_0_32px_rgba(99,102,241,0.25)]"
+            draggable={false}
+          />
+          {/* Divider */}
+          <div className="w-16 h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
+          {/* Product line */}
+          <div className="text-center space-y-1">
+            <p className="text-[9px] text-blue-300/50 uppercase tracking-[3.5px] font-medium">
               Estudio Editorial
             </p>
-            <p className="text-[9px] text-white/25 uppercase tracking-widest">
+            <p className="text-[8px] text-white/20 uppercase tracking-[2px]">
               AI-200 Visual Study Atlas
             </p>
           </div>
         </div>
-        {/* Bottom version */}
+
+        {/* Bottom label */}
         <div className="absolute bottom-6 left-0 right-0 text-center">
-          <p className="text-[8px] text-white/15 tracking-widest uppercase">Plataforma editorial interna</p>
+          <p className="text-[8px] text-white/12 tracking-widest uppercase">Plataforma editorial interna</p>
         </div>
       </div>
 
@@ -73,24 +79,25 @@ export default function Login() {
       <div className="flex-1 bg-[#f8f9fb] flex items-center justify-center px-6">
         <div className="w-full max-w-sm">
 
-          {/* Mobile logo — only visible on small screens */}
+          {/* Mobile logo */}
           <div className="lg:hidden flex justify-center mb-8">
-            <div className="bg-[#0d1629] rounded-lg px-5 py-3.5 inline-flex items-center gap-3">
-              <img src="/cloudbooks-icon.svg" alt="CloudBooks" width={32} height={32} />
-              <span className="text-white font-bold text-base tracking-tight">CloudBooks</span>
+            <div className="bg-[#080f24] rounded-lg p-3 inline-flex">
+              <img src="/cloudbooks-logo.png" alt="CloudBooks" className="h-10" />
             </div>
           </div>
 
-          <div className="mb-7">
+          <div className="mb-6">
             <h1 className="text-lg font-bold text-gray-900 tracking-tight">Acceso al estudio</h1>
             <p className="text-xs text-gray-400 mt-0.5">Selecciona tu perfil e introduce tu PIN</p>
           </div>
 
           <div className="bg-white border border-gray-200 rounded-sm shadow-sm p-6">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Perfil de trabajo</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+              Perfil de trabajo
+            </p>
 
-            {/* User cards */}
-            <div className="grid grid-cols-2 gap-2 mb-5">
+            {/* Profile grid */}
+            <div className="grid grid-cols-2 gap-2 mb-4">
               {USERS.map((u) => (
                 <button
                   key={u.username}
@@ -113,7 +120,9 @@ export default function Login() {
                       {u.initial}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-semibold text-gray-900 leading-tight truncate">{u.displayName}</p>
+                      <p className="text-[10px] font-semibold text-gray-900 leading-tight truncate">
+                        {u.displayName}
+                      </p>
                       <p className="text-[9px] text-gray-400">{u.role}</p>
                     </div>
                   </div>
@@ -121,11 +130,13 @@ export default function Login() {
               ))}
             </div>
 
-            {/* PIN form */}
-            {selected && (
+            {/* PIN entry */}
+            {selected ? (
               <form onSubmit={handleSubmit} className="space-y-3 border-t border-gray-100 pt-4">
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">PIN de acceso</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">
+                    PIN de acceso
+                  </label>
                   <Input
                     type="password"
                     inputMode="numeric"
@@ -139,22 +150,24 @@ export default function Login() {
                   />
                 </div>
                 {error && (
-                  <p className="text-[10px] text-red-600 bg-red-50 border border-red-100 px-2.5 py-1.5 rounded-sm">{error}</p>
+                  <p className="text-[10px] text-red-600 bg-red-50 border border-red-100 px-2.5 py-1.5 rounded-sm">
+                    {error}
+                  </p>
                 )}
                 <Button
                   type="submit"
-                  className="w-full h-9 text-sm font-semibold bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 border-0 text-white shadow-sm"
                   disabled={pin.length < 4 || loginMutation.isPending}
                   data-testid="button-submit-login"
+                  className="w-full h-9 text-sm font-semibold bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 border-0 text-white shadow-sm"
                 >
                   {loginMutation.isPending ? "Verificando…" : "Acceder al estudio"}
                 </Button>
               </form>
-            )}
-
-            {!selected && (
+            ) : (
               <div className="border-t border-gray-100 pt-4">
-                <p className="text-[10px] text-gray-300 text-center">Selecciona un perfil para continuar</p>
+                <p className="text-[10px] text-gray-300 text-center">
+                  Selecciona un perfil para continuar
+                </p>
               </div>
             )}
           </div>
