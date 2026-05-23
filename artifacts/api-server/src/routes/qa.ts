@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, qaRecordsTable, pagesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { GetQAParams, UpsertQAParams, UpsertQABody, GetQAResponse, UpsertQAResponse } from "@workspace/api-zod";
+import { serializeDates } from "../lib/serialize.js";
 
 const router: IRouter = Router();
 
@@ -23,7 +24,7 @@ router.get("/qa/:pageId", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetQAResponse.parse(record));
+  res.json(GetQAResponse.parse(serializeDates(record)));
 });
 
 router.put("/qa/:pageId", async (req, res): Promise<void> => {
@@ -49,7 +50,7 @@ router.put("/qa/:pageId", async (req, res): Promise<void> => {
   if (existing.length > 0) {
     [record] = await db
       .update(qaRecordsTable)
-      .set(parsed.data)
+      .set({ ...parsed.data, updatedAt: new Date() })
       .where(eq(qaRecordsTable.pageId, params.data.pageId))
       .returning();
   } else {
@@ -59,13 +60,12 @@ router.put("/qa/:pageId", async (req, res): Promise<void> => {
       .returning();
   }
 
-  // Update the qaScore on the page too
   await db
     .update(pagesTable)
     .set({ qaScore: parsed.data.total })
     .where(eq(pagesTable.id, params.data.pageId));
 
-  res.json(UpsertQAResponse.parse(record));
+  res.json(UpsertQAResponse.parse(serializeDates(record)));
 });
 
 export default router;

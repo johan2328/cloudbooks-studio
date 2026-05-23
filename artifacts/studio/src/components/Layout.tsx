@@ -55,21 +55,22 @@ export default function Layout({ children, title }: LayoutProps) {
         {/* Nav */}
         <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
           {NAV.map(({ href, label, icon: Icon }) => {
-            const active = location.startsWith(href.split("/")[1] ? `/${href.split("/")[1]}` : href);
+            const segment = href.split("/")[1];
+            const active = segment ? location.startsWith(`/${segment}`) : location === href;
             return (
-              <Link key={href} href={href}>
-                <a
-                  className={cn(
-                    "flex items-center gap-2.5 px-3 py-2 rounded-sm text-xs font-medium transition-colors",
-                    active
-                      ? "bg-white/10 text-white"
-                      : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
-                  )}
-                  data-testid={`nav-${href.replace("/", "")}`}
-                >
-                  <Icon className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">{label}</span>
-                </a>
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "flex items-center gap-2.5 px-3 py-2 rounded-sm text-xs font-medium transition-colors",
+                  active
+                    ? "bg-white/10 text-white"
+                    : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
+                )}
+                data-testid={`nav-${href.replace("/", "").split("/")[0]}`}
+              >
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{label}</span>
               </Link>
             );
           })}
@@ -97,17 +98,17 @@ export default function Layout({ children, title }: LayoutProps) {
         </div>
       </aside>
 
-      {/* Main */}
+      {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Topbar */}
         {title && (
-          <header className="bg-white border-b border-gray-200 px-6 py-3 shrink-0">
+          <header className="bg-white border-b border-gray-200 px-6 py-2.5 shrink-0">
             <h1 className="text-sm font-semibold text-gray-900">{title}</h1>
           </header>
         )}
 
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto">
+        {/* Page content */}
+        <main className="flex-1 overflow-hidden">
           {children}
         </main>
       </div>

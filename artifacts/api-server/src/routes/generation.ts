@@ -8,6 +8,7 @@ import {
   GetRunParams,
   GetRunResponse,
 } from "@workspace/api-zod";
+import { serializeDates } from "../lib/serialize.js";
 
 const router: IRouter = Router();
 
@@ -33,7 +34,7 @@ router.get("/generation/runs", async (req, res): Promise<void> => {
       .limit(50);
   }
 
-  res.json(ListRunsResponse.parse(runs));
+  res.json(ListRunsResponse.parse(serializeDates(runs)));
 });
 
 router.post("/generation/runs", async (req, res): Promise<void> => {
@@ -43,14 +44,12 @@ router.post("/generation/runs", async (req, res): Promise<void> => {
     return;
   }
 
-  // Verify page exists
   const [page] = await db.select().from(pagesTable).where(eq(pagesTable.id, parsed.data.pageId));
   if (!page) {
     res.status(404).json({ error: "Página no encontrada" });
     return;
   }
 
-  // Mark page as generating
   await db
     .update(pagesTable)
     .set({ status: "generating" })
@@ -58,7 +57,6 @@ router.post("/generation/runs", async (req, res): Promise<void> => {
 
   const model = parsed.data.model ?? "gpt-4o";
 
-  // Insert the run as "running"
   const [run] = await db
     .insert(generationRunsTable)
     .values({
@@ -69,14 +67,9 @@ router.post("/generation/runs", async (req, res): Promise<void> => {
     })
     .returning();
 
-  // Simulate async generation (demo mode if no OPENAI_API_KEY)
-  // In production, this would call OpenAI server-side
-  simulateGeneration(run.id, page).catch((err: Error) => {
-    // logger would be imported in production
-    void err;
-  });
+  simulateGeneration(run.id, page).catch(() => {});
 
-  res.status(201).json(run);
+  res.status(201).json(serializeDates(run));
 });
 
 router.get("/generation/runs/:id", async (req, res): Promise<void> => {
@@ -97,22 +90,20 @@ router.get("/generation/runs/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetRunResponse.parse(run));
+  res.json(GetRunResponse.parse(serializeDates(run)));
 });
 
 async function simulateGeneration(
   runId: number,
   page: { id: number; title: string; domain: string }
 ): Promise<void> {
-  // Simulate a 3-5 second generation
   const delay = 3000 + Math.random() * 2000;
-
   await new Promise((resolve) => setTimeout(resolve, delay));
 
   const hasApiKey = !!process.env.OPENAI_API_KEY;
   const outputText = hasApiKey
     ? "[OpenAI output would appear here in production]"
-    : `[DEMO] Infografía generada para "${page.title}" en el dominio ${page.domain}. En producción, este output sería el HTML/SVG completo generado por GPT-4o usando el contrato visual activo.`;
+    : `[DEMO] Infografía generada para "${page.title}" (${page.domain}). En producción, este output sería el HTML/SVG completo generado por GPT-4o con el Contrato Visual v1.4 activo.`;
 
   await db
     .update(generationRunsTable)
@@ -125,12 +116,9 @@ async function simulateGeneration(
     })
     .where(eq(generationRunsTable.id, runId));
 
-  // Move page to review
   await db
     .update(pagesTable)
-    .set({
-      status: "review",
-    })
+    .set({ status: "review" })
     .where(eq(pagesTable.id, page.id));
 }
 

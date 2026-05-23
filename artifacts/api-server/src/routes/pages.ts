@@ -18,6 +18,7 @@ import {
   GetSummaryResponse,
   ListBatchesResponse,
 } from "@workspace/api-zod";
+import { serializeDates } from "../lib/serialize.js";
 
 const router: IRouter = Router();
 
@@ -47,7 +48,7 @@ router.get("/pages", async (req, res): Promise<void> => {
   }
 
   const pages = await query.orderBy(pagesTable.pageNumber);
-  res.json(ListPagesResponse.parse(pages));
+  res.json(ListPagesResponse.parse(serializeDates(pages)));
 });
 
 router.post("/pages", async (req, res): Promise<void> => {
@@ -58,7 +59,7 @@ router.post("/pages", async (req, res): Promise<void> => {
   }
 
   const [page] = await db.insert(pagesTable).values(parsed.data).returning();
-  res.status(201).json(GetPageResponse.parse(page));
+  res.status(201).json(GetPageResponse.parse(serializeDates(page)));
 });
 
 router.get("/pages/:id", async (req, res): Promise<void> => {
@@ -75,7 +76,7 @@ router.get("/pages/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetPageResponse.parse(page));
+  res.json(GetPageResponse.parse(serializeDates(page)));
 });
 
 router.patch("/pages/:id", async (req, res): Promise<void> => {
@@ -92,7 +93,7 @@ router.patch("/pages/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const updateData: Record<string, unknown> = { ...parsed.data };
+  const updateData: Record<string, unknown> = { ...parsed.data, updatedAt: new Date() };
   if (parsed.data.groundingStatus === "verified") {
     updateData.groundingUpdatedAt = new Date();
   }
@@ -108,7 +109,7 @@ router.patch("/pages/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(UpdatePageResponse.parse(page));
+  res.json(UpdatePageResponse.parse(serializeDates(page)));
 });
 
 router.post("/pages/:id/approve", async (req, res): Promise<void> => {
@@ -121,7 +122,7 @@ router.post("/pages/:id/approve", async (req, res): Promise<void> => {
 
   const [page] = await db
     .update(pagesTable)
-    .set({ status: "approved" })
+    .set({ status: "approved", updatedAt: new Date() })
     .where(eq(pagesTable.id, params.data.id))
     .returning();
 
@@ -130,7 +131,7 @@ router.post("/pages/:id/approve", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(ApprovePageResponse.parse(page));
+  res.json(ApprovePageResponse.parse(serializeDates(page)));
 });
 
 router.post("/pages/:id/request-revision", async (req, res): Promise<void> => {
@@ -149,7 +150,7 @@ router.post("/pages/:id/request-revision", async (req, res): Promise<void> => {
 
   const [page] = await db
     .update(pagesTable)
-    .set({ status: "pending" })
+    .set({ status: "pending", updatedAt: new Date() })
     .where(eq(pagesTable.id, params.data.id))
     .returning();
 
@@ -158,7 +159,7 @@ router.post("/pages/:id/request-revision", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(RequestRevisionResponse.parse(page));
+  res.json(RequestRevisionResponse.parse(serializeDates(page)));
 });
 
 router.get("/stats/summary", async (_req, res): Promise<void> => {
@@ -175,7 +176,6 @@ router.get("/stats/summary", async (_req, res): Promise<void> => {
   const scoresArr = allPages.filter((p) => p.qaScore != null).map((p) => p.qaScore as number);
   const avgQaScore = scoresArr.length > 0 ? scoresArr.reduce((a, b) => a + b, 0) / scoresArr.length : null;
 
-  // Recent activity from last 10 updated pages
   const recentPages = allPages
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 10);
@@ -185,7 +185,7 @@ router.get("/stats/summary", async (_req, res): Promise<void> => {
     pageNumber: p.pageNumber,
     title: p.title,
     action: p.status,
-    at: p.updatedAt.toISOString(),
+    at: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : String(p.updatedAt),
   }));
 
   res.json(
