@@ -3,20 +3,32 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: AI-200 Production Studio API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: pages
+    description: Infographic pages
+  - name: batches
+    description: Production batches
+  - name: qa
+    description: QA scores and observations
+  - name: generation
+    description: Generation runs
+  - name: contract
+    description: Visual contract
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +36,343 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with username and pin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+        "401":
+          description: Unauthorized
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current session user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+
+  /pages:
+    get:
+      operationId: listPages
+      tags: [pages]
+      summary: List all infographic pages
+      parameters:
+        - name: batch
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: domain
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of pages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Page"
+    post:
+      operationId: createPage
+      tags: [pages]
+      summary: Create a new page
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PageInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Page"
+
+  /pages/{id}:
+    get:
+      operationId: getPage
+      tags: [pages]
+      summary: Get page by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Page detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Page"
+        "404":
+          description: Not found
+    patch:
+      operationId: updatePage
+      tags: [pages]
+      summary: Update page content or status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PageUpdate"
+      responses:
+        "200":
+          description: Updated page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Page"
+
+  /pages/{id}/approve:
+    post:
+      operationId: approvePage
+      tags: [pages]
+      summary: Approve a page
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Page approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Page"
+
+  /pages/{id}/request-revision:
+    post:
+      operationId: requestRevision
+      tags: [pages]
+      summary: Request revision for a page
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RevisionInput"
+      responses:
+        "200":
+          description: Revision requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Page"
+
+  /stats/summary:
+    get:
+      operationId: getSummary
+      tags: [pages]
+      summary: Get production summary stats
+      responses:
+        "200":
+          description: Summary statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductionSummary"
+
+  /batches:
+    get:
+      operationId: listBatches
+      tags: [batches]
+      summary: List all batches
+      responses:
+        "200":
+          description: List of batches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Batch"
+
+  /qa/{pageId}:
+    get:
+      operationId: getQA
+      tags: [qa]
+      summary: Get QA scores and observations for a page
+      parameters:
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: QA record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QARecord"
+        "404":
+          description: Not found
+    put:
+      operationId: upsertQA
+      tags: [qa]
+      summary: Create or update QA record for a page
+      parameters:
+        - name: pageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QAInput"
+      responses:
+        "200":
+          description: QA record saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QARecord"
+
+  /generation/runs:
+    get:
+      operationId: listRuns
+      tags: [generation]
+      summary: List generation runs
+      parameters:
+        - name: pageId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of runs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GenerationRun"
+    post:
+      operationId: createRun
+      tags: [generation]
+      summary: Trigger a generation run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunInput"
+      responses:
+        "201":
+          description: Run started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerationRun"
+
+  /generation/runs/{id}:
+    get:
+      operationId: getRun
+      tags: [generation]
+      summary: Get run status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Run record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerationRun"
+
+  /contract:
+    get:
+      operationId: getContract
+      tags: [contract]
+      summary: Get the active visual contract
+      responses:
+        "200":
+          description: Visual contract
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisualContract"
+    put:
+      operationId: updateContract
+      tags: [contract]
+      summary: Update the visual contract
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractInput"
+      responses:
+        "200":
+          description: Updated contract
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisualContract"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +380,340 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    LoginInput:
+      type: object
+      required: [username, pin]
+      properties:
+        username:
+          type: string
+        pin:
+          type: string
+
+    AuthResult:
+      type: object
+      required: [user, token]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+
+    User:
+      type: object
+      required: [id, username, displayName, role]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        displayName:
+          type: string
+        role:
+          type: string
+
+    Page:
+      type: object
+      required: [id, pageNumber, title, domain, batch, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        pageNumber:
+          type: string
+        title:
+          type: string
+        domain:
+          type: string
+        batch:
+          type: string
+        status:
+          type: string
+          enum: [pending, generating, review, approved, exported]
+        qaScore:
+          type: ["number", "null"]
+        groundingStatus:
+          type: string
+          enum: [unverified, partial, verified]
+        groundingUpdatedAt:
+          type: ["string", "null"]
+        context:
+          type: ["string", "null"]
+        concepts:
+          type: ["string", "null"]
+        examTraps:
+          type: ["string", "null"]
+        autocheckQuestion:
+          type: ["string", "null"]
+        autocheckAnswer:
+          type: ["string", "null"]
+        autocheckExplanation:
+          type: ["string", "null"]
+        sources:
+          type: ["string", "null"]
+        thumbnailUrl:
+          type: ["string", "null"]
+        runCount:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    PageInput:
+      type: object
+      required: [pageNumber, title, domain, batch]
+      properties:
+        pageNumber:
+          type: string
+        title:
+          type: string
+        domain:
+          type: string
+        batch:
+          type: string
+        context:
+          type: string
+        concepts:
+          type: string
+        examTraps:
+          type: string
+        autocheckQuestion:
+          type: string
+        autocheckAnswer:
+          type: string
+        autocheckExplanation:
+          type: string
+        sources:
+          type: string
+
+    PageUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        domain:
+          type: string
+        context:
+          type: string
+        concepts:
+          type: string
+        examTraps:
+          type: string
+        autocheckQuestion:
+          type: string
+        autocheckAnswer:
+          type: string
+        autocheckExplanation:
+          type: string
+        sources:
+          type: string
+        status:
+          type: string
+        groundingStatus:
+          type: string
+
+    RevisionInput:
+      type: object
+      required: [comment]
+      properties:
+        comment:
+          type: string
+
+    ProductionSummary:
+      type: object
+      required: [total, byStatus, byDomain, recentActivity]
+      properties:
+        total:
+          type: integer
+        byStatus:
+          type: object
+          additionalProperties:
+            type: integer
+        byDomain:
+          type: object
+          additionalProperties:
+            type: integer
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityEntry"
+        avgQaScore:
+          type: ["number", "null"]
+
+    ActivityEntry:
+      type: object
+      required: [pageId, pageNumber, title, action, at]
+      properties:
+        pageId:
+          type: integer
+        pageNumber:
+          type: string
+        title:
+          type: string
+        action:
+          type: string
+        at:
+          type: string
+
+    Batch:
+      type: object
+      required: [id, name, pageCount, approvedCount]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        pageCount:
+          type: integer
+        approvedCount:
+          type: integer
+
+    QARecord:
+      type: object
+      required: [id, pageId, artDirection, editorialConsistency, readability, technicalAccuracy, total, observations, updatedAt]
+      properties:
+        id:
+          type: integer
+        pageId:
+          type: integer
+        artDirection:
+          type: number
+        editorialConsistency:
+          type: number
+        readability:
+          type: number
+        technicalAccuracy:
+          type: number
+        total:
+          type: number
+        observations:
+          type: array
+          items:
+            type: string
+        redTeam:
+          type: array
+          items:
+            type: string
+        updatedAt:
+          type: string
+
+    QAInput:
+      type: object
+      required: [artDirection, editorialConsistency, readability, technicalAccuracy, total, observations]
+      properties:
+        artDirection:
+          type: number
+        editorialConsistency:
+          type: number
+        readability:
+          type: number
+        technicalAccuracy:
+          type: number
+        total:
+          type: number
+        observations:
+          type: array
+          items:
+            type: string
+        redTeam:
+          type: array
+          items:
+            type: string
+
+    GenerationRun:
+      type: object
+      required: [id, pageId, status, startedAt]
+      properties:
+        id:
+          type: integer
+        pageId:
+          type: integer
+        batch:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [queued, running, completed, failed]
+        model:
+          type: ["string", "null"]
+        promptTokens:
+          type: ["integer", "null"]
+        completionTokens:
+          type: ["integer", "null"]
+        output:
+          type: ["string", "null"]
+        error:
+          type: ["string", "null"]
+        startedAt:
+          type: string
+        finishedAt:
+          type: ["string", "null"]
+
+    RunInput:
+      type: object
+      required: [pageId]
+      properties:
+        pageId:
+          type: integer
+        batch:
+          type: string
+        model:
+          type: string
+
+    VisualContract:
+      type: object
+      required: [id, version, nonNegotiable, flexibleStorytelling, stableComponents, changelog, updatedAt]
+      properties:
+        id:
+          type: integer
+        version:
+          type: string
+        nonNegotiable:
+          type: array
+          items:
+            type: string
+        flexibleStorytelling:
+          type: array
+          items:
+            type: string
+        stableComponents:
+          type: array
+          items:
+            type: string
+        changelog:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChangelogEntry"
+        updatedAt:
+          type: string
+
+    ContractInput:
+      type: object
+      properties:
+        version:
+          type: string
+        nonNegotiable:
+          type: array
+          items:
+            type: string
+        flexibleStorytelling:
+          type: array
+          items:
+            type: string
+        stableComponents:
+          type: array
+          items:
+            type: string
+        changeNote:
+          type: string
+
+    ChangelogEntry:
+      type: object
+      required: [version, note, at]
+      properties:
+        version:
+          type: string
+        note:
+          type: string
+        at:
+          type: string
