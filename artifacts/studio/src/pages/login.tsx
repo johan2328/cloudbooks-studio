@@ -40,7 +40,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Left panel — CloudBooks brand identity */}
-      <div className="hidden lg:flex w-80 bg-[#080f24] flex-col items-center justify-center px-10 shrink-0 relative overflow-hidden">
+      <div className="hidden lg:flex w-80 bg-[#0d1629] flex-col items-center justify-center px-10 shrink-0 relative overflow-hidden">
         {/* Subtle grid texture */}
         <div className="absolute inset-0 opacity-[0.035]"
           style={{
@@ -51,7 +51,7 @@ export default function Login() {
         {/* Logo — full PNG, blends with navy bg */}
         <div className="relative z-10 flex flex-col items-center gap-5">
           <img
-            src="/cloudbooks-logo.png"
+            src="/cloudbooks-logo-nobg.png"
             alt="CloudBooks"
             className="w-56 drop-shadow-[0_0_32px_rgba(99,102,241,0.25)]"
             draggable={false}
@@ -81,8 +81,8 @@ export default function Login() {
 
           {/* Mobile logo */}
           <div className="lg:hidden flex justify-center mb-8">
-            <div className="bg-[#080f24] rounded-lg p-3 inline-flex">
-              <img src="/cloudbooks-logo.png" alt="CloudBooks" className="h-10" />
+            <div className="bg-[#0d1629] rounded-lg p-3 inline-flex">
+              <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-10" />
             </div>
           </div>
 

@@ -38,13 +38,13 @@ export default function Layout({ children, title }: LayoutProps) {
   return (
     <div className="flex h-screen bg-[#f8f9fb] overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-52 bg-[#080f24] flex flex-col shrink-0">
+      <aside className="w-52 bg-[#0d1629] flex flex-col shrink-0">
 
         {/* Brand — logo PNG centered, bg matches logo background */}
         <div className="flex items-center justify-center px-4 pt-5 pb-4 border-b border-white/[0.06]">
           <Link href="/biblioteca">
             <img
-              src="/cloudbooks-logo.png"
+              src="/cloudbooks-logo-nobg.png"
               alt="CloudBooks"
               className="w-36 opacity-95 hover:opacity-100 transition-opacity"
               draggable={false}
