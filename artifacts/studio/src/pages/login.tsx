@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 const USERS = [
-  { username: "directora", displayName: "Directora Editorial", role: "admin", initial: "DE" },
-  { username: "disenador", displayName: "Diseñador Sr", role: "editor", initial: "DS" },
-  { username: "qa", displayName: "QA Specialist", role: "reviewer", initial: "QA" },
-  { username: "exportacion", displayName: "Exportación Lead", role: "exporter", initial: "EL" },
+  { username: "directora", displayName: "Directora Editorial", role: "Admin", initial: "DE" },
+  { username: "disenador", displayName: "Diseñador Sr", role: "Editor", initial: "DS" },
+  { username: "qa", displayName: "QA Specialist", role: "Reviewer", initial: "QA" },
+  { username: "exportacion", displayName: "Exportación Lead", role: "Exporter", initial: "EL" },
 ];
 
 export default function Login() {
@@ -40,85 +40,129 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f9fb] flex items-center justify-center">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="mb-10 text-center">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 bg-[#0d1629] rounded flex items-center justify-center">
-              <div className="w-4 h-4 border-2 border-teal-400 rounded-sm" />
+    <div className="min-h-screen flex">
+      {/* Left panel — brand identity */}
+      <div className="hidden lg:flex w-72 bg-[#0d1629] flex-col items-center justify-center px-10 shrink-0 relative overflow-hidden">
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
+            backgroundSize: "32px 32px"
+          }} />
+        {/* Brand mark */}
+        <div className="relative z-10 flex flex-col items-center gap-6">
+          <img src="/cloudbooks-wordmark.svg" alt="CloudBooks" width={200} height={48}
+            className="drop-shadow-lg" />
+          <div className="w-12 h-px bg-gradient-to-r from-transparent via-blue-400/40 to-transparent" />
+          <div className="text-center space-y-1.5">
+            <p className="text-[10px] text-blue-300/60 uppercase tracking-[3px] font-medium">
+              Estudio Editorial
+            </p>
+            <p className="text-[9px] text-white/25 uppercase tracking-widest">
+              AI-200 Visual Study Atlas
+            </p>
+          </div>
+        </div>
+        {/* Bottom version */}
+        <div className="absolute bottom-6 left-0 right-0 text-center">
+          <p className="text-[8px] text-white/15 tracking-widest uppercase">Plataforma editorial interna</p>
+        </div>
+      </div>
+
+      {/* Right panel — login form */}
+      <div className="flex-1 bg-[#f8f9fb] flex items-center justify-center px-6">
+        <div className="w-full max-w-sm">
+
+          {/* Mobile logo — only visible on small screens */}
+          <div className="lg:hidden flex justify-center mb-8">
+            <div className="bg-[#0d1629] rounded-lg px-5 py-3.5 inline-flex items-center gap-3">
+              <img src="/cloudbooks-icon.svg" alt="CloudBooks" width={32} height={32} />
+              <span className="text-white font-bold text-base tracking-tight">CloudBooks</span>
             </div>
-            <span className="text-[#0d1629] font-semibold text-lg tracking-tight">AI-200 Studio</span>
           </div>
-          <p className="text-xs text-gray-400 tracking-widest uppercase font-medium">Consola Editorial — Acceso Restringido</p>
-        </div>
 
-        <div className="bg-white border border-gray-200 rounded-sm shadow-sm p-8">
-          <p className="text-sm font-medium text-gray-700 mb-4">Selecciona tu perfil</p>
+          <div className="mb-7">
+            <h1 className="text-lg font-bold text-gray-900 tracking-tight">Acceso al estudio</h1>
+            <p className="text-xs text-gray-400 mt-0.5">Selecciona tu perfil e introduce tu PIN</p>
+          </div>
 
-          {/* User cards */}
-          <div className="grid grid-cols-2 gap-2 mb-6">
-            {USERS.map((u) => (
-              <button
-                key={u.username}
-                data-testid={`user-card-${u.username}`}
-                onClick={() => { setSelected(u.username); setPin(""); setError(""); }}
-                className={cn(
-                  "p-3 rounded-sm border text-left transition-all",
-                  selected === u.username
-                    ? "border-teal-500 bg-teal-50"
-                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <div className={cn(
-                    "w-8 h-8 rounded-sm flex items-center justify-center text-xs font-bold text-white",
-                    selected === u.username ? "bg-teal-600" : "bg-[#0d1629]"
-                  )}>
-                    {u.initial}
+          <div className="bg-white border border-gray-200 rounded-sm shadow-sm p-6">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Perfil de trabajo</p>
+
+            {/* User cards */}
+            <div className="grid grid-cols-2 gap-2 mb-5">
+              {USERS.map((u) => (
+                <button
+                  key={u.username}
+                  data-testid={`user-card-${u.username}`}
+                  onClick={() => { setSelected(u.username); setPin(""); setError(""); }}
+                  className={cn(
+                    "p-2.5 rounded-sm border text-left transition-all",
+                    selected === u.username
+                      ? "border-blue-500 bg-blue-50 ring-1 ring-blue-200"
+                      : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={cn(
+                      "w-8 h-8 rounded-sm flex items-center justify-center text-[10px] font-bold text-white shrink-0",
+                      selected === u.username
+                        ? "bg-gradient-to-br from-blue-600 to-violet-600"
+                        : "bg-[#0d1629]"
+                    )}>
+                      {u.initial}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold text-gray-900 leading-tight truncate">{u.displayName}</p>
+                      <p className="text-[9px] text-gray-400">{u.role}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-900 leading-tight">{u.displayName}</p>
-                    <p className="text-[10px] text-gray-400 capitalize">{u.role}</p>
-                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* PIN form */}
+            {selected && (
+              <form onSubmit={handleSubmit} className="space-y-3 border-t border-gray-100 pt-4">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">PIN de acceso</label>
+                  <Input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    placeholder="· · · ·"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value)}
+                    data-testid="input-pin"
+                    className="text-center text-xl tracking-[0.5em] font-mono h-11 border-gray-200 focus:border-blue-400 focus:ring-blue-200"
+                    autoFocus
+                  />
                 </div>
-              </button>
-            ))}
+                {error && (
+                  <p className="text-[10px] text-red-600 bg-red-50 border border-red-100 px-2.5 py-1.5 rounded-sm">{error}</p>
+                )}
+                <Button
+                  type="submit"
+                  className="w-full h-9 text-sm font-semibold bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 border-0 text-white shadow-sm"
+                  disabled={pin.length < 4 || loginMutation.isPending}
+                  data-testid="button-submit-login"
+                >
+                  {loginMutation.isPending ? "Verificando…" : "Acceder al estudio"}
+                </Button>
+              </form>
+            )}
+
+            {!selected && (
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-[10px] text-gray-300 text-center">Selecciona un perfil para continuar</p>
+              </div>
+            )}
           </div>
 
-          {/* PIN form */}
-          {selected && (
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">PIN de acceso</label>
-                <Input
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={4}
-                  placeholder="• • • •"
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value)}
-                  data-testid="input-pin"
-                  className="text-center text-lg tracking-widest"
-                  autoFocus
-                />
-              </div>
-              {error && <p className="text-xs text-red-600">{error}</p>}
-              <Button
-                type="submit"
-                className="w-full bg-[#0d1629] hover:bg-[#1a2745] text-white"
-                disabled={pin.length < 4 || loginMutation.isPending}
-                data-testid="button-submit-login"
-              >
-                {loginMutation.isPending ? "Verificando..." : "Acceder al estudio"}
-              </Button>
-            </form>
-          )}
+          <p className="text-center text-[9px] text-gray-300 mt-5">
+            Acceso restringido · PIN universal demo: 1234
+          </p>
         </div>
-
-        <p className="text-center text-[10px] text-gray-300 mt-6">
-          Autenticación demo — PIN universal: 1234 · En producción configurar auth real
-        </p>
       </div>
     </div>
   );

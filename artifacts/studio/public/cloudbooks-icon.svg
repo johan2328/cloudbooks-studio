@@ -1,0 +1,25 @@
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="40" height="40" rx="7" fill="#0d1629"/>
+  <!-- Cloud body blue→violet gradient -->
+  <path d="M8 26.5C8 29.5 10.3 31 13 31H28C30.8 31 33 29.2 33 26.5C33 24.6 31.9 23 30.2 22.3C30.3 22 30.4 21.7 30.4 21.4C30.4 19.4 28.8 17.8 26.8 17.8C26.4 17.8 26 17.9 25.7 18C24.5 16.2 22.5 15 20.2 15C16.8 15 14 17.4 13.7 20.5C13.5 20.5 13.2 20.4 12.9 20.4C10.2 20.4 8 22.3 8 25V26.5Z" fill="url(#cloudGrad)"/>
+  <!-- Open book — left page (brighter white) -->
+  <path d="M15.5 22.5L20 20.5V29L15.5 30.5Z" fill="white" opacity="0.92"/>
+  <!-- Open book — right page (slightly dimmer) -->
+  <path d="M24.5 22.5L20 20.5V29L24.5 30.5Z" fill="white" opacity="0.65"/>
+  <!-- Book spine -->
+  <line x1="20" y1="20.5" x2="20" y2="29" stroke="#0d1629" stroke-width="0.6" opacity="0.5"/>
+  <!-- Vertical circuit lines left -->
+  <line x1="13.5" y1="22.5" x2="13.5" y2="28" stroke="#93c5fd" stroke-width="0.8" opacity="0.6"/>
+  <circle cx="13.5" cy="22.5" r="1" fill="#93c5fd" opacity="0.7"/>
+  <circle cx="13.5" cy="28" r="0.6" fill="#60a5fa" opacity="0.6"/>
+  <!-- Vertical circuit lines right -->
+  <line x1="26.5" y1="22.5" x2="26.5" y2="28" stroke="#a78bfa" stroke-width="0.8" opacity="0.6"/>
+  <circle cx="26.5" cy="22.5" r="1" fill="#a78bfa" opacity="0.7"/>
+  <circle cx="26.5" cy="28" r="0.6" fill="#a78bfa" opacity="0.6"/>
+  <defs>
+    <linearGradient id="cloudGrad" x1="8" y1="15" x2="33" y2="31" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+</svg>
