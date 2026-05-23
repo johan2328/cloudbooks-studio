@@ -40,19 +40,16 @@ export default function Layout({ children, title }: LayoutProps) {
       {/* Sidebar */}
       <aside className="w-52 bg-[#080f24] flex flex-col shrink-0">
 
-        {/* Brand — logo PNG, navy blends */}
-        <div className="px-4 pt-4 pb-3 border-b border-white/[0.06]">
+        {/* Brand — logo PNG centered, bg matches logo background */}
+        <div className="flex items-center justify-center px-4 pt-5 pb-4 border-b border-white/[0.06]">
           <Link href="/biblioteca">
             <img
               src="/cloudbooks-logo.png"
               alt="CloudBooks"
-              className="w-28 opacity-95 hover:opacity-100 transition-opacity"
+              className="w-36 opacity-95 hover:opacity-100 transition-opacity"
               draggable={false}
             />
           </Link>
-          <p className="text-[7.5px] text-white/20 uppercase tracking-[2.5px] mt-1 font-medium pl-0.5">
-            AI-200 Studio
-          </p>
         </div>
 
         {/* Nav */}
