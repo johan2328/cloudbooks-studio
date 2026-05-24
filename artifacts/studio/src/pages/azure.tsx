@@ -86,10 +86,10 @@ const CERTS: Cert[] = [
 ];
 
 const LEVEL_CONFIG = {
-  Fundamentals: { color: "text-sky-600",  bg: "bg-sky-50",   border: "border-sky-200",   label: "Fundamentals"  },
-  Associate:    { color: "text-blue-600", bg: "bg-blue-50",  border: "border-blue-200",  label: "Associate"     },
-  Expert:       { color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-200", label: "Expert"     },
-  Specialty:    { color: "text-teal-600", bg: "bg-teal-50",  border: "border-teal-200",  label: "Specialty"     },
+  Fundamentals: { color: "text-sky-400",  bg: "bg-sky-500/10",   border: "border-sky-500/20",   label: "Fundamentals"  },
+  Associate:    { color: "text-blue-400", bg: "bg-blue-500/10",  border: "border-blue-500/20",  label: "Associate"     },
+  Expert:       { color: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/20", label: "Expert"     },
+  Specialty:    { color: "text-teal-400", bg: "bg-teal-500/10",  border: "border-teal-500/20",  label: "Specialty"     },
 };
 
 export default function Azure() {
@@ -115,8 +115,8 @@ export default function Azure() {
             Az
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Microsoft Azure</h1>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <h1 className="text-xl font-bold text-white tracking-tight">Microsoft Azure</h1>
+            <p className="text-xs text-white/30 mt-0.5">
               {CERTS.length} certificaciones · {CERTS.filter(c => c.status === "active").length} en producción · 6 formatos editoriales por colección
             </p>
           </div>
@@ -132,50 +132,52 @@ export default function Azure() {
               <div
                 key={cert.code}
                 className={cn(
-                  "bg-white border rounded-sm flex flex-col transition-all",
+                  "bg-[#0d1629] border rounded-sm flex flex-col transition-all",
                   isActive
-                    ? "border-blue-200 shadow-sm hover:shadow-md hover:border-blue-300"
-                    : "border-gray-200 opacity-65"
+                    ? "border-white/[0.08] hover:border-white/[0.15] shadow-sm hover:shadow-md"
+                    : "border-white/[0.04] opacity-65"
                 )}
               >
                 {/* Card header */}
                 <div className={cn(
                   "px-4 pt-4 pb-3 border-b",
-                  isActive ? "bg-gradient-to-r from-blue-50/50 to-violet-50/20 border-blue-100" : "bg-gray-50/50 border-gray-100"
+                  isActive
+                    ? "bg-blue-500/5 border-white/[0.06]"
+                    : "bg-white/[0.02] border-white/[0.04]"
                 )}>
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <span className={cn("text-[10px] font-bold tracking-wider px-1.5 py-0.5 rounded-sm",
-                      isActive ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-500")}>
+                      isActive ? "bg-blue-600 text-white" : "bg-white/[0.08] text-white/30")}>
                       {cert.code}
                     </span>
                     <div className="flex items-center gap-1.5">
                       <span className={cn("text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm border", lvl.bg, lvl.border, lvl.color)}>
                         {lvl.label}
                       </span>
-                      {!isActive && <Lock className="w-3 h-3 text-gray-300" />}
+                      {!isActive && <Lock className="w-3 h-3 text-white/15" />}
                     </div>
                   </div>
-                  <p className={cn("text-sm font-bold leading-tight", isActive ? "text-gray-900" : "text-gray-500")}>
+                  <p className={cn("text-sm font-bold leading-tight", isActive ? "text-white" : "text-white/30")}>
                     {cert.name}
                   </p>
-                  <p className="text-[9px] text-gray-400 mt-0.5">{cert.fullName}</p>
+                  <p className="text-[9px] text-white/20 mt-0.5">{cert.fullName}</p>
                 </div>
 
                 {/* Stats */}
-                <div className="px-4 py-3 grid grid-cols-3 gap-2 border-b border-gray-100 text-center">
+                <div className="px-4 py-3 grid grid-cols-3 gap-2 border-b border-white/[0.04] text-center">
                   <div>
-                    <p className="text-[8px] text-gray-400 uppercase tracking-wider font-medium">Formatos</p>
-                    <p className="text-xs font-bold text-gray-700 mt-0.5">{cert.formats}</p>
+                    <p className="text-[8px] text-white/20 uppercase tracking-wider font-medium">Formatos</p>
+                    <p className="text-xs font-bold text-white/60 mt-0.5">{cert.formats}</p>
                   </div>
                   <div>
-                    <p className="text-[8px] text-gray-400 uppercase tracking-wider font-medium">Infografías</p>
-                    <p className="text-xs font-bold text-gray-700 mt-0.5">
+                    <p className="text-[8px] text-white/20 uppercase tracking-wider font-medium">Infografías</p>
+                    <p className="text-xs font-bold text-white/60 mt-0.5">
                       {isActive ? total : cert.estimatedPages + "*"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[8px] text-gray-400 uppercase tracking-wider font-medium">Score QA</p>
-                    <p className={cn("text-xs font-bold mt-0.5", isActive && avgQA ? "text-blue-600" : "text-gray-400")}>
+                    <p className="text-[8px] text-white/20 uppercase tracking-wider font-medium">Score QA</p>
+                    <p className={cn("text-xs font-bold mt-0.5", isActive && avgQA ? "text-blue-400" : "text-white/15")}>
                       {isActive && avgQA ? avgQA : "—"}
                     </p>
                   </div>
@@ -183,12 +185,12 @@ export default function Azure() {
 
                 {/* Progress (only AI-200) */}
                 {isActive && (
-                  <div className="px-4 py-2.5 border-b border-gray-100">
+                  <div className="px-4 py-2.5 border-b border-white/[0.04]">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[9px] text-gray-400">Visual Atlas — {approved}/{total} aprobadas</span>
-                      <span className="text-[9px] font-bold text-blue-600">{total > 0 ? Math.round((approved / total) * 100) : 0}%</span>
+                      <span className="text-[9px] text-white/30">Visual Atlas — {approved}/{total} aprobadas</span>
+                      <span className="text-[9px] font-bold text-blue-400">{total > 0 ? Math.round((approved / total) * 100) : 0}%</span>
                     </div>
-                    <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
                       <div className="h-full bg-gradient-to-r from-blue-500 to-violet-500 rounded-full"
                         style={{ width: `${total > 0 ? Math.round((approved / total) * 100) : 0}%` }} />
                     </div>
@@ -207,7 +209,7 @@ export default function Azure() {
                       <ArrowRight className="w-3 h-3 ml-auto" />
                     </button>
                   ) : (
-                    <div className="w-full flex items-center justify-center h-8 bg-gray-100 text-gray-400 text-xs font-medium rounded-sm cursor-not-allowed gap-1.5">
+                    <div className="w-full flex items-center justify-center h-8 bg-white/[0.03] text-white/15 text-xs font-medium rounded-sm cursor-not-allowed gap-1.5 border border-white/[0.04]">
                       <Lock className="w-3 h-3" />
                       Planificado
                     </div>
@@ -219,7 +221,7 @@ export default function Azure() {
         </div>
 
         {/* Nota estimados */}
-        <p className="text-[9px] text-gray-300 mb-1">* Estimado de infografías para planificación editorial.</p>
+        <p className="text-[9px] text-white/15 mb-1">* Estimado de infografías para planificación editorial.</p>
 
       </div>
     </CatalogLayout>

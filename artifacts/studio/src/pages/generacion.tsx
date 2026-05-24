@@ -75,7 +75,6 @@ export default function Generacion() {
 
       if (step.key === "done") {
         setProgress(100);
-        // Actually call the API for the selected page
         if (selectedPageId) {
           createRun.mutate({ data: { pageId: selectedPageId } }, {
             onSuccess: () => {
@@ -105,17 +104,17 @@ export default function Generacion() {
 
   return (
     <Layout title="Generación — AI-200 Visual Study Atlas">
-      <div className="flex min-h-0" style={{ height: "calc(100vh - 57px)" }}>
+      <div className="flex min-h-0 bg-[#0a1220]" style={{ height: "calc(100vh - 57px)" }}>
         {/* Left: config */}
-        <div className="w-80 shrink-0 border-r border-gray-200 bg-white p-5 overflow-y-auto space-y-5">
+        <div className="w-80 shrink-0 border-r border-white/[0.06] bg-[#0d1629] p-5 overflow-y-auto space-y-5">
           {/* Mode toggle */}
           <section>
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Modo de generación</p>
-            <div className="flex border border-gray-200 rounded-sm overflow-hidden">
+            <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest mb-2">Modo de generación</p>
+            <div className="flex border border-white/[0.08] rounded-sm overflow-hidden">
               {([["page", "Página individual"], ["batch", "Batch completo"]] as const).map(([m, label]) => (
                 <button key={m} onClick={() => setMode(m)}
                   className={cn("flex-1 text-xs py-1.5 font-medium transition-colors",
-                    mode === m ? "bg-[#0d1629] text-white" : "text-gray-500 hover:text-gray-900 hover:bg-gray-50")}>
+                    mode === m ? "bg-blue-600 text-white" : "text-white/30 hover:text-white/60 hover:bg-white/[0.03]")}>
                   {label}
                 </button>
               ))}
@@ -125,9 +124,9 @@ export default function Generacion() {
           {/* Page selector */}
           {mode === "page" ? (
             <section>
-              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Página objetivo</p>
+              <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest mb-2">Página objetivo</p>
               <select value={selectedPageId ?? ""} onChange={(e) => setSelectedPageId(e.target.value ? parseInt(e.target.value) : null)}
-                className="w-full h-8 text-xs border border-gray-200 rounded-sm px-2 bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+                className="w-full h-8 text-xs border border-white/[0.08] rounded-sm px-2 bg-[#0a1220] text-white/60 focus:outline-none focus:ring-1 focus:ring-teal-500/40"
                 data-testid="select-page-generate">
                 <option value="">— Seleccionar página —</option>
                 {pages.map((p) => (
@@ -138,7 +137,7 @@ export default function Generacion() {
               </select>
 
               {selectedPage && (
-                <div className="mt-3 bg-gray-50 border border-gray-100 rounded-sm px-3 py-2.5 space-y-1.5">
+                <div className="mt-3 bg-white/[0.02] border border-white/[0.06] rounded-sm px-3 py-2.5 space-y-1.5">
                   <InfoRow label="Batch" value={selectedPage.batch} />
                   <InfoRow label="Dominio" value={selectedPage.domain.split(" ").slice(0,3).join(" ")} />
                   <InfoRow label="Estado" value={selectedPage.status} />
@@ -148,12 +147,12 @@ export default function Generacion() {
             </section>
           ) : (
             <section>
-              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Batch objetivo</p>
+              <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest mb-2">Batch objetivo</p>
               <select value={selectedBatch} onChange={(e) => setSelectedBatch(e.target.value)}
-                className="w-full h-8 text-xs border border-gray-200 rounded-sm px-2 bg-white focus:outline-none focus:ring-1 focus:ring-teal-500">
+                className="w-full h-8 text-xs border border-white/[0.08] rounded-sm px-2 bg-[#0a1220] text-white/60 focus:outline-none focus:ring-1 focus:ring-teal-500/40">
                 {BATCH_OPTIONS.map((b) => <option key={b} value={b}>{b}</option>)}
               </select>
-              <div className="mt-2 text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-sm px-3 py-2">
+              <div className="mt-2 text-xs text-white/30 bg-white/[0.02] border border-white/[0.06] rounded-sm px-3 py-2">
                 {batchPages.length} páginas · {batchPages.filter(p => p.groundingStatus === "verified").length} con grounding verificado
               </div>
             </section>
@@ -163,24 +162,24 @@ export default function Generacion() {
           {mode === "page" && selectedPage && (
             <section>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Preflight editorial</p>
-                <span className={cn("text-[10px] font-bold", preflightOk ? "text-green-600" : "text-amber-600")}>
+                <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest">Preflight editorial</p>
+                <span className={cn("text-[10px] font-bold", preflightOk ? "text-emerald-400" : "text-amber-400")}>
                   {preflightScore}/{PREFLIGHT_ITEMS.length}
                 </span>
               </div>
               <div className="space-y-1">
                 {preflightResults.map((item) => (
                   <div key={item.key} className={cn("flex items-center gap-2 px-2 py-1.5 rounded-sm text-[10px]",
-                    item.pass ? "bg-green-50 text-green-800" : "bg-amber-50 text-amber-800")}>
+                    item.pass ? "bg-emerald-500/8 text-emerald-300" : "bg-amber-500/8 text-amber-300")}>
                     {item.pass
-                      ? <CheckCircle2 className="w-3 h-3 text-green-600 shrink-0" />
-                      : <AlertCircle className="w-3 h-3 text-amber-500 shrink-0" />}
+                      ? <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                      : <AlertCircle className="w-3 h-3 text-amber-400 shrink-0" />}
                     {item.label}
                   </div>
                 ))}
               </div>
               {!preflightOk && (
-                <p className="text-[9px] text-amber-600 mt-1.5 px-1">
+                <p className="text-[9px] text-amber-400 mt-1.5 px-1">
                   Completa el grounding en Contenido y Grounding antes de generar.
                 </p>
               )}
@@ -189,20 +188,20 @@ export default function Generacion() {
 
           {/* Model */}
           <section>
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Modelo</p>
-            <select className="w-full h-8 text-xs border border-gray-200 rounded-sm px-2 bg-white focus:outline-none focus:ring-1 focus:ring-teal-500">
+            <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest mb-2">Modelo</p>
+            <select className="w-full h-8 text-xs border border-white/[0.08] rounded-sm px-2 bg-[#0a1220] text-white/60 focus:outline-none focus:ring-1 focus:ring-teal-500/40">
               <option value="gpt-4o">GPT-4o — calidad premium</option>
               <option value="gpt-4o-mini">GPT-4o mini — iteración rápida</option>
             </select>
-            <div className="mt-2 flex items-start gap-1.5 text-[9px] text-gray-500 bg-gray-50 border border-dashed border-gray-200 rounded-sm px-2 py-1.5">
-              <ShieldCheck className="w-3 h-3 text-teal-500 shrink-0 mt-0.5" />
+            <div className="mt-2 flex items-start gap-1.5 text-[9px] text-white/30 bg-white/[0.02] border border-dashed border-white/[0.06] rounded-sm px-2 py-1.5">
+              <ShieldCheck className="w-3 h-3 text-teal-400 shrink-0 mt-0.5" />
               Modo seguro activo — sin API conectada. Simulación funcional disponible.
             </div>
           </section>
 
           {/* Generate button */}
           <Button onClick={runFlow} disabled={!canGenerate || isRunning}
-            className="w-full bg-[#0d1629] hover:bg-[#1a2745] text-white text-sm h-10"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm h-10"
             data-testid="button-generate">
             {isRunning ? (
               <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{FLOW_STEPS[stepIndex]?.label ?? "Procesando"}…</>
@@ -216,12 +215,12 @@ export default function Generacion() {
         <div className="flex-1 p-5 overflow-y-auto space-y-5">
           {/* Flow pipeline */}
           <section>
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Pipeline de generación</p>
-            <div className="bg-white border border-gray-200 rounded-sm overflow-hidden">
+            <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest mb-3">Pipeline de generación</p>
+            <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm overflow-hidden">
               {/* Progress */}
               {isRunning && (
                 <div className="px-4 pt-3 pb-1">
-                  <Progress value={progress} className="h-1.5" />
+                  <Progress value={progress} className="h-1.5 bg-white/[0.06]" />
                 </div>
               )}
               {/* Steps */}
@@ -235,17 +234,17 @@ export default function Generacion() {
                       <div className={cn("flex flex-col items-center gap-1 flex-1 text-center transition-all",
                         isActive ? "opacity-100" : isDone ? "opacity-80" : "opacity-30")}>
                         <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors",
-                          isDone ? "bg-green-500 text-white" :
-                          isActive ? "bg-[#0d1629] text-white ring-2 ring-teal-400 ring-offset-1" :
-                          "bg-gray-100 text-gray-400")}>
+                          isDone ? "bg-emerald-500 text-white" :
+                          isActive ? "bg-blue-600 text-white ring-2 ring-teal-400 ring-offset-1" :
+                          "bg-white/[0.06] text-white/20")}>
                           {isDone ? <CheckCircle2 className="w-3.5 h-3.5" /> :
                            isActive ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
                            i + 1}
                         </div>
-                        <span className="text-[9px] font-medium text-gray-600 leading-tight">{step.label}</span>
+                        <span className="text-[9px] font-medium text-white/40 leading-tight">{step.label}</span>
                       </div>
                       {i < arr.length - 1 && (
-                        <ChevronRight className={cn("w-3 h-3 shrink-0 -mx-1", isDone ? "text-green-400" : "text-gray-200")} />
+                        <ChevronRight className={cn("w-3 h-3 shrink-0 -mx-1", isDone ? "text-emerald-400" : "text-white/[0.06]")} />
                       )}
                     </div>
                   );
@@ -257,16 +256,16 @@ export default function Generacion() {
           {/* Contrato visual summary */}
           {contract && (
             <section>
-              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+              <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest mb-3 flex items-center gap-2">
                 Contrato Visual Activo
-                <span className="text-[9px] bg-[#0d1629] text-white px-1.5 py-0.5 rounded-sm">{contract.version}</span>
+                <span className="text-[9px] bg-blue-600 text-white px-1.5 py-0.5 rounded-sm">{contract.version}</span>
               </p>
-              <div className="bg-white border border-gray-200 rounded-sm p-4 grid grid-cols-2 gap-4">
+              <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4 grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-[9px] font-bold text-red-600 uppercase tracking-wide mb-2">No negociable ({(contract.nonNegotiable as string[]).length})</p>
+                  <p className="text-[9px] font-bold text-red-400 uppercase tracking-wide mb-2">No negociable ({(contract.nonNegotiable as string[]).length})</p>
                   <ul className="space-y-1">
                     {(contract.nonNegotiable as string[]).slice(0, 5).map((rule, i) => (
-                      <li key={i} className="text-[9px] text-gray-600 flex items-start gap-1">
+                      <li key={i} className="text-[9px] text-white/40 flex items-start gap-1">
                         <span className="w-1 h-1 bg-red-400 rounded-full mt-1.5 shrink-0" />
                         <span className="leading-tight">{rule.slice(0, 80)}{rule.length > 80 ? "…" : ""}</span>
                       </li>
@@ -274,10 +273,10 @@ export default function Generacion() {
                   </ul>
                 </div>
                 <div>
-                  <p className="text-[9px] font-bold text-teal-600 uppercase tracking-wide mb-2">Storytelling flexible ({(contract.flexibleStorytelling as string[]).length})</p>
+                  <p className="text-[9px] font-bold text-teal-400 uppercase tracking-wide mb-2">Storytelling flexible ({(contract.flexibleStorytelling as string[]).length})</p>
                   <ul className="space-y-1">
                     {(contract.flexibleStorytelling as string[]).slice(0, 4).map((rule, i) => (
-                      <li key={i} className="text-[9px] text-gray-600 flex items-start gap-1">
+                      <li key={i} className="text-[9px] text-white/40 flex items-start gap-1">
                         <span className="w-1 h-1 bg-teal-400 rounded-full mt-1.5 shrink-0" />
                         <span className="leading-tight">{rule.slice(0, 80)}{rule.length > 80 ? "…" : ""}</span>
                       </li>
@@ -290,45 +289,45 @@ export default function Generacion() {
 
           {/* Run history */}
           <section>
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+            <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest mb-3 flex items-center gap-2">
               Historial de versiones
-              {selectedPage && <span className="text-gray-400 font-normal">· Pág. {selectedPage.pageNumber}</span>}
+              {selectedPage && <span className="text-white/15 font-normal">· Pág. {selectedPage.pageNumber}</span>}
             </p>
             {runsLoading ? (
-              <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-10" />)}</div>
+              <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-10 bg-white/[0.04]" />)}</div>
             ) : allRuns.length === 0 ? (
-              <div className="bg-white border border-dashed border-gray-200 rounded-sm p-5 text-center">
-                <Clock className="w-5 h-5 text-gray-200 mx-auto mb-1.5" />
-                <p className="text-xs text-gray-400">
+              <div className="bg-[#0d1629] border border-dashed border-white/[0.06] rounded-sm p-5 text-center">
+                <Clock className="w-5 h-5 text-white/10 mx-auto mb-1.5" />
+                <p className="text-xs text-white/25">
                   {selectedPageId ? "Sin ejecuciones registradas para esta página." : "Selecciona una página para ver su historial de versiones."}
                 </p>
               </div>
             ) : (
-              <div className="bg-white border border-gray-200 rounded-sm overflow-hidden">
+              <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm overflow-hidden">
                 <table className="w-full text-xs">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-white/[0.03] border-b border-white/[0.06]">
                     <tr>
-                      <th className="text-left px-3 py-2 text-[9px] text-gray-500 font-semibold uppercase tracking-wide">Estado</th>
-                      <th className="text-left px-3 py-2 text-[9px] text-gray-500 font-semibold uppercase tracking-wide">Modelo</th>
-                      <th className="text-right px-3 py-2 text-[9px] text-gray-500 font-semibold uppercase tracking-wide">Tokens</th>
-                      <th className="text-right px-3 py-2 text-[9px] text-gray-500 font-semibold uppercase tracking-wide">Versión</th>
-                      <th className="text-right px-3 py-2 text-[9px] text-gray-500 font-semibold uppercase tracking-wide">Fecha</th>
+                      <th className="text-left px-3 py-2 text-[9px] text-white/25 font-semibold uppercase tracking-wide">Estado</th>
+                      <th className="text-left px-3 py-2 text-[9px] text-white/25 font-semibold uppercase tracking-wide">Modelo</th>
+                      <th className="text-right px-3 py-2 text-[9px] text-white/25 font-semibold uppercase tracking-wide">Tokens</th>
+                      <th className="text-right px-3 py-2 text-[9px] text-white/25 font-semibold uppercase tracking-wide">Versión</th>
+                      <th className="text-right px-3 py-2 text-[9px] text-white/25 font-semibold uppercase tracking-wide">Fecha</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-white/[0.03]">
                     {allRuns.map((run, idx) => (
-                      <tr key={run.id} className="hover:bg-gray-50" data-testid={`row-run-${run.id}`}>
+                      <tr key={run.id} className="hover:bg-white/[0.02]" data-testid={`row-run-${run.id}`}>
                         <td className="px-3 py-2"><RunBadge status={run.status} /></td>
-                        <td className="px-3 py-2 font-mono text-gray-500 text-[10px]">{run.model ?? "—"}</td>
-                        <td className="px-3 py-2 text-right text-gray-400 text-[10px] tabular-nums">
+                        <td className="px-3 py-2 font-mono text-white/25 text-[10px]">{run.model ?? "—"}</td>
+                        <td className="px-3 py-2 text-right text-white/20 text-[10px] tabular-nums">
                           {run.promptTokens != null && run.completionTokens != null
                             ? `${(run.promptTokens + run.completionTokens).toLocaleString()}t`
                             : "—"}
                         </td>
-                        <td className="px-3 py-2 text-right text-[10px] text-gray-400 font-mono">
+                        <td className="px-3 py-2 text-right text-[10px] text-white/20 font-mono">
                           v{allRuns.length - idx}
                         </td>
-                        <td className="px-3 py-2 text-right text-[10px] text-gray-400">{formatDate(run.startedAt)}</td>
+                        <td className="px-3 py-2 text-right text-[10px] text-white/20">{formatDate(run.startedAt)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -344,16 +343,16 @@ export default function Generacion() {
 
 function RunBadge({ status }: { status: string }) {
   const cfg: Record<string, string> = {
-    completed: "bg-green-100 text-green-800",
-    running:   "bg-blue-100 text-blue-800",
-    queued:    "bg-gray-100 text-gray-600",
-    failed:    "bg-red-100 text-red-700",
+    completed: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+    running:   "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+    queued:    "bg-white/[0.03] text-white/25 border border-white/[0.06]",
+    failed:    "bg-red-500/10 text-red-400 border border-red-500/20",
   };
   const labels: Record<string, string> = {
     completed: "Completada", running: "En curso", queued: "En cola", failed: "Error"
   };
   return (
-    <span className={cn("inline-flex items-center px-1.5 py-0.5 rounded-sm text-[9px] font-semibold", cfg[status] ?? "bg-gray-100 text-gray-600")}>
+    <span className={cn("inline-flex items-center px-1.5 py-0.5 rounded-sm text-[9px] font-semibold", cfg[status] ?? "bg-white/[0.03] text-white/25")}>
       {labels[status] ?? status}
     </span>
   );
@@ -362,8 +361,8 @@ function RunBadge({ status }: { status: string }) {
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
-      <span className="text-[9px] text-gray-400">{label}</span>
-      <span className="text-[10px] text-gray-700 font-medium truncate max-w-36">{value}</span>
+      <span className="text-[9px] text-white/20">{label}</span>
+      <span className="text-[10px] text-white/50 font-medium truncate max-w-36">{value}</span>
     </div>
   );
 }

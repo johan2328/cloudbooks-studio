@@ -2,7 +2,7 @@ import { useListPages } from "@workspace/api-client-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn, statusColor } from "@/lib/utils";
+import { cn, statusColorDark } from "@/lib/utils";
 import { Download, FileText, Image, BookOpen, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -26,14 +26,14 @@ export default function Exportacion() {
   return (
     <Layout title="Exportación">
       {/* Header actions */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-3 flex-wrap">
+      <div className="bg-[#0d1629] border-b border-white/[0.06] px-6 py-3 flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">{pages.length} aprobadas · {exported.length} exportadas</span>
+          <span className="text-xs text-white/30">{pages.length} aprobadas · {exported.length} exportadas</span>
         </div>
         <div className="ml-auto flex gap-2">
           <Button
             onClick={() => handleExport("Book Pack completo")}
-            className="bg-[#0d1629] hover:bg-[#1a2745] text-white text-xs h-8"
+            className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
             data-testid="button-export-book"
             disabled={allApproved.length === 0}
           >
@@ -43,7 +43,7 @@ export default function Exportacion() {
           <Button
             onClick={() => handleExport("PDF")}
             variant="outline"
-            className="text-xs h-8"
+            className="text-xs h-8 border-white/[0.08] text-white/40 hover:bg-white/[0.03] bg-transparent"
             data-testid="button-export-pdf-all"
             disabled={allApproved.length === 0}
           >
@@ -53,38 +53,38 @@ export default function Exportacion() {
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="p-6 bg-[#0a1220]">
         {isLoading ? (
-          <div className="space-y-2">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-12" />)}</div>
+          <div className="space-y-2">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-12 bg-white/[0.04]" />)}</div>
         ) : allApproved.length === 0 ? (
-          <div className="text-center py-16 border border-dashed border-gray-200 rounded-sm bg-white">
-            <p className="text-sm text-gray-400 mb-1">Sin páginas aprobadas</p>
-            <p className="text-xs text-gray-300">Aprueba páginas en el panel QA para habilitarlas aquí.</p>
+          <div className="text-center py-16 border border-dashed border-white/[0.06] rounded-sm bg-[#0d1629]">
+            <p className="text-sm text-white/25 mb-1">Sin páginas aprobadas</p>
+            <p className="text-xs text-white/15">Aprueba páginas en el panel QA para habilitarlas aquí.</p>
           </div>
         ) : (
-          <div className="bg-white border border-gray-200 rounded-sm overflow-hidden">
+          <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm overflow-hidden">
             <table className="w-full text-xs">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-white/[0.03] border-b border-white/[0.06]">
                 <tr>
-                  <th className="text-left px-4 py-2.5 text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Pág.</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Título</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Dominio</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Batch</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Estado</th>
-                  <th className="text-right px-4 py-2.5 text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Formatos</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] text-white/25 font-semibold uppercase tracking-wide">Pág.</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] text-white/25 font-semibold uppercase tracking-wide">Título</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] text-white/25 font-semibold uppercase tracking-wide">Dominio</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] text-white/25 font-semibold uppercase tracking-wide">Batch</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] text-white/25 font-semibold uppercase tracking-wide">Estado</th>
+                  <th className="text-right px-4 py-2.5 text-[10px] text-white/25 font-semibold uppercase tracking-wide">Formatos</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-white/[0.03]">
                 {allApproved.map((page) => (
-                  <tr key={page.id} className="hover:bg-gray-50 group" data-testid={`row-export-${page.id}`}>
-                    <td className="px-4 py-2.5 font-mono text-gray-500 font-bold">{page.pageNumber}</td>
+                  <tr key={page.id} className="hover:bg-white/[0.02] group" data-testid={`row-export-${page.id}`}>
+                    <td className="px-4 py-2.5 font-mono text-white/20 font-bold">{page.pageNumber}</td>
                     <td className="px-4 py-2.5">
-                      <p className="text-gray-900 font-medium truncate max-w-xs">{page.title}</p>
+                      <p className="text-white/70 font-medium truncate max-w-xs">{page.title}</p>
                     </td>
-                    <td className="px-4 py-2.5 text-gray-500 truncate max-w-40">{page.domain}</td>
-                    <td className="px-4 py-2.5 text-gray-400">{page.batch}</td>
+                    <td className="px-4 py-2.5 text-white/30 truncate max-w-40">{page.domain}</td>
+                    <td className="px-4 py-2.5 text-white/20">{page.batch}</td>
                     <td className="px-4 py-2.5">
-                      <span className={cn("inline-flex items-center px-1.5 py-0.5 rounded-sm text-[10px] font-medium", statusColor(page.status))}>
+                      <span className={cn("inline-flex items-center px-1.5 py-0.5 rounded-sm text-[10px] font-medium", statusColorDark(page.status))}>
                         {page.status === "exported" ? "Exportada" : "Aprobada"}
                       </span>
                     </td>
@@ -103,8 +103,8 @@ export default function Exportacion() {
         )}
 
         {/* Export note */}
-        <div className="mt-4 text-[10px] text-gray-300 bg-gray-50 border border-dashed border-gray-200 rounded-sm px-4 py-3">
-          Exportacion demostrativa — Los formatos reales (HTML/PNG/PDF/Book Pack) se activaran cuando el pipeline de generacion este conectado a OpenAI.
+        <div className="mt-4 text-[10px] text-white/15 bg-white/[0.02] border border-dashed border-white/[0.06] rounded-sm px-4 py-3">
+          Exportación demostrativa — Los formatos reales (HTML/PNG/PDF/Book Pack) se activarán cuando el pipeline de generación esté conectado a OpenAI.
         </div>
       </div>
     </Layout>
@@ -115,7 +115,7 @@ function ExportBtn({ icon: Icon, label, onClick }: { icon: any; label: string; o
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-0.5 px-1.5 py-1 rounded-sm text-[10px] text-gray-500 hover:bg-gray-100 hover:text-gray-900 border border-gray-200 transition-colors"
+      className="flex items-center gap-0.5 px-1.5 py-1 rounded-sm text-[10px] text-white/30 hover:bg-white/[0.06] hover:text-white/60 border border-white/[0.06] transition-colors"
     >
       <Icon className="w-2.5 h-2.5" />
       {label}

@@ -23,7 +23,7 @@ export default function CatalogLayout({ crumbs, children }: CatalogLayoutProps) 
   }
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] flex flex-col">
+    <div className="min-h-screen bg-[#0a1220] flex flex-col">
       {/* Topbar */}
       <header className="bg-[#0d1629] border-b border-white/[0.06] px-8 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
@@ -50,16 +50,16 @@ export default function CatalogLayout({ crumbs, children }: CatalogLayoutProps) 
       </header>
 
       {/* Breadcrumb */}
-      <div className="bg-white border-b border-gray-200 px-8 py-2 flex items-center gap-1.5 shrink-0">
+      <div className="bg-[#0d1629] border-b border-white/[0.06] px-8 py-2 flex items-center gap-1.5 shrink-0">
         {crumbs.map((crumb, i) => (
           <div key={i} className="flex items-center gap-1.5">
-            {i > 0 && <ChevronRight className="w-3 h-3 text-gray-300" />}
+            {i > 0 && <ChevronRight className="w-3 h-3 text-white/10" />}
             {crumb.href ? (
-              <Link href={crumb.href} className="text-[10px] font-medium text-blue-500 hover:text-blue-700 transition-colors">
+              <Link href={crumb.href} className="text-[10px] font-medium text-blue-400 hover:text-blue-300 transition-colors">
                 {crumb.label}
               </Link>
             ) : (
-              <span className="text-[10px] font-semibold text-gray-700">{crumb.label}</span>
+              <span className="text-[10px] font-semibold text-white/50">{crumb.label}</span>
             )}
           </div>
         ))}
