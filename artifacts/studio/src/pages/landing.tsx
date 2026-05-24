@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import {
   BookOpen, Map, Package, ArrowRight, ChevronRight,
   CheckCircle2, Check, Clock, Database, Layers, Edit3, Eye, Shield, Package as Pkg,
-  Globe,
+  Globe, Search,
 } from "lucide-react";
 
 export function translateHref() {
@@ -57,7 +57,6 @@ export function CommercialNav({ active }: { active?: string }) {
         <nav className="hidden md:flex items-center gap-5 ml-4">
           {[
             { label: "Inicio",      href: "/" },
-            { label: "Books",       href: "/books" },
             { label: "Metodología", href: "/#metodologia" },
           ].map(({ label, href }) => (
             <a key={label} href={href}
@@ -69,6 +68,20 @@ export function CommercialNav({ active }: { active?: string }) {
             </a>
           ))}
         </nav>
+
+        {/* Buscador */}
+        <div className="hidden md:flex flex-1 max-w-[200px] ml-6">
+          <div className="relative w-full">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Buscar..."
+              className="w-full h-7 pl-7 pr-2 bg-white/[0.04] border border-white/[0.08] rounded-sm text-xs text-white/70 placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors"
+              onKeyDown={(e) => { if (e.key === "Enter") setLocation("/books"); }}
+            />
+          </div>
+        </div>
+
         <div className="ml-auto flex items-center gap-2">
           <a
             href={translateHref()}
