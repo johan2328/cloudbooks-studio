@@ -5,6 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import Login from "@/pages/login";
 import Catalogo from "@/pages/catalogo";
+import Azure from "@/pages/azure";
+import AI200Collection from "@/pages/ai200";
 import Biblioteca from "@/pages/biblioteca";
 import Contenido from "@/pages/contenido";
 import Generacion from "@/pages/generacion";
@@ -34,17 +36,28 @@ function Router() {
     <Switch>
       <Route path="/login" component={Login} />
 
-      {/* Root → catálogo de certificaciones */}
+      {/* Root → CloudBooks Library */}
       <Route path="/">
         <Redirect to="/catalogo" />
       </Route>
 
-      {/* Biblioteca CloudBooks — catálogo de libros por proveedor */}
+      {/* ── Catálogo jerárquico ─────────────────────────── */}
+      {/* Nivel 1: Proveedores cloud */}
       <Route path="/catalogo">
         <PrivateRoute><Catalogo /></PrivateRoute>
       </Route>
 
-      {/* Estudio AI-200 */}
+      {/* Nivel 2: Certificaciones Azure */}
+      <Route path="/azure">
+        <PrivateRoute><Azure /></PrivateRoute>
+      </Route>
+
+      {/* Nivel 3: AI-200 Certification Collection */}
+      <Route path="/ai-200">
+        <PrivateRoute><AI200Collection /></PrivateRoute>
+      </Route>
+
+      {/* ── Estudio Visual Atlas (AI-200) ───────────────── */}
       <Route path="/biblioteca">
         <PrivateRoute><Biblioteca /></PrivateRoute>
       </Route>
