@@ -164,13 +164,21 @@ export default function Landing() {
     const el = formatsRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setFormatsInView(true);
-          obs.disconnect();
-        }
-      },
+      ([entry]) => { if (entry.isIntersecting) { setFormatsInView(true); obs.disconnect(); } },
       { threshold: 0.25 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const [methodInView, setMethodInView] = useState(false);
+  const methodRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = methodRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setMethodInView(true); obs.disconnect(); } },
+      { threshold: 0.15 }
     );
     obs.observe(el);
     return () => obs.disconnect();
@@ -502,7 +510,7 @@ export default function Landing() {
       </section>
 
       {/* ── Metodología — Estudio multiagente unificado ──────────────────── */}
-      <section id="metodologia" className="py-24 bg-[#0a1220] relative overflow-hidden">
+      <section ref={methodRef} id="metodologia" className="py-24 bg-[#0a1220] relative overflow-hidden">
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/30 to-transparent" />
         {/* PCB grid background sutil */}
         <div className="absolute inset-0 opacity-[0.025] pointer-events-none"
@@ -512,10 +520,11 @@ export default function Landing() {
         <div className="absolute -right-32 bottom-1/4 w-96 h-96 rounded-full blur-3xl opacity-[0.07] bg-amber-500 pointer-events-none" />
 
         <div className="relative max-w-6xl mx-auto px-6">
-          {/* Header */}
-          <div className="text-center mb-14">
-            <p className="text-[9px] font-bold text-teal-400/60 uppercase tracking-[0.25em] mb-3">Metodología editorial</p>
-            <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight">Un estudio editorial humano-agentes.</h2>
+          {/* Header con animación progresiva */}
+          <div className="text-center mb-14"
+            style={{opacity: methodInView ? 1 : 0, transform: methodInView ? "translateY(0)" : "translateY(18px)", transition: "opacity 0.6s ease-out, transform 0.6s ease-out"}}>
+            <p className="text-[11px] font-bold text-teal-400/60 uppercase tracking-[0.25em] mb-3">Metodología editorial</p>
+            <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">Un estudio editorial humano-agentes.</h2>
             <p className="text-sm text-white/55 mt-4 leading-relaxed max-w-2xl mx-auto">
               Una batería de agentes especializados distribuidos por dominios produce cada formato.
               Un auditor humano valida la entrega final antes de publicación.
