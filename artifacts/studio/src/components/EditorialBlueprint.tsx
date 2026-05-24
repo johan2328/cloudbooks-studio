@@ -2,139 +2,114 @@ interface EditorialBlueprintProps {
   className?: string;
 }
 
-const LAYERS = [
-  { y: -84, color: "#14b8a6", label: "Calidad",     code: "QA · PRODUCTION" },
-  { y: 0,   color: "#7c3aed", label: "Creación",    code: "EDITORIAL · VISUAL" },
-  { y: 84,  color: "#2563eb", label: "Conocimiento", code: "GROUNDING · PEDAGOGY" },
-] as const;
-
 export function EditorialBlueprint({ className = "" }: EditorialBlueprintProps) {
-  const cx = 240;
-  const cy = 240;
-  const halfW = 132;
-  const halfH = 34;
-
   return (
-    <svg viewBox="0 0 540 480" className={className} fill="none" aria-hidden>
+    <svg viewBox="0 0 460 520" className={className} fill="none" aria-hidden>
       <defs>
-        <radialGradient id="eb-halo" cx="50%" cy="50%" r="45%">
-          <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.22" />
+        <radialGradient id="cb-halo" cx="50%" cy="50%" r="55%">
+          <stop offset="0%"  stopColor="#7c3aed" stopOpacity="0.22" />
           <stop offset="55%" stopColor="#2563eb" stopOpacity="0.08" />
           <stop offset="100%" stopColor="#0d1629" stopOpacity="0" />
         </radialGradient>
-        <linearGradient id="eb-bus" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"  stopColor="#fbbf24" stopOpacity="0.7" />
-          <stop offset="18%" stopColor="#14b8a6" stopOpacity="0.6" />
-          <stop offset="50%" stopColor="#7c3aed" stopOpacity="0.6" />
-          <stop offset="85%" stopColor="#2563eb" stopOpacity="0.6" />
-          <stop offset="100%" stopColor="#2563eb" stopOpacity="0.2" />
+        <linearGradient id="cb-cover" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor="#101a32" />
+          <stop offset="100%" stopColor="#0a1220" />
+        </linearGradient>
+        <linearGradient id="cb-spine" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor="#a78bfa" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#5b21b6" stopOpacity="0.6" />
+        </linearGradient>
+        <linearGradient id="cb-ghost" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor="#0e1830" />
+          <stop offset="100%" stopColor="#0a1220" />
         </linearGradient>
       </defs>
 
       {/* Halo */}
-      <circle cx={cx} cy={cy} r="200" fill="url(#eb-halo)" />
+      <circle cx="230" cy="260" r="220" fill="url(#cb-halo)" />
 
-      {/* Backdrop tick grid */}
-      <g stroke="#ffffff" strokeOpacity="0.04" strokeWidth="0.5">
-        {Array.from({ length: 11 }).map((_, i) => (
-          <line key={`h${i}`} x1="0" y1={i * 48} x2="480" y2={i * 48} />
-        ))}
-        {Array.from({ length: 11 }).map((_, i) => (
-          <line key={`v${i}`} x1={i * 48} y1="0" x2={i * 48} y2="480" />
-        ))}
+      {/* Soft floor shadow under stack */}
+      <ellipse cx="230" cy="470" rx="160" ry="14" fill="#000" opacity="0.35" />
+
+      {/* Ghost volume 2 (deepest back) */}
+      <g transform="translate(190 60) rotate(-3 0 200)" opacity="0.55">
+        <rect x="0" y="0" width="170" height="380" rx="2" fill="url(#cb-ghost)" stroke="#ffffff" strokeOpacity="0.08" />
+        <rect x="0" y="0" width="6" height="380" fill="#0d9488" fillOpacity="0.55" />
+        <text x="85" y="200" textAnchor="middle" fill="#ffffff" fillOpacity="0.35" fontSize="22" fontWeight="900" fontFamily="ui-sans-serif" letterSpacing="2">AZ-104</text>
       </g>
 
-      {/* Corner registration marks (blueprint feel) */}
-      {[
-        [24, 24], [456, 24], [24, 456], [456, 456],
-      ].map(([x, y], i) => (
-        <g key={`reg${i}`} stroke="#ffffff" strokeOpacity="0.15" strokeWidth="0.75">
-          <line x1={x - 6} y1={y} x2={x + 6} y2={y} />
-          <line x1={x} y1={y - 6} x2={x} y2={y + 6} />
+      {/* Ghost volume 1 (closer back) */}
+      <g transform="translate(120 50) rotate(-1.5 0 200)" opacity="0.78">
+        <rect x="0" y="0" width="180" height="395" rx="2" fill="url(#cb-ghost)" stroke="#ffffff" strokeOpacity="0.1" />
+        <rect x="0" y="0" width="6" height="395" fill="#2563eb" fillOpacity="0.7" />
+        <text x="93" y="210" textAnchor="middle" fill="#ffffff" fillOpacity="0.5" fontSize="26" fontWeight="900" fontFamily="ui-sans-serif" letterSpacing="2">AZ-900</text>
+      </g>
+
+      {/* Front volume: AI-200 Visual Atlas */}
+      <g transform="translate(70 40)">
+        {/* Drop shadow */}
+        <rect x="3" y="6" width="230" height="420" rx="3" fill="#000" opacity="0.45" />
+        {/* Cover */}
+        <rect x="0" y="0" width="230" height="420" rx="3" fill="url(#cb-cover)" stroke="#ffffff" strokeOpacity="0.14" />
+        {/* Spine accent (violet for Visual Atlas) */}
+        <rect x="0" y="0" width="9" height="420" fill="url(#cb-spine)" />
+        <rect x="9" y="0" width="1" height="420" fill="#ffffff" fillOpacity="0.08" />
+
+        {/* Inner editorial border (double line) */}
+        <rect x="22" y="22" width="186" height="376" fill="none" stroke="#ffffff" strokeOpacity="0.1" />
+        <rect x="26" y="26" width="178" height="368" fill="none" stroke="#ffffff" strokeOpacity="0.05" />
+
+        {/* Top brand block */}
+        <text x="115" y="56" textAnchor="middle" fill="#ffffff" fillOpacity="0.55" fontSize="9" fontWeight="700" fontFamily="ui-sans-serif" letterSpacing="4">CLOUDBOOKS</text>
+        <line x1="80" y1="68" x2="150" y2="68" stroke="#ffffff" strokeOpacity="0.2" strokeWidth="0.75" />
+        <text x="115" y="82" textAnchor="middle" fill="#a78bfa" fillOpacity="0.7" fontSize="6.5" fontFamily="ui-monospace" letterSpacing="2.5">EDITORIAL · AZURE</text>
+
+        {/* Cert code — the focal element */}
+        <text x="115" y="206" textAnchor="middle" fill="#ffffff" fontSize="58" fontWeight="900" fontFamily="ui-sans-serif" letterSpacing="-1">AI-200</text>
+
+        {/* Subtitle stack */}
+        <line x1="65" y1="232" x2="165" y2="232" stroke="#a78bfa" strokeOpacity="0.6" strokeWidth="1" />
+        <text x="115" y="252" textAnchor="middle" fill="#ffffff" fillOpacity="0.92" fontSize="11" fontWeight="800" fontFamily="ui-sans-serif" letterSpacing="2.5">AZURE AI FUNDAMENTALS</text>
+        <text x="115" y="268" textAnchor="middle" fill="#ffffff" fillOpacity="0.5" fontSize="8" fontFamily="ui-sans-serif" letterSpacing="0.5">Designing &amp; implementing AI solutions</text>
+
+        {/* Decorative editorial mark */}
+        <g transform="translate(115 308)">
+          <circle cx="0" cy="0" r="10" fill="none" stroke="#a78bfa" strokeOpacity="0.45" strokeWidth="0.75" />
+          <circle cx="0" cy="0" r="5"  fill="none" stroke="#a78bfa" strokeOpacity="0.55" strokeWidth="0.75" />
+          <circle cx="0" cy="0" r="1.6" fill="#a78bfa" />
+          <line x1="-22" y1="0" x2="-12" y2="0" stroke="#ffffff" strokeOpacity="0.15" strokeWidth="0.75" />
+          <line x1="12"  y1="0" x2="22"  y2="0" stroke="#ffffff" strokeOpacity="0.15" strokeWidth="0.75" />
         </g>
-      ))}
 
-      {/* PCB vertical bus through column */}
-      <line x1={cx} y1={cy - 160} x2={cx} y2={cy + 160} stroke="url(#eb-bus)" strokeWidth="1.25" strokeDasharray="2 4" />
+        {/* Format strip */}
+        <g transform="translate(38 340)">
+          <text x="0" y="0" fill="#ffffff" fillOpacity="0.4" fontSize="7" fontWeight="700" fontFamily="ui-monospace" letterSpacing="2">FORMATO</text>
+          <text x="153" y="0" textAnchor="end" fill="#a78bfa" fillOpacity="0.9" fontSize="7" fontWeight="700" fontFamily="ui-monospace" letterSpacing="2">02 / 06</text>
+          {/* 6 ticks, with 02 highlighted */}
+          {[0,1,2,3,4,5].map(i => {
+            const active = i === 1;
+            return (
+              <g key={i}>
+                <rect x={i*26} y="8" width="22" height="3" rx="1"
+                  fill={active ? "#a78bfa" : "#ffffff"}
+                  fillOpacity={active ? 0.95 : 0.18} />
+              </g>
+            );
+          })}
+          <text x="0" y="28" fill="#ffffff" fillOpacity="0.85" fontSize="9" fontWeight="800" fontFamily="ui-sans-serif" letterSpacing="2.5">VISUAL ATLAS</text>
+          <text x="153" y="28" textAnchor="end" fill="#ffffff" fillOpacity="0.35" fontSize="7" fontFamily="ui-monospace" letterSpacing="1.2">61 INFOGRAFÍAS</text>
+        </g>
 
-      {/* Isometric planes */}
-      {LAYERS.map((p) => {
-        const py = cy + p.y;
-        const top    = `${cx},${py - halfH}`;
-        const right  = `${cx + halfW},${py}`;
-        const bottom = `${cx},${py + halfH}`;
-        const left   = `${cx - halfW},${py}`;
-        return (
-          <g key={p.label}>
-            {/* Subtle drop shadow plane */}
-            <polygon
-              points={`${cx},${py - halfH + 6} ${cx + halfW},${py + 6} ${cx},${py + halfH + 6} ${cx - halfW},${py + 6}`}
-              fill="#000000"
-              fillOpacity="0.18"
-            />
-            {/* Plane */}
-            <polygon
-              points={`${top} ${right} ${bottom} ${left}`}
-              fill={p.color}
-              fillOpacity="0.06"
-              stroke={p.color}
-              strokeOpacity="0.5"
-              strokeWidth="1"
-            />
-            {/* Internal cross */}
-            <line x1={cx} y1={py - halfH} x2={cx} y2={py + halfH} stroke={p.color} strokeOpacity="0.22" strokeWidth="0.5" />
-            <line x1={cx - halfW} y1={py} x2={cx + halfW} y2={py} stroke={p.color} strokeOpacity="0.22" strokeWidth="0.5" />
-            {/* Inner secondary diamond */}
-            <polygon
-              points={`${cx},${py - halfH * 0.5} ${cx + halfW * 0.5},${py} ${cx},${py + halfH * 0.5} ${cx - halfW * 0.5},${py}`}
-              fill="none"
-              stroke={p.color}
-              strokeOpacity="0.25"
-              strokeWidth="0.5"
-              strokeDasharray="1.5 2"
-            />
-            {/* Center node */}
-            <circle cx={cx} cy={py} r="3.5" fill={p.color} />
-            <circle cx={cx} cy={py} r="7" fill={p.color} fillOpacity="0.18" />
-
-            {/* Vertex dots */}
-            <circle cx={cx + halfW} cy={py} r="1.5" fill={p.color} fillOpacity="0.7" />
-            <circle cx={cx - halfW} cy={py} r="1.5" fill={p.color} fillOpacity="0.7" />
-
-            {/* Right callout */}
-            <line x1={cx + halfW} y1={py} x2={cx + halfW + 36} y2={py} stroke={p.color} strokeOpacity="0.55" strokeWidth="0.75" />
-            <line x1={cx + halfW + 36} y1={py} x2={cx + halfW + 44} y2={py - 7} stroke={p.color} strokeOpacity="0.55" strokeWidth="0.75" />
-            <text x={cx + halfW + 48} y={py - 9} fill="#ffffff" fillOpacity="0.9" fontSize="10" fontWeight="800" fontFamily="ui-sans-serif" letterSpacing="0.3">{p.label}</text>
-            <text x={cx + halfW + 48} y={py + 3} fill={p.color} fillOpacity="0.85" fontSize="6.5" fontFamily="ui-monospace" letterSpacing="1.4">{p.code}</text>
-          </g>
-        );
-      })}
-
-      {/* Top: Final Human Audit beacon */}
-      <g>
-        <circle cx={cx} cy={cy - 178} r="14" fill="#f59e0b" fillOpacity="0.08" />
-        <circle cx={cx} cy={cy - 178} r="7" fill="#f59e0b" fillOpacity="0.18" />
-        <circle cx={cx} cy={cy - 178} r="3.5" fill="#fbbf24" />
-        {/* Left callout for audit */}
-        <line x1={cx} y1={cy - 178} x2={cx - 42} y2={cy - 178} stroke="#f59e0b" strokeOpacity="0.55" strokeWidth="0.75" />
-        <line x1={cx - 42} y1={cy - 178} x2={cx - 50} y2={cy - 171} stroke="#f59e0b" strokeOpacity="0.55" strokeWidth="0.75" />
-        <text x={cx - 54} y={cy - 180} textAnchor="end" fill="#fbbf24" fillOpacity="0.95" fontSize="7.5" fontFamily="ui-monospace" letterSpacing="1.4" fontWeight="700">FINAL · HUMAN AUDIT</text>
-        <text x={cx - 54} y={cy - 168} textAnchor="end" fill="#ffffff" fillOpacity="0.4" fontSize="6" fontFamily="ui-monospace" letterSpacing="1.2">QA ≥ 9.5</text>
+        {/* Bottom imprint */}
+        <line x1="22" y1="384" x2="208" y2="384" stroke="#ffffff" strokeOpacity="0.08" />
+        <text x="32" y="408" fill="#ffffff" fillOpacity="0.5" fontSize="7" fontFamily="ui-monospace" letterSpacing="1.5">VOL · 02</text>
+        <text x="198" y="408" textAnchor="end" fill="#ffffff" fillOpacity="0.5" fontSize="7" fontFamily="ui-monospace" letterSpacing="1.5">EDITORIAL · 2026</text>
       </g>
 
-      {/* Bottom: foundation label */}
+      {/* Series caption below stack */}
       <g>
-        <circle cx={cx} cy={cy + 168} r="3" fill="#2563eb" fillOpacity="0.7" />
-        <line x1={cx - 70} y1={cy + 168} x2={cx + 70} y2={cy + 168} stroke="#ffffff" strokeOpacity="0.15" strokeWidth="0.5" />
-        <text x={cx} y={cy + 188} textAnchor="middle" fill="#ffffff" fillOpacity="0.45" fontSize="7" fontFamily="ui-monospace" letterSpacing="2">CLOUDBOOKS · EDITORIAL CORE</text>
-      </g>
-
-      {/* Spec annotations (very subtle, blueprint chrome) */}
-      <g fill="#ffffff" fillOpacity="0.22" fontSize="6" fontFamily="ui-monospace" letterSpacing="1">
-        <text x="34" y="40">SPEC · 001</text>
-        <text x="446" y="40" textAnchor="end">REV · 2026.05</text>
-        <text x="34" y="450">SCALE · 1:1</text>
-        <text x="446" y="450" textAnchor="end">SHEET · A</text>
+        <line x1="160" y1="492" x2="300" y2="492" stroke="#ffffff" strokeOpacity="0.12" />
+        <text x="230" y="506" textAnchor="middle" fill="#ffffff" fillOpacity="0.4" fontSize="8" fontFamily="ui-monospace" letterSpacing="2.5">CLOUDBOOKS · AZURE SERIES</text>
       </g>
     </svg>
   );

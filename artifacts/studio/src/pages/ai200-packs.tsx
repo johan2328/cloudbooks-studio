@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { CommercialNav } from "./landing";
-import { SiteFooter } from "@/components/SiteFooter";
 import { cn } from "@/lib/utils";
 import {
   BookOpen, Map, Package, CheckCircle2, ChevronRight,
@@ -259,14 +258,18 @@ export default function AI200Packs() {
       </div>
 
       {/* Footer */}
-      <SiteFooter
-        right={
+      <footer className="bg-[#0d1629] border-t border-white/[0.06] py-6">
+        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-12 w-auto opacity-70" draggable={false} />
+            <span className="text-[9px] text-white/15">Editorial inteligente de certificaciones cloud</span>
+          </div>
           <button onClick={() => setLocation("/books")}
-            className="text-[10px] text-white/40 hover:text-white/70 transition-colors flex items-center gap-1 font-mono tracking-wider">
+            className="text-[9px] text-white/25 hover:text-white/50 transition-colors flex items-center gap-1">
             <ChevronRight className="w-3 h-3 rotate-180" /> Azure Books
           </button>
-        }
-      />
+        </div>
+      </footer>
     </div>
   );
 }

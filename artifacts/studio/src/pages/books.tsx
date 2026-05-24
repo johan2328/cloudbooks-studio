@@ -1,7 +1,6 @@
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { CommercialNav } from "./landing";
-import { SiteFooter } from "@/components/SiteFooter";
 import { ChevronRight, Clock, Package, BookOpen, Map, ArrowRight } from "lucide-react";
 
 const AZURE_CERTS = [
@@ -176,11 +175,15 @@ export default function Books() {
       </div>
 
       {/* Footer */}
-      <div className="mt-10">
-        <SiteFooter
-          right={<span className="text-[10px] text-white/35 font-mono tracking-wider">Azure AI-200 · Visual Atlas en producción</span>}
-        />
-      </div>
+      <footer className="bg-[#0d1629] border-t border-white/[0.06] py-6 mt-10">
+        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-12 w-auto opacity-70" draggable={false} />
+            <span className="text-[9px] text-white/15">Editorial inteligente de certificaciones cloud</span>
+          </div>
+          <div className="text-[9px] text-white/15 font-mono">Azure AI-200 · Visual Atlas en producción</div>
+        </div>
+      </footer>
     </div>
   );
 }
