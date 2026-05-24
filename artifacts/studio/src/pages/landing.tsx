@@ -62,7 +62,7 @@ export function CommercialNav({ active }: { active?: string }) {
           <nav className="hidden md:flex items-center gap-5 ml-4">
             {[
               { label: "Inicio",         href: "/" },
-              { label: "Nuestra Labor",  href: "/nuestra-labor" },
+              { label: "Nuestra Labor",  href: "/#nuestra-labor" },
               { label: "Empresas",       href: "/#empresas" },
               { label: "Metodología",    href: "/#metodologia" },
             ].map(({ label, href }) => (
@@ -256,17 +256,53 @@ export default function Landing() {
       </section>
 
       {/* ── Nuestra Labor ──────────────────────────────────────────────────── */}
-      <section className="py-24 bg-[#0d1629] relative overflow-hidden">
+      <section id="nuestra-labor" className="py-24 bg-[#0d1629] relative overflow-hidden">
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
         <div className="max-w-6xl mx-auto px-6">
           <div className="mb-14 max-w-2xl">
             <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em] mb-3">Nuestra labor</p>
+            <h2 className="text-3xl font-black text-white leading-tight">Una comunidad afectada por materiales dispersos.</h2>
+            <p className="text-base text-white/55 mt-4 leading-relaxed">
+              Miles de personas intentan certificarse en cloud cada mes. La mayoria enfrenta documentacion extensa sin priorizacion, cursos desactualizados, dumps sin contexto y resumenes de calidad variable. No existe una ruta clara ni un estandar de calidad medible.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-4">
+            {[
+              { num: "+", label: "Candidatos",        desc: "Cada mes intentan certificarse en Azure, AWS y GCP. La demanda crece." },
+              { num: "6", label: "Formatos dispersos", desc: "Documentacion, cursos, dumps, resumenes, videos, foros. Sin integracion." },
+              { num: "0", label: "Rutas claras",       desc: "Ningun producto editorial ofrece una secuencia completa de estudio validada." },
+            ].map(s => (
+              <div key={s.label} className="bg-white/[0.03] border border-white/[0.06] rounded-sm p-5 hover:border-white/[0.12] transition-colors">
+                <span className="text-2xl font-black text-white/20 block mb-2">{s.num}</span>
+                <h3 className="text-sm font-bold text-white mb-2">{s.label}</h3>
+                <p className="text-xs text-white/50 leading-relaxed">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-10 flex items-start gap-3 bg-white/[0.02] border border-white/[0.06] rounded-sm p-4">
+            <div className="w-8 h-8 rounded-sm bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+              <ArrowRight className="w-4 h-4 text-blue-400" />
+            </div>
+            <div>
+              <p className="text-sm text-white/70 mb-1">CloudBooks produce colecciones integrales por certificacion.</p>
+              <p className="text-xs text-white/40">Seis formatos complementarios, validados tecnicamente, mantenidos vigentes. Una ruta completa de cero al examen.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Para Empresas ──────────────────────────────────────────────────── */}
+      <section id="empresas" className="py-24 bg-[#0a1220] relative overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="mb-14 max-w-2xl">
+            <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em] mb-3">Para empresas</p>
             <h2 className="text-3xl font-black text-white leading-tight">Material de estudio con coherencia editorial.</h2>
             <p className="text-base text-white/55 mt-4 leading-relaxed">
               No resumimos contenido ajeno. Cada coleccion se construye desde cero: agentes especializados por dominio generan, validan y refinan cada pagina. Un editor humano audita la entrega final.
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-3 gap-4 mb-10">
             {[
               { icon: Edit3, title: "Produccion", desc: "Un agente por dominio del examen produce contenido estructurado, referenciado y verificable. Luego un editor humano valida coherencia, precision y calidad narrativa.", color: "#2563eb" },
               { icon: Eye,    title: "Validacion",  desc: "Cuatro dimensiones de QA tecnico por cada pagina: precision, coherencia con el examen, puntuacion didactica y completitud de referencias. Solo el material aprobado llega al lector.", color: "#0d9488" },
@@ -284,25 +320,18 @@ export default function Landing() {
               );
             })}
           </div>
-        </div>
-      </section>
-
-      {/* ── Para Empresas ──────────────────────────────────────────────────── */}
-      <section id="empresas" className="py-24 bg-[#0a1220] relative overflow-hidden">
-        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
+          <div className="grid md:grid-cols-2 gap-12 items-start">
             <div>
-              <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em] mb-3">Para empresas</p>
-              <h2 className="text-3xl font-black text-white leading-tight mb-5">Formacion cloud para equipos tecnicos.</h2>
-              <p className="text-base text-white/55 leading-relaxed mb-7">
-                Licencias de volumen para departamentos de TI, academias y consultoras que preparan a sus equipos para certificaciones Azure. Rutas de estudio adaptadas, reportes de progreso y soporte directo.
+              <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em] mb-3">Licencias corporativas</p>
+              <h3 className="text-xl font-black text-white mb-4">Formacion cloud para equipos tecnicos.</h3>
+              <p className="text-sm text-white/50 leading-relaxed mb-6">
+                Licencias de volumen para departamentos de TI, academias y consultoras. Rutas de estudio adaptadas, reportes de progreso y soporte directo.
               </p>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {[
-                  { icon: Users,          title: "Licencias de volumen",    desc: "Desde 5 licencias con descuentos escalonados. Asignacion flexible por colaborador." },
-                  { icon: Briefcase,      title: "Rutas corporativas",      desc: "Secuencia de formatos adaptada al ritmo del equipo, con milestones de preparacion." },
-                  { icon: GraduationCap,  title: "Seguimiento de progreso", desc: "Dashboard de avance por certificacion, dominio y formato completado." },
+                  { icon: Users,          title: "Licencias de volumen",    desc: "Desde 5 licencias con descuentos escalonados. Asignacion flexible." },
+                  { icon: Briefcase,      title: "Rutas corporativas",      desc: "Secuencia de formatos adaptada al ritmo del equipo." },
+                  { icon: GraduationCap,  title: "Seguimiento de progreso", desc: "Dashboard de avance por certificacion y dominio." },
                 ].map(b => {
                   const Icon = b.icon;
                   return (
@@ -318,9 +347,9 @@ export default function Landing() {
                   );
                 })}
               </div>
-              <button onClick={() => setLocation("/books")}
-                className="mt-8 flex items-center gap-2 border border-white/15 hover:border-amber-400/40 text-white/60 hover:text-amber-300 text-xs font-medium px-4 h-9 rounded-sm transition-all">
-                Explorar licencias <ArrowRight className="w-3 h-3" />
+              <button onClick={() => setLocation("/empresas")}
+                className="mt-6 flex items-center gap-2 border border-white/15 hover:border-amber-400/40 text-white/60 hover:text-amber-300 text-xs font-medium px-4 h-9 rounded-sm transition-all">
+                Contactar para empresas <ArrowRight className="w-3 h-3" />
               </button>
             </div>
             <div className="relative bg-white/[0.04] border border-white/[0.08] rounded-sm p-6 shadow-2xl shadow-black/40">
@@ -329,8 +358,8 @@ export default function Landing() {
                 <p className="text-[9px] font-bold text-white/50 uppercase tracking-widest mb-4">Planes de licenciamiento</p>
                 <div className="space-y-3">
                   {[
-                    { plan: "Starter", seats: "5 - 20", discount: "10%",  highlight: false },
-                    { plan: "Growth",  seats: "21 - 50", discount: "20%",  highlight: true },
+                    { plan: "Starter", seats: "5 — 20", discount: "10%",  highlight: false },
+                    { plan: "Growth",  seats: "21 — 50", discount: "20%",  highlight: true },
                     { plan: "Enterprise", seats: "50+",  discount: "Contactar", highlight: false },
                   ].map(p => (
                     <div key={p.plan} className={cn(

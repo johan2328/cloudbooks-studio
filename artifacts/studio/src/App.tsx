@@ -7,7 +7,6 @@ import { CartProvider, CartPanel } from "@/lib/cart";
 import Landing from "@/pages/landing";
 import Books from "@/pages/books";
 import AI200Packs from "@/pages/ai200-packs";
-import NuestraLabor from "@/pages/nuestra-labor";
 import Login from "@/pages/login";
 import Catalogo from "@/pages/catalogo";
 import Azure from "@/pages/azure";
@@ -46,7 +45,6 @@ function Router() {
       <Route path="/portal" component={Landing} />
       <Route path="/books" component={Books} />
       <Route path="/ai-200-packs" component={AI200Packs} />
-      <Route path="/nuestra-labor" component={NuestraLabor} />
 
       {/* ── Catálogo jerárquico ─────────────────────────── */}
       {/* Nivel 1: Proveedores cloud */}
