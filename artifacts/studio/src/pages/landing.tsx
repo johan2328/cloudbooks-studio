@@ -7,9 +7,40 @@ import {
   Globe,
 } from "lucide-react";
 
-function translateHref() {
+export function translateHref() {
   if (typeof window === "undefined") return "#";
   return `https://translate.google.com/translate?sl=es&tl=en&u=${encodeURIComponent(window.location.href)}`;
+}
+
+/* ─── Fila legal compartida (Apple-style) ───────────────────────────────── */
+export function LegalRow() {
+  return (
+    <div className="border-t border-white/[0.04] mt-5 pt-4 flex flex-wrap items-center justify-between gap-y-2 gap-x-4 text-[10px] text-white/30">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span>Copyright © 2026 CloudBooks. Todos los derechos reservados.</span>
+        <span className="text-white/10">|</span>
+        <a href="#" className="hover:text-white/60 transition-colors">Política de privacidad</a>
+        <span className="text-white/10">|</span>
+        <a href="#" className="hover:text-white/60 transition-colors">Aviso legal</a>
+        <span className="text-white/10">|</span>
+        <a href="#" className="hover:text-white/60 transition-colors">Mapa del sitio</a>
+      </div>
+      <div className="flex items-center gap-3">
+        <span>América Latina y el Caribe</span>
+        <span className="text-white/10">|</span>
+        <a
+          href={translateHref()}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Traducir esta página al inglés (Google Translate)"
+          className="hover:text-white/60 transition-colors inline-flex items-center gap-1"
+        >
+          <Globe className="w-3 h-3" />
+          English
+        </a>
+      </div>
+    </div>
+  );
 }
 
 /* ─── Nav comercial compartida ──────────────────────────────────────────── */
@@ -592,12 +623,15 @@ export default function Landing() {
 
       {/* ── Footer ───────────────────────────────────────────────────────── */}
       <footer className="bg-[#0d1629] border-t border-white/[0.06] py-6">
-        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-12 w-auto opacity-70" draggable={false} />
-            <span className="text-[9px] text-white/15">Editorial inteligente de certificaciones cloud</span>
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-12 w-auto opacity-70" draggable={false} />
+              <span className="text-[9px] text-white/15">Editorial inteligente de certificaciones cloud</span>
+            </div>
+            <div className="text-[9px] text-white/15 font-mono">© 2026 CloudBooks</div>
           </div>
-          <div className="text-[9px] text-white/15 font-mono">© 2026 CloudBooks</div>
+          <LegalRow />
         </div>
       </footer>
     </div>
