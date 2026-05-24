@@ -226,12 +226,14 @@ export default function Landing() {
 
             {/* ── Derecha: imagen hero ── */}
             <div className="relative hidden lg:flex items-center justify-center">
-              <img
-                src="/hero-ai200.png"
-                alt="CloudBooks AI-200 — 6 formatos sincronizados"
-                className="w-full max-w-[640px] h-auto object-contain drop-shadow-2xl"
-                draggable={false}
-              />
+              <div className="relative rounded-sm bg-[#11182a]/80 ring-1 ring-white/[0.08] p-3 backdrop-blur-sm">
+                <img
+                  src="/hero-devices.png"
+                  alt="CloudBooks — Biblioteca multi-formato en todos los dispositivos"
+                  className="w-full max-w-[680px] h-auto object-contain"
+                  draggable={false}
+                />
+              </div>
             </div>
           </div>
         </div>
