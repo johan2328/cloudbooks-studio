@@ -135,15 +135,16 @@ export default function Landing() {
       </section>
 
       {/* ── Problema ─────────────────────────────────────────────────────── */}
-      <section className="py-16 bg-gray-50 border-b border-gray-100">
+      <section className="py-20 bg-[#0a1220] relative">
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-4">El problema</p>
-              <h2 className="text-2xl font-black text-gray-900 leading-tight mb-4">
+              <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em] mb-4">El problema</p>
+              <h2 className="text-2xl font-black text-white leading-tight mb-4">
                 Estudiar certificaciones cloud está fragmentado.
               </h2>
-              <p className="text-sm text-gray-500 leading-relaxed mb-6">
+              <p className="text-sm text-white/55 leading-relaxed mb-6">
                 Documentación extensa sin priorización, cursos desactualizados, dumps sin contexto y resúmenes de calidad inconsistente. Sin una ruta clara ni un estándar de calidad medible.
               </p>
               <div className="space-y-2">
@@ -153,16 +154,16 @@ export default function Landing() {
                   "Sin validación técnica sistemática del contenido",
                 ].map((item) => (
                   <div key={item} className="flex items-start gap-2.5">
-                    <div className="w-4 h-4 rounded-sm bg-red-100 border border-red-200 flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="w-4 h-4 rounded-sm bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0 mt-0.5">
                       <div className="w-1.5 h-1.5 rounded-full bg-red-400"/>
                     </div>
-                    <p className="text-sm text-gray-600">{item}</p>
+                    <p className="text-sm text-white/65">{item}</p>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="bg-white border border-gray-200 rounded-sm p-6 shadow-sm">
-              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-4">Fuentes típicas de preparación</p>
+            <div className="bg-white/[0.04] border border-white/10 rounded-sm p-6">
+              <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mb-4">Fuentes típicas de preparación</p>
               <div className="space-y-2.5">
                 {[
                   { src: "Documentación oficial",   q: 40, note: "Muy extensa, sin priorización" },
@@ -171,11 +172,11 @@ export default function Landing() {
                   { src: "Resúmenes de terceros",    q: 35, note: "Inconsistentes, sin estándar" },
                 ].map((r) => (
                   <div key={r.src} className="flex items-center gap-3">
-                    <span className="text-[9px] text-gray-400 w-36 shrink-0">{r.src}</span>
-                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-red-200 rounded-full" style={{width:`${r.q}%`}} />
+                    <span className="text-[9px] text-white/50 w-36 shrink-0">{r.src}</span>
+                    <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-red-500/60 rounded-full" style={{width:`${r.q}%`}} />
                     </div>
-                    <span className="text-[8px] text-gray-400 w-32 shrink-0">{r.note}</span>
+                    <span className="text-[8px] text-white/40 w-32 shrink-0">{r.note}</span>
                   </div>
                 ))}
               </div>
@@ -185,17 +186,18 @@ export default function Landing() {
       </section>
 
       {/* ── Seis formatos ────────────────────────────────────────────────── */}
-      <section className="py-16 bg-white border-b border-gray-100">
+      <section className="py-20 bg-[#0d1629] relative">
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/30 to-transparent" />
         <div className="max-w-6xl mx-auto px-6">
           <div className="mb-10 grid md:grid-cols-2 gap-10 items-center">
             <div>
-              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">Sistema editorial</p>
-              <h2 className="text-2xl font-black text-gray-900">Seis formatos. Una ruta completa de estudio.</h2>
-              <p className="text-sm text-gray-500 mt-3 leading-relaxed">Cada colección CloudBooks se produce en seis formatos complementarios, diseñados para cubrir todo el ciclo de preparación: comprensión profunda, estudio visual, práctica de examen y repaso final.</p>
+              <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em] mb-3">Sistema editorial</p>
+              <h2 className="text-2xl font-black text-white">Seis formatos. Una ruta completa de estudio.</h2>
+              <p className="text-sm text-white/55 mt-3 leading-relaxed">Cada colección CloudBooks se produce en seis formatos complementarios, diseñados para cubrir todo el ciclo de preparación: comprensión profunda, estudio visual, práctica de examen y repaso final.</p>
             </div>
             <div className="hidden md:block">
               <img src="/formats-collection.png" alt="Colección editorial CloudBooks"
-                className="w-full rounded-sm shadow-sm ring-1 ring-gray-200 object-cover" />
+                className="w-full rounded-sm ring-1 ring-white/10 object-cover opacity-90" />
             </div>
           </div>
           <div className="grid md:grid-cols-3 gap-3">
@@ -225,16 +227,16 @@ export default function Landing() {
                 desc: "Pack de repaso para los últimos días antes del examen: checklist de dominio, preguntas críticas y mapas de memoria.",
               },
             ].map(f => (
-              <div key={f.num} className="bg-gray-50 border border-gray-200 rounded-sm p-4 flex flex-col gap-2 hover:border-gray-300 transition-colors">
+              <div key={f.num} className="bg-white/[0.04] border border-white/10 rounded-sm p-4 flex flex-col gap-2 hover:border-white/20 transition-colors">
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-black text-gray-300 font-mono tracking-wider">{f.num}</span>
+                  <span className="text-[9px] font-black text-white/25 font-mono tracking-wider">{f.num}</span>
                   <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm"
-                    style={{color: f.color, backgroundColor: `${f.color}12`, border: `1px solid ${f.color}25`}}>
+                    style={{color: f.color, backgroundColor: `${f.color}25`, border: `1px solid ${f.color}40`, filter: "brightness(1.3)"}}>
                     {f.tag}
                   </span>
                 </div>
-                <h3 className="text-sm font-black text-gray-900">{f.label}</h3>
-                <p className="text-[10px] text-gray-500 leading-relaxed flex-1">{f.desc}</p>
+                <h3 className="text-sm font-black text-white">{f.label}</h3>
+                <p className="text-[10px] text-white/55 leading-relaxed flex-1">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -242,55 +244,56 @@ export default function Landing() {
       </section>
 
       {/* ── Elige tu paquete ─────────────────────────────────────────────── */}
-      <section className="py-16 bg-gray-50 border-b border-gray-100">
+      <section className="py-20 bg-[#0a1220] relative">
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-teal-500/30 to-transparent" />
         <div className="max-w-6xl mx-auto px-6">
           <div className="mb-10">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">Paquetes de compra</p>
-            <h2 className="text-2xl font-black text-gray-900">Elige tu paquete.</h2>
-            <p className="text-sm text-gray-500 mt-2">Tres opciones por certificación. Empieza donde necesites y completa cuando estés listo.</p>
+            <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em] mb-3">Paquetes de compra</p>
+            <h2 className="text-2xl font-black text-white">Elige tu paquete.</h2>
+            <p className="text-sm text-white/55 mt-2">Tres opciones por certificación. Empieza donde necesites y completa cuando estés listo.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-4">
             {/* Master Book */}
-            <div className="bg-white border border-gray-200 rounded-sm p-5 flex flex-col relative overflow-hidden hover:border-blue-200 hover:shadow-sm transition-all">
-              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-600 to-blue-400" />
-              <div className="w-9 h-9 rounded-sm flex items-center justify-center mb-3 bg-blue-50 border border-blue-100">
-                <BookOpen className="w-4.5 h-4.5 text-blue-600" />
+            <div className="bg-white/[0.04] border border-white/10 rounded-sm p-5 flex flex-col relative overflow-hidden hover:border-blue-400/40 transition-all">
+              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 to-blue-400" />
+              <div className="w-9 h-9 rounded-sm flex items-center justify-center mb-3 bg-blue-500/15 border border-blue-500/30">
+                <BookOpen className="w-4.5 h-4.5 text-blue-400" />
               </div>
-              <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest mb-1">Aprendizaje profundo</p>
-              <h3 className="text-lg font-black text-gray-900 mb-2">Master Book</h3>
-              <p className="text-xs text-gray-500 leading-relaxed flex-1">
+              <p className="text-[9px] font-bold text-blue-400 uppercase tracking-widest mb-1">Aprendizaje profundo</p>
+              <h3 className="text-lg font-black text-white mb-2">Master Book</h3>
+              <p className="text-xs text-white/55 leading-relaxed flex-1">
                 Construye criterio técnico con explicaciones completas de dominios, servicios, arquitecturas, límites y decisiones de examen.
               </p>
-              <div className="mt-4 pt-4 border-t border-gray-100 space-y-1.5">
+              <div className="mt-4 pt-4 border-t border-white/10 space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                  <span className="text-xs text-gray-600">Incluye Master Book completo</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <span className="text-xs text-white/70">Incluye Master Book completo</span>
                 </div>
               </div>
               <button onClick={() => setLocation("/ai-200-packs")}
-                className="mt-4 w-full h-8 border border-gray-200 hover:border-blue-300 hover:bg-blue-50 rounded-sm text-xs font-semibold text-gray-600 hover:text-blue-700 transition-all flex items-center justify-center gap-1.5">
+                className="mt-4 w-full h-8 border border-white/15 hover:border-blue-400/50 hover:bg-blue-500/10 rounded-sm text-xs font-semibold text-white/70 hover:text-blue-300 transition-all flex items-center justify-center gap-1.5">
                 Ver Master Book <ChevronRight className="w-3 h-3" />
               </button>
             </div>
 
             {/* Visual Atlas */}
-            <div className="bg-white border border-violet-200 rounded-sm p-5 flex flex-col relative overflow-hidden hover:border-violet-300 hover:shadow-sm transition-all">
+            <div className="bg-white/[0.04] border border-violet-500/30 rounded-sm p-5 flex flex-col relative overflow-hidden hover:border-violet-400/60 transition-all">
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-500 to-blue-500" />
-              <div className="w-9 h-9 rounded-sm flex items-center justify-center mb-3 bg-violet-50 border border-violet-100">
-                <Map className="w-4.5 h-4.5 text-violet-600" />
+              <div className="w-9 h-9 rounded-sm flex items-center justify-center mb-3 bg-violet-500/20 border border-violet-500/40">
+                <Map className="w-4.5 h-4.5 text-violet-400" />
               </div>
               <div className="flex items-center gap-2 mb-1">
-                <p className="text-[9px] font-bold text-violet-500 uppercase tracking-widest">Estudio visual acelerado</p>
-                <span className="text-[7px] font-bold bg-violet-100 text-violet-700 border border-violet-200 px-1 py-px rounded-sm">DISPONIBLE</span>
+                <p className="text-[9px] font-bold text-violet-400 uppercase tracking-widest">Estudio visual acelerado</p>
+                <span className="text-[7px] font-bold bg-violet-500/20 text-violet-300 border border-violet-400/30 px-1 py-px rounded-sm">DISPONIBLE</span>
               </div>
-              <h3 className="text-lg font-black text-gray-900 mb-2">Visual Atlas</h3>
-              <p className="text-xs text-gray-500 leading-relaxed flex-1">
+              <h3 className="text-lg font-black text-white mb-2">Visual Atlas</h3>
+              <p className="text-xs text-white/55 leading-relaxed flex-1">
                 Estudio visual acelerado de conceptos. Diagramas, mapas de decisión, comparaciones y autochecks para comprender más rápido.
               </p>
-              <div className="mt-4 pt-4 border-t border-gray-100 space-y-1.5">
+              <div className="mt-4 pt-4 border-t border-white/10 space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-violet-500 shrink-0" />
-                  <span className="text-xs text-gray-600">Incluye Visual Atlas</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                  <span className="text-xs text-white/70">Incluye Visual Atlas</span>
                 </div>
               </div>
               <button onClick={() => setLocation("/ai-200-packs")}
@@ -300,25 +303,25 @@ export default function Landing() {
             </div>
 
             {/* Collection Pack */}
-            <div className="bg-[#0d1629] rounded-sm p-5 flex flex-col relative overflow-hidden shadow-lg">
+            <div className="bg-gradient-to-br from-teal-500/[0.08] to-blue-500/[0.08] border border-teal-400/30 rounded-sm p-5 flex flex-col relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal-400 to-blue-500" />
-              <div className="w-9 h-9 rounded-sm flex items-center justify-center mb-3 bg-teal-400/15 border border-teal-400/25">
+              <div className="w-9 h-9 rounded-sm flex items-center justify-center mb-3 bg-teal-400/15 border border-teal-400/30">
                 <Package className="w-4.5 h-4.5 text-teal-400" />
               </div>
               <div className="flex items-center gap-2 mb-1">
-                <p className="text-[9px] font-bold text-teal-400/70 uppercase tracking-widest">Preparación completa</p>
+                <p className="text-[9px] font-bold text-teal-400 uppercase tracking-widest">Preparación completa</p>
                 <span className="text-[7px] font-bold bg-teal-400/20 text-teal-300 border border-teal-400/30 px-1.5 py-0.5 rounded-sm">BEST VALUE</span>
               </div>
               <h3 className="text-lg font-black text-white mb-2">Collection Pack</h3>
-              <p className="text-xs text-white/55 leading-relaxed flex-1">
+              <p className="text-xs text-white/65 leading-relaxed flex-1">
                 Todo lo necesario para preparar y aprobar: aprendizaje profundo, estudio visual, trampas de examen, práctica exhaustiva, cheat sheets y repaso final.
               </p>
-              <div className="mt-4 pt-4 border-t border-white/[0.08] space-y-1.5">
-                <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-2">Incluye los 6 formatos</p>
+              <div className="mt-4 pt-4 border-t border-white/10 space-y-1.5">
+                <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mb-2">Incluye los 6 formatos</p>
                 {["Master Book", "Visual Atlas", "Exam Traps Guide", "Question Bank", "Cheat Sheets", "Rapid Review Pack"].map(f => (
                   <div key={f} className="flex items-center gap-2">
                     <CheckCircle2 className="w-3 h-3 text-teal-400 shrink-0" />
-                    <span className="text-[10px] text-white/60">{f}</span>
+                    <span className="text-[10px] text-white/70">{f}</span>
                   </div>
                 ))}
               </div>
@@ -332,12 +335,13 @@ export default function Landing() {
       </section>
 
       {/* ── Azure Books ──────────────────────────────────────────────────── */}
-      <section className="py-16 bg-white border-b border-gray-100">
+      <section className="py-20 bg-[#0d1629] relative">
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
         <div className="max-w-6xl mx-auto px-6">
           <div className="mb-8">
-            <p className="text-[9px] font-bold text-blue-500 uppercase tracking-[0.2em] mb-3">Azure Books</p>
-            <h2 className="text-2xl font-black text-gray-900">Certificaciones Azure disponibles.</h2>
-            <p className="text-sm text-gray-500 mt-2">Colecciones Azure disponibles ahora. Más certificaciones próximamente.</p>
+            <p className="text-[9px] font-bold text-blue-400 uppercase tracking-[0.2em] mb-3">Azure Books</p>
+            <h2 className="text-2xl font-black text-white">Certificaciones Azure disponibles.</h2>
+            <p className="text-sm text-white/55 mt-2">Colecciones Azure disponibles ahora. Más certificaciones próximamente.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-3">
             {[
@@ -350,20 +354,20 @@ export default function Landing() {
             ].map(c => (
               <div key={c.cert} className={cn(
                 "rounded-sm border p-4 relative overflow-hidden",
-                c.status === "active" ? "bg-teal-50 border-teal-200" : "bg-gray-50 border-gray-200"
+                c.status === "active" ? "bg-teal-500/10 border-teal-400/40" : "bg-white/[0.03] border-white/10"
               )}>
-                {c.status === "active" && <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal-500 to-blue-500" />}
+                {c.status === "active" && <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal-400 to-blue-500" />}
                 <div className="flex items-start justify-between mb-2">
-                  <span className={cn("text-xs font-black tracking-wide font-mono", c.status === "active" ? "text-teal-600" : "text-gray-300")}>{c.cert}</span>
+                  <span className={cn("text-xs font-black tracking-wide font-mono", c.status === "active" ? "text-teal-300" : "text-white/25")}>{c.cert}</span>
                   {c.status === "active"
-                    ? <span className="text-[8px] font-bold bg-teal-100 text-teal-700 border border-teal-200 px-1.5 py-0.5 rounded-sm flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"/>ACTIVO</span>
-                    : <Clock className="w-3 h-3 text-gray-300" />}
+                    ? <span className="text-[8px] font-bold bg-teal-400/20 text-teal-300 border border-teal-400/30 px-1.5 py-0.5 rounded-sm flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"/>ACTIVO</span>
+                    : <Clock className="w-3 h-3 text-white/25" />}
                 </div>
-                <p className={cn("text-sm font-semibold mb-1", c.status === "active" ? "text-gray-900" : "text-gray-300")}>{c.title}</p>
-                <p className="text-[9px] text-gray-400">{c.note}</p>
+                <p className={cn("text-sm font-semibold mb-1", c.status === "active" ? "text-white" : "text-white/30")}>{c.title}</p>
+                <p className="text-[9px] text-white/40">{c.note}</p>
                 {c.status === "active" && (
                   <button onClick={() => setLocation("/ai-200-packs")}
-                    className="mt-3 flex items-center gap-1 text-[9px] text-teal-600 hover:text-teal-700 font-semibold transition-colors">
+                    className="mt-3 flex items-center gap-1 text-[9px] text-teal-300 hover:text-teal-200 font-semibold transition-colors">
                     Ver paquetes <ChevronRight className="w-3 h-3" />
                   </button>
                 )}
@@ -374,13 +378,14 @@ export default function Landing() {
       </section>
 
       {/* ── Metodología ──────────────────────────────────────────────────── */}
-      <section id="metodologia" className="py-16 bg-[#0d1629] border-b border-white/[0.06]">
+      <section id="metodologia" className="py-20 bg-[#0a1220] relative">
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/30 to-transparent" />
         <div className="max-w-6xl mx-auto px-6">
           <div className="mb-8 grid md:grid-cols-2 gap-10 items-center">
             <div>
               <p className="text-[9px] font-bold text-teal-400/60 uppercase tracking-[0.2em] mb-3">Metodología editorial</p>
               <h2 className="text-2xl font-black text-white">Producción sistemática con estándar QA ≥ 9.5.</h2>
-              <p className="text-sm text-white/40 mt-3 leading-relaxed max-w-md">Cada formato se produce a través de un proceso editorial estructurado de seis fases, validado con scoring multidimensional antes de publicación.</p>
+              <p className="text-sm text-white/55 mt-3 leading-relaxed max-w-md">Cada formato se produce a través de un proceso editorial estructurado de seis fases, validado con scoring multidimensional antes de publicación.</p>
             </div>
             <div className="hidden md:block">
               <img src="/methodology-pipeline.png" alt="Pipeline editorial CloudBooks"
@@ -414,7 +419,8 @@ export default function Landing() {
       </section>
 
       {/* ── CTA Final ────────────────────────────────────────────────────── */}
-      <section className="py-20 bg-[#0d1629] relative overflow-hidden">
+      <section className="py-24 bg-[#0d1629] relative overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-teal-400/40 to-transparent" />
         <div className="absolute inset-0 opacity-[0.02]"
           style={{backgroundImage:"linear-gradient(#ffffff 1px,transparent 1px),linear-gradient(90deg,#ffffff 1px,transparent 1px)",backgroundSize:"40px 40px"}} />
         <div className="absolute right-0 top-0 w-96 h-96 rounded-full blur-3xl opacity-5 bg-violet-600 pointer-events-none" />
