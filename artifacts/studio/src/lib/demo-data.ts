@@ -1,4 +1,33 @@
-import type { AtlasPage, GenerationRun, QAReport, UserActionLog, ContractVersion, StudioState } from "./types";
+import type { AtlasPage, GenerationRun, QAReport, UserActionLog, ContractVersion, StudioState, OutputPack, AssetType, AssetSlot, AssetSlotStatus } from "./types";
+
+/* ─── Helpers para OutputPack ────────────────────────────────────────────── */
+function makeSlot(type: AssetType, status: AssetSlotStatus, isDemo: boolean, extra?: Partial<AssetSlot>): AssetSlot {
+  return { type, status, isDemo, ...extra };
+}
+
+function makeOutputPack(page: AtlasPage): OutputPack {
+  const hasQA = (["approved","exported","qa_review","needs_revision"] as const).includes(page.status as any);
+  const isApproved = page.status === "approved" || page.status === "exported";
+  return {
+    pageId: page.id,
+    pageNumber: page.pageNumber,
+    pageTitle: page.title,
+    contractVersion: page.contractVersion,
+    lastGenerationAt: page.lastRevision ? `${page.lastRevision}T10:00:00Z` : undefined,
+    lastGenerationVersion: page.currentVersion,
+    slots: {
+      preview:   makeSlot("preview",   "demo_available", true,  { filename:`ai200-p${page.id}-preview-demo.svg`, note:"Preview simulado — asset real pendiente de carga" }),
+      html:      makeSlot("html",      "pending",        false, { note:"Pendiente de generación o carga real" }),
+      png:       makeSlot("png",       "pending",        false, { note:"Pendiente de generación real (PNG 2x)" }),
+      pdf:       makeSlot("pdf",       "pending",        false, { note:"Pendiente de exportación PDF print-ready" }),
+      qa_report: makeSlot("qa_report", hasQA ? "demo_available" : "pending", hasQA, {
+        filename: hasQA ? `ai200-p${page.id}-qa-report.json` : undefined,
+        note: hasQA ? "Reporte QA generado por pipeline demo" : "Pendiente de ejecución QA",
+      }),
+      contract:  makeSlot("contract",  "approved", false, { filename:"visual-atlas-v24.pdf", note:"Contrato Visual Atlas v24 — aprobado y vigente" }),
+    },
+  };
+}
 
 /* ─── Páginas Batch 01–10 (Azure Container Registry) ────────────────────── */
 const PAGES: AtlasPage[] = [
@@ -309,7 +338,8 @@ const CONTRACTS: ContractVersion[] = [
   },
 ];
 
-/* ─── Export assets iniciales ────────────────────────────────────────────── */
+/* ─── Output Packs iniciales (Visual Atlas 01–10) ────────────────────────── */
+const OUTPUT_PACKS: OutputPack[] = PAGES.map(makeOutputPack);
 
 /* ─── Seed inicial del store ─────────────────────────────────────────────── */
 export function buildInitialState(): StudioState {
@@ -320,5 +350,6 @@ export function buildInitialState(): StudioState {
     actionLog: ACTION_LOG,
     contracts: CONTRACTS,
     exports: [],
+    outputPacks: OUTPUT_PACKS,
   };
 }

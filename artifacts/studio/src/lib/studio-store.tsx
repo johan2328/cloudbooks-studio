@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, type ReactNode } from "react";
-import type { StudioState, StudioAction, AtlasPage, GenerationRun, QAReport, UserActionLog, ExportAsset } from "./types";
+import type { StudioState, StudioAction, AtlasPage, GenerationRun, QAReport, UserActionLog, ExportAsset, OutputPack, AssetType } from "./types";
 import { buildInitialState } from "./demo-data";
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
@@ -245,6 +245,119 @@ function reducer(state: StudioState, action: StudioAction): StudioState {
       return { ...state, contracts, actionLog: [log, ...state.actionLog] };
     }
 
+    case "UPLOAD_ASSET_DEMO": {
+      const now = nowISO();
+      const page = state.pages.find(p => p.id === action.pageId);
+      const outputPacks = state.outputPacks.map(pack =>
+        pack.pageId !== action.pageId ? pack : {
+          ...pack,
+          slots: {
+            ...pack.slots,
+            [action.assetType]: {
+              ...pack.slots[action.assetType],
+              status: "real_available" as const,
+              isDemo: false,
+              uploadedAt: now,
+              uploadedBy: action.userName,
+              filename: `ai200-p${pack.pageNumber}-real.${action.assetType}`,
+              note: "Asset real cargado — pendiente de aprobación editorial",
+            },
+          },
+        }
+      );
+      const log: UserActionLog = {
+        id: uid(), actionType: "asset_uploaded", pageId: action.pageId,
+        pageTitle: page?.title, pageNumber: page?.pageNumber,
+        userId: action.userId, userName: action.userName,
+        result: `Asset ${action.assetType.toUpperCase()} cargado — pág. ${action.pageId} · pendiente de aprobación`,
+        createdAt: now,
+      };
+      return { ...state, outputPacks, actionLog: [log, ...state.actionLog] };
+    }
+
+    case "LINK_ASSET": {
+      const now = nowISO();
+      const page = state.pages.find(p => p.id === action.pageId);
+      const outputPacks = state.outputPacks.map(pack =>
+        pack.pageId !== action.pageId ? pack : {
+          ...pack,
+          slots: {
+            ...pack.slots,
+            [action.assetType]: {
+              ...pack.slots[action.assetType],
+              status: "real_available" as const,
+              isDemo: false,
+              url: action.url,
+              filename: action.filename,
+              uploadedAt: now,
+              uploadedBy: action.userName,
+              note: `Vinculado desde: ${action.url}`,
+            },
+          },
+        }
+      );
+      const log: UserActionLog = {
+        id: uid(), actionType: "asset_linked", pageId: action.pageId,
+        pageTitle: page?.title, pageNumber: page?.pageNumber,
+        userId: action.userId, userName: action.userName,
+        result: `Asset ${action.assetType.toUpperCase()} vinculado — ${action.filename}`,
+        createdAt: now,
+      };
+      return { ...state, outputPacks, actionLog: [log, ...state.actionLog] };
+    }
+
+    case "APPROVE_ASSET": {
+      const now = nowISO();
+      const page = state.pages.find(p => p.id === action.pageId);
+      const outputPacks = state.outputPacks.map(pack =>
+        pack.pageId !== action.pageId ? pack : {
+          ...pack,
+          slots: {
+            ...pack.slots,
+            [action.assetType]: {
+              ...pack.slots[action.assetType],
+              status: "approved" as const,
+              note: `Aprobado por ${action.userName} · ${now.slice(0, 10)}`,
+            },
+          },
+        }
+      );
+      const log: UserActionLog = {
+        id: uid(), actionType: "asset_approved", pageId: action.pageId,
+        pageTitle: page?.title, pageNumber: page?.pageNumber,
+        userId: action.userId, userName: action.userName,
+        result: `Asset ${action.assetType.toUpperCase()} aprobado para producción — pág. ${action.pageId}`,
+        createdAt: now,
+      };
+      return { ...state, outputPacks, actionLog: [log, ...state.actionLog] };
+    }
+
+    case "REPLACE_ASSET_REQUEST": {
+      const now = nowISO();
+      const page = state.pages.find(p => p.id === action.pageId);
+      const outputPacks = state.outputPacks.map(pack =>
+        pack.pageId !== action.pageId ? pack : {
+          ...pack,
+          slots: {
+            ...pack.slots,
+            [action.assetType]: {
+              ...pack.slots[action.assetType],
+              status: "needs_replacement" as const,
+              note: `Reemplazo solicitado por ${action.userName} · ${now.slice(0, 10)}`,
+            },
+          },
+        }
+      );
+      const log: UserActionLog = {
+        id: uid(), actionType: "asset_replaced", pageId: action.pageId,
+        pageTitle: page?.title, pageNumber: page?.pageNumber,
+        userId: action.userId, userName: action.userName,
+        result: `Asset ${action.assetType.toUpperCase()} marcado para reemplazo — pág. ${action.pageId}`,
+        createdAt: now,
+      };
+      return { ...state, outputPacks, actionLog: [log, ...state.actionLog] };
+    }
+
     case "HYDRATE":
       return action.state;
 
@@ -254,12 +367,12 @@ function reducer(state: StudioState, action: StudioAction): StudioState {
 }
 
 /* ─── Context ────────────────────────────────────────────────────────────── */
-const STORAGE_KEY = "cloudbooks-studio-state-v2";
+const STORAGE_KEY = "cloudbooks-studio-state-v3";
 
 interface StudioContextValue {
   state: StudioState;
   dispatch: React.Dispatch<StudioAction>;
-  /* Acciones de conveniencia */
+  /* Acciones de producción */
   executeGrounding: (pageId: string) => void;
   startGeneration: (pageId: string, model?: string) => void;
   executeQA: (pageId: string) => void;
@@ -268,11 +381,17 @@ interface StudioContextValue {
   regenerateSelective: (pageId: string) => void;
   exportPage: (pageId: string, format: ExportAsset["format"]) => void;
   updateContract: (contractId: string, changeNote: string) => void;
-  /* Queries convenientes */
+  /* Acciones de assets */
+  uploadAssetDemo: (pageId: string, assetType: AssetType) => void;
+  linkAsset: (pageId: string, assetType: AssetType, url: string, filename: string) => void;
+  approveAsset: (pageId: string, assetType: AssetType) => void;
+  replaceAssetRequest: (pageId: string, assetType: AssetType) => void;
+  /* Queries */
   getPage: (pageId: string) => AtlasPage | undefined;
   getRunsForPage: (pageId: string) => GenerationRun[];
   getQAForPage: (pageId: string) => QAReport | undefined;
   getExportsForPage: (pageId: string) => ExportAsset[];
+  getOutputPackForPage: (pageId: string) => OutputPack | undefined;
 }
 
 const StudioContext = createContext<StudioContextValue | null>(null);
@@ -330,17 +449,35 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "UPDATE_CONTRACT", contractId, changeNote, ...currentUser });
   }, []);
 
+  const uploadAssetDemo = useCallback((pageId: string, assetType: AssetType) => {
+    dispatch({ type: "UPLOAD_ASSET_DEMO", pageId, assetType, ...currentUser });
+  }, []);
+
+  const linkAsset = useCallback((pageId: string, assetType: AssetType, url: string, filename: string) => {
+    dispatch({ type: "LINK_ASSET", pageId, assetType, url, filename, ...currentUser });
+  }, []);
+
+  const approveAsset = useCallback((pageId: string, assetType: AssetType) => {
+    dispatch({ type: "APPROVE_ASSET", pageId, assetType, ...currentUser });
+  }, []);
+
+  const replaceAssetRequest = useCallback((pageId: string, assetType: AssetType) => {
+    dispatch({ type: "REPLACE_ASSET_REQUEST", pageId, assetType, ...currentUser });
+  }, []);
+
   const getPage = useCallback((pageId: string) => state.pages.find(p => p.id === pageId), [state.pages]);
   const getRunsForPage = useCallback((pageId: string) => state.runs.filter(r => r.pageId === pageId), [state.runs]);
   const getQAForPage = useCallback((pageId: string) => state.qaReports.find(r => r.pageId === pageId), [state.qaReports]);
   const getExportsForPage = useCallback((pageId: string) => state.exports.filter(e => e.pageId === pageId), [state.exports]);
+  const getOutputPackForPage = useCallback((pageId: string) => state.outputPacks?.find(p => p.pageId === pageId), [state.outputPacks]);
 
   return (
     <StudioContext.Provider value={{
       state, dispatch,
       executeGrounding, startGeneration, executeQA, approvePage,
       requestRevision, regenerateSelective, exportPage, updateContract,
-      getPage, getRunsForPage, getQAForPage, getExportsForPage,
+      uploadAssetDemo, linkAsset, approveAsset, replaceAssetRequest,
+      getPage, getRunsForPage, getQAForPage, getExportsForPage, getOutputPackForPage,
     }}>
       {children}
     </StudioContext.Provider>

@@ -12,6 +12,39 @@ export type PageStatus =
 
 export type GroundingStatus = "unverified" | "partial" | "verified";
 
+/* ─── Asset layer ────────────────────────────────────────────────────────── */
+export type AssetSlotStatus =
+  | "pending"             // slot vacío, asset real no cargado
+  | "demo_available"      // preview simulado disponible
+  | "real_available"      // asset real cargado, pendiente de aprobación
+  | "approved"            // asset aprobado para uso en producción
+  | "needs_replacement"   // asset existente requiere reemplazo
+  | "exported";           // asset exportado/publicado
+
+export type AssetType = "preview" | "html" | "png" | "pdf" | "qa_report" | "contract";
+
+export interface AssetSlot {
+  type: AssetType;
+  status: AssetSlotStatus;
+  isDemo: boolean;          // true = contenido simulado
+  filename?: string;
+  url?: string;             // ruta local o URL remota
+  sizeKb?: number;
+  uploadedAt?: string;
+  uploadedBy?: string;
+  note?: string;
+}
+
+export interface OutputPack {
+  pageId: string;
+  pageNumber: string;
+  pageTitle: string;
+  contractVersion: string;
+  lastGenerationAt?: string;
+  lastGenerationVersion?: string;
+  slots: Record<AssetType, AssetSlot>;
+}
+
 /* ─── Entidades del modelo operativo ────────────────────────────────────── */
 
 export interface CloudProvider {
@@ -122,7 +155,11 @@ export type ActionType =
   | "revision_requested"
   | "selective_regeneration"
   | "page_exported"
-  | "contract_updated";
+  | "contract_updated"
+  | "asset_uploaded"
+  | "asset_linked"
+  | "asset_approved"
+  | "asset_replaced";
 
 export interface UserActionLog {
   id: string;
@@ -159,6 +196,7 @@ export interface StudioState {
   actionLog: UserActionLog[];
   contracts: ContractVersion[];
   exports: ExportAsset[];
+  outputPacks: OutputPack[];
 }
 
 /* ─── Acciones del reducer ───────────────────────────────────────────────── */
@@ -172,4 +210,8 @@ export type StudioAction =
   | { type: "REGENERATE_SELECTIVE"; pageId: string; userId: string; userName: string }
   | { type: "EXPORT_PAGE"; pageId: string; format: ExportAsset["format"]; userId: string; userName: string }
   | { type: "UPDATE_CONTRACT"; contractId: string; changeNote: string; userId: string; userName: string }
+  | { type: "UPLOAD_ASSET_DEMO"; pageId: string; assetType: AssetType; userId: string; userName: string }
+  | { type: "LINK_ASSET"; pageId: string; assetType: AssetType; url: string; filename: string; userId: string; userName: string }
+  | { type: "APPROVE_ASSET"; pageId: string; assetType: AssetType; userId: string; userName: string }
+  | { type: "REPLACE_ASSET_REQUEST"; pageId: string; assetType: AssetType; userId: string; userName: string }
   | { type: "HYDRATE"; state: StudioState };

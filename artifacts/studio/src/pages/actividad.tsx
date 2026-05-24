@@ -4,7 +4,7 @@ import { useStudio } from "@/lib/studio-store";
 import { cn, actionLabel, actionColor, formatDateTime, statusLabel, statusColorDark } from "@/lib/utils";
 import {
   Activity, RefreshCw, CheckCircle2, AlertTriangle, Download,
-  Zap, FlaskConical, Shield, FileEdit, Filter,
+  Zap, FlaskConical, Shield, FileEdit, Filter, Upload, Link2, Package,
 } from "lucide-react";
 import type { ActionType } from "@/lib/types";
 
@@ -18,6 +18,10 @@ const ACTION_ICONS: Record<ActionType, React.ComponentType<{className?:string}>>
   selective_regeneration: RefreshCw,
   page_exported:          Download,
   contract_updated:       FileEdit,
+  asset_uploaded:         Upload,
+  asset_linked:           Link2,
+  asset_approved:         Package,
+  asset_replaced:         RefreshCw,
 };
 
 const FILTER_OPTIONS: { value: ActionType | "all"; label: string }[] = [
@@ -30,6 +34,10 @@ const FILTER_OPTIONS: { value: ActionType | "all"; label: string }[] = [
   { value: "selective_regeneration",label: "Regeneración" },
   { value: "page_exported",         label: "Exportación" },
   { value: "contract_updated",      label: "Contratos" },
+  { value: "asset_uploaded",        label: "Asset cargado" },
+  { value: "asset_linked",          label: "Asset vinculado" },
+  { value: "asset_approved",        label: "Asset aprobado" },
+  { value: "asset_replaced",        label: "Asset reemplazado" },
 ];
 
 const USER_FILTERS = ["Todos los usuarios", "Ana García", "Carlos Méndez", "Laura Vidal", "Usuario activo", "Sistema"];

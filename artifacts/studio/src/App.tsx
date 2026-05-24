@@ -30,6 +30,7 @@ import Exportacion from "@/pages/exportacion";
 import Contrato from "@/pages/contrato";
 import Actividad from "@/pages/actividad";
 import Conectores from "@/pages/conectores";
+import Assets from "@/pages/assets";
 
 import NotFound from "@/pages/not-found";
 
@@ -115,6 +116,10 @@ function Router() {
 
       <Route path="/conectores">
         <PrivateRoute><Conectores /></PrivateRoute>
+      </Route>
+
+      <Route path="/assets">
+        <PrivateRoute><Assets /></PrivateRoute>
       </Route>
 
       <Route path="/ejecuciones">

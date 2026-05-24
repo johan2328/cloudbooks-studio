@@ -2,17 +2,17 @@ import { useState } from "react";
 import Layout from "@/components/Layout";
 import { cn } from "@/lib/utils";
 import { useStudio } from "@/lib/studio-store";
-import type { PageStatus } from "@/lib/types";
+import type { PageStatus, OutputPack, AssetType, AssetSlotStatus } from "@/lib/types";
 import {
   CheckCircle2, AlertTriangle, Clock, RotateCcw, Loader2,
   ChevronRight, Target, BookOpen, Layers, History, Award,
   Download, RefreshCw, MessageSquare, ThumbsUp, Shield,
   Activity, FileText, Package, ExternalLink, Zap, CheckCheck,
-  FlaskConical,
+  FlaskConical, Database, Upload, Link2, Eye, Globe, Image,
 } from "lucide-react";
 
 /* ─── Tipos ─────────────────────────────────────────────────────────────── */
-type Tab = "contenido"|"grounding"|"preview"|"qa"|"versiones"|"export";
+type Tab = "contenido"|"grounding"|"preview"|"qa"|"versiones"|"export"|"assets";
 
 interface QADims {
   artDir: number; editCons: number; legib: number; techAcc: number;
@@ -494,6 +494,8 @@ function PageDetail({ed, effectiveStatus, onApprove, onRevision, onRegen, onExpo
   const [groundingDone, setGroundingDone] = useState(false);
   const [qaRunning, setQaRunning] = useState(false);
   const [qaDone, setQaDone] = useState(false);
+  const { getOutputPackForPage, uploadAssetDemo, linkAsset, approveAsset, replaceAssetRequest } = useStudio();
+  const outputPack = getOutputPackForPage(ed.num);
 
   const cfg = STATUS_CFG[effectiveStatus];
   const Icon = cfg.icon;
@@ -518,6 +520,7 @@ function PageDetail({ed, effectiveStatus, onApprove, onRevision, onRegen, onExpo
     { id:"qa",         label:"QA",         icon: Shield     },
     { id:"versiones",  label:"Versiones",  icon: History    },
     { id:"export",     label:"Export",     icon: Download   },
+    { id:"assets",     label:"Assets",     icon: Database   },
   ];
 
   return (
@@ -880,6 +883,116 @@ function PageDetail({ed, effectiveStatus, onApprove, onRevision, onRegen, onExpo
                   Exportar Collection Pack · 0/10 páginas listas
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* ── Assets ── */}
+          {tab==="assets" && (
+            <div className="space-y-3 max-w-xl">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Output Pack · pág. {ed.num}</p>
+                {outputPack && (
+                  <span className="text-[7px] text-white/20">Contrato <span className="font-semibold text-white/35">{outputPack.contractVersion}</span></span>
+                )}
+              </div>
+
+              {!outputPack ? (
+                <div className="bg-white/[0.02] border border-white/[0.05] rounded-sm p-4 text-center">
+                  <p className="text-[9px] text-white/25">No hay OutputPack disponible para esta página</p>
+                </div>
+              ) : (
+                <>
+                  {/* Slots */}
+                  {(["preview","html","png","pdf","qa_report","contract"] as AssetType[]).map(type => {
+                    const slot = outputPack.slots[type];
+                    const ACFG: Record<AssetType, {label:string; ext:string; Icon:React.ComponentType<{className?:string}>; color:string; bg:string}> = {
+                      preview:   { label:"Preview",   ext:"SVG",  Icon:Eye,      color:"text-violet-400", bg:"bg-violet-500/10 border-violet-500/20" },
+                      html:      { label:"HTML",      ext:"HTML", Icon:Globe,    color:"text-blue-400",   bg:"bg-blue-500/10 border-blue-500/20" },
+                      png:       { label:"PNG 2x",    ext:"PNG",  Icon:Image,    color:"text-teal-400",   bg:"bg-teal-500/10 border-teal-500/20" },
+                      pdf:       { label:"PDF",       ext:"PDF",  Icon:FileText, color:"text-amber-400",  bg:"bg-amber-500/10 border-amber-500/20" },
+                      qa_report: { label:"QA Report", ext:"JSON", Icon:Shield,   color:"text-sky-400",    bg:"bg-sky-500/10 border-sky-500/20" },
+                      contract:  { label:"Contrato",  ext:"PDF",  Icon:Package,  color:"text-emerald-400",bg:"bg-emerald-500/10 border-emerald-500/20" },
+                    };
+                    const ac = ACFG[type];
+                    const AIcon = ac.Icon;
+                    const STATUS_SLOT: Record<AssetSlotStatus, {label:string; badge:string; dot:string}> = {
+                      pending:          { label:"Pendiente",        badge:"bg-white/[0.04] text-white/20 border-white/[0.06]",          dot:"bg-white/15" },
+                      demo_available:   { label:"Demo disponible",  badge:"bg-violet-500/10 text-violet-300 border-violet-500/20",      dot:"bg-violet-400 opacity-60" },
+                      real_available:   { label:"Real cargado",     badge:"bg-blue-500/10 text-blue-300 border-blue-500/20",            dot:"bg-blue-400" },
+                      approved:         { label:"Aprobado",         badge:"bg-emerald-500/10 text-emerald-300 border-emerald-500/20",   dot:"bg-emerald-400" },
+                      needs_replacement:{ label:"Requiere reemplazo",badge:"bg-amber-500/10 text-amber-300 border-amber-500/20",       dot:"bg-amber-400" },
+                      exported:         { label:"Exportado",        badge:"bg-teal-500/10 text-teal-300 border-teal-500/20",           dot:"bg-teal-400" },
+                    };
+                    const sc = STATUS_SLOT[slot.status];
+                    return (
+                      <div key={type} className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 border rounded-sm transition-all",
+                        slot.status === "pending" ? "bg-white/[0.02] border-white/[0.05]" :
+                        slot.status === "demo_available" ? "bg-violet-500/5 border-violet-500/15" :
+                        slot.status === "approved" ? "bg-emerald-500/5 border-emerald-500/15" :
+                        "bg-[#0a1220] border-white/[0.07]"
+                      )}>
+                        <div className={cn("w-7 h-7 rounded-sm flex items-center justify-center border shrink-0", ac.bg)}>
+                          <AIcon className={cn("w-3.5 h-3.5", ac.color)} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className={cn("text-[9px] font-bold", ac.color)}>{ac.label}</span>
+                            <span className={cn("inline-flex items-center gap-1 text-[7px] font-bold px-1.5 py-0.5 rounded-sm border", sc.badge)}>
+                              <span className={cn("w-1 h-1 rounded-full shrink-0", sc.dot)} />
+                              {slot.isDemo && slot.status === "demo_available" ? "Demo" : sc.label}
+                            </span>
+                            {slot.isDemo && (
+                              <span className="text-[7px] bg-violet-500/10 text-violet-400/50 border border-violet-500/15 px-1 py-px rounded-sm">DEMO</span>
+                            )}
+                          </div>
+                          <p className="text-[8px] text-white/20 truncate">{slot.filename ?? <em>sin archivo</em>}</p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {slot.status === "pending" && (
+                            <>
+                              <button onClick={() => uploadAssetDemo(ed.num, type)}
+                                className="flex items-center gap-1 h-6 px-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 rounded-sm text-[8px] text-blue-400 font-semibold transition-all">
+                                <Upload className="w-2.5 h-2.5" />Cargar
+                              </button>
+                              <button onClick={() => linkAsset(ed.num, type, `/outputs/ai200-p${ed.num}/output.${type}`, `ai200-p${ed.num}.${type}`)}
+                                className="flex items-center gap-1 h-6 px-2 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] rounded-sm text-[8px] text-white/35 font-semibold transition-all">
+                                <Link2 className="w-2.5 h-2.5" />Vincular
+                              </button>
+                            </>
+                          )}
+                          {slot.status === "demo_available" && (
+                            <button onClick={() => uploadAssetDemo(ed.num, type)}
+                              className="flex items-center gap-1 h-6 px-2 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20 rounded-sm text-[8px] text-violet-400 font-semibold transition-all">
+                              <Upload className="w-2.5 h-2.5" />Reemplazar real
+                            </button>
+                          )}
+                          {slot.status === "real_available" && (
+                            <button onClick={() => approveAsset(ed.num, type)}
+                              className="flex items-center gap-1 h-6 px-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-sm text-[8px] text-emerald-400 font-semibold transition-all">
+                              <CheckCircle2 className="w-2.5 h-2.5" />Aprobar
+                            </button>
+                          )}
+                          {(slot.status === "approved" || slot.status === "exported") && (
+                            <button onClick={() => replaceAssetRequest(ed.num, type)}
+                              className="flex items-center gap-1 h-6 px-2 bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.07] rounded-sm text-[8px] text-white/25 font-semibold transition-all">
+                              <RefreshCw className="w-2.5 h-2.5" />Reemplazar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Nota de migración */}
+                  <div className="mt-2 flex items-start gap-2 px-3 py-2.5 bg-amber-500/5 border border-amber-500/15 rounded-sm">
+                    <AlertTriangle className="w-3 h-3 text-amber-400/50 mt-0.5 shrink-0" />
+                    <p className="text-[8px] text-amber-300/50 leading-relaxed">
+                      Los assets reales (HTML, PNG, PDF) existen en el filesystem local fuera de Replit. Usa el botón <strong>Cargar</strong> para cada slot o <strong>Vincular</strong> para registrar la ruta sin subir. Los previews demo son referenciales — no reemplazan los assets de producción.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, FileText, CheckSquare, Download, Palette,
   LogOut, ChevronRight, Layers, BookOpen, Activity,
-  DollarSign, Shield, Map, HelpCircle, Table2, Zap, Code2,
+  DollarSign, Shield, Map, HelpCircle, Table2, Zap, Code2, Database,
 } from "lucide-react";
 import { useStudio } from "@/lib/studio-store";
 
@@ -19,6 +19,7 @@ const NAV_PRODUCTION = [
 ];
 
 const NAV_TOOLS = [
+  { href: "/assets",     label: "Assets y Outputs",       icon: Database, segment: "assets" },
   { href: "/actividad",  label: "Historial de actividad", icon: Activity, segment: "actividad" },
   { href: "/conectores", label: "Conectores pipeline",    icon: Code2,    segment: "conectores" },
 ];
