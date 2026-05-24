@@ -34,7 +34,7 @@ const FORMATS: Format[] = [
     id: "visual-atlas",
     name: "Visual Atlas",
     tagline: "Lectura visual acelerada",
-    role: "61 infografías organizadas en 13 batches por dominio. Comunicación visual densa y precisa. El formato en producción activa.",
+    role: "61 páginas organizadas en 13 batches por dominio. Comunicación visual densa y precisa. El formato en producción activa.",
     icon: FileText,
     status: "active",
     href: "/biblioteca",
@@ -122,7 +122,7 @@ export default function AI200Collection() {
               </span>
             </div>
             <h1 className="text-lg font-bold text-gray-900 tracking-tight">AI-200 Certification Collection</h1>
-            <p className="text-xs text-gray-500 mt-0.5">Azure AI Engineer Associate · 6 formatos editoriales · {pages.length} infografías en Visual Atlas</p>
+            <p className="text-xs text-gray-500 mt-0.5">Azure AI Fundamentals · 6 formatos editoriales · {pages.length} páginas en Visual Atlas</p>
           </div>
           {/* Live stats */}
           <div className="hidden md:flex items-center gap-5 shrink-0">
@@ -183,7 +183,7 @@ export default function AI200Collection() {
                     {isActive && (
                       <div className="mt-2 pt-2 border-t border-gray-100">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-[9px] text-gray-400">Progreso · {approved}/{pages.length} infografías</span>
+                          <span className="text-[9px] text-gray-400">Progreso · {approved}/{pages.length} páginas</span>
                           <span className="text-[9px] font-bold text-blue-600">
                             {pages.length > 0 ? Math.round((approved / pages.length) * 100) : 0}%
                           </span>

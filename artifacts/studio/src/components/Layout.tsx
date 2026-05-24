@@ -42,15 +42,18 @@ export default function Layout({ children, title }: LayoutProps) {
       {/* ── Sidebar ─────────────────────────────────────────────────────── */}
       <aside className="w-52 bg-[#0d1629] flex flex-col shrink-0">
 
-        {/* Logo → vuelve al catálogo */}
-        <div className="flex items-center justify-center px-4 pt-5 pb-4 border-b border-white/[0.06]">
-          <Link href="/catalogo">
+        {/* Logo → portal landing */}
+        <div className="flex flex-col items-center px-4 pt-4 pb-3 border-b border-white/[0.06] gap-1.5">
+          <Link href="/">
             <img
               src="/cloudbooks-logo-nobg.png"
               alt="CloudBooks"
-              className="w-36 opacity-95 hover:opacity-100 transition-opacity"
+              className="w-32 opacity-95 hover:opacity-100 transition-opacity"
               draggable={false}
             />
+          </Link>
+          <Link href="/" className="text-[8px] text-white/15 hover:text-white/40 transition-colors tracking-widest uppercase font-medium">
+            ← Portal
           </Link>
         </div>
 

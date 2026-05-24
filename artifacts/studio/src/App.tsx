@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import Landing from "@/pages/landing";
 import Login from "@/pages/login";
 import Catalogo from "@/pages/catalogo";
 import Azure from "@/pages/azure";
@@ -36,10 +37,9 @@ function Router() {
     <Switch>
       <Route path="/login" component={Login} />
 
-      {/* Root → CloudBooks Library */}
-      <Route path="/">
-        <Redirect to="/catalogo" />
-      </Route>
+      {/* Root → Portal landing (público) */}
+      <Route path="/" component={Landing} />
+      <Route path="/portal" component={Landing} />
 
       {/* ── Catálogo jerárquico ─────────────────────────── */}
       {/* Nivel 1: Proveedores cloud */}

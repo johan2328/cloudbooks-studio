@@ -59,7 +59,7 @@ export default function Exportacion() {
         ) : allApproved.length === 0 ? (
           <div className="text-center py-16 border border-dashed border-gray-200 rounded-sm bg-white">
             <p className="text-sm text-gray-400 mb-1">Sin páginas aprobadas</p>
-            <p className="text-xs text-gray-300">Aprueba infografías en el panel QA para habilitarlas aquí.</p>
+            <p className="text-xs text-gray-300">Aprueba páginas en el panel QA para habilitarlas aquí.</p>
           </div>
         ) : (
           <div className="bg-white border border-gray-200 rounded-sm overflow-hidden">
