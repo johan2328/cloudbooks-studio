@@ -230,7 +230,7 @@ export default function Landing() {
                 <img
                   src="/hero-devices.png"
                   alt="CloudBooks — Biblioteca multi-formato en todos los dispositivos"
-                  className="w-full max-w-[680px] h-auto object-contain"
+                  className="w-full max-w-[735px] h-auto object-contain"
                   draggable={false}
                 />
               </div>

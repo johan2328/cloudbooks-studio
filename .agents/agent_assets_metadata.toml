@@ -2,24 +2,6 @@ uploads = []
 outputs = []
 
 [[generated]]
-id = "Uto1g7OlJvjjljZ8BCIJf"
-uri = "file://artifacts/studio/public/hero-editorial.png"
-type = "image"
-title = "generated_image"
-
-[[generated]]
-id = "bSEYzfed1K1vkYLaGkw8V"
-uri = "file://artifacts/studio/public/formats-collection.png"
-type = "image"
-title = "generated_image"
-
-[[generated]]
-id = "f_uIz90mXounOIkj3Guih"
-uri = "file://artifacts/studio/public/methodology-pipeline.png"
-type = "image"
-title = "generated_image"
-
-[[generated]]
 id = "kxlI8fImubYsAJ7xVmFzP"
 uri = "file://artifacts/studio/public/hero-volume-still.png"
 type = "image"
