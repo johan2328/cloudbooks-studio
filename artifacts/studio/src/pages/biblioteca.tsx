@@ -1,18 +1,17 @@
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useListPages, useApprovePage, useRequestRevision, useUpdatePage } from "@workspace/api-client-react";
 import Layout from "@/components/Layout";
 import { cn } from "@/lib/utils";
+import { useStudio } from "@/lib/studio-store";
+import type { PageStatus } from "@/lib/types";
 import {
   CheckCircle2, AlertTriangle, Clock, RotateCcw, Loader2,
   ChevronRight, Target, BookOpen, Layers, History, Award,
   Download, RefreshCw, MessageSquare, ThumbsUp, Shield,
   Activity, FileText, Package, ExternalLink, Zap, CheckCheck,
+  FlaskConical,
 } from "lucide-react";
 
 /* ─── Tipos ─────────────────────────────────────────────────────────────── */
-type EStatus = "approved"|"approved_minor"|"qa_review"|"visual_fix"|"pending_regen"|"grounding_pending"|"pending_qa";
-type GroundingStatus = "verified"|"partial"|"pending";
 type Tab = "contenido"|"grounding"|"preview"|"qa"|"versiones"|"export";
 
 interface QADims {
@@ -27,8 +26,8 @@ interface VersionEntry { version: string; date: string; note: string; author: st
 interface PageEdit {
   num: string; title: string; domain: string; examObjective: string;
   contexto: string; conceptos: string[]; trampas: string[];
-  autocheck: Autocheck; groundingStatus: GroundingStatus; groundingNote: string;
-  sources: string[]; editorialStatus: EStatus; qaTotal: number; qaDims: QADims;
+  autocheck: Autocheck; groundingStatus: "verified"|"partial"|"pending"; groundingNote: string;
+  sources: string[]; editorialStatus: PageStatus; qaTotal: number; qaDims: QADims;
   contractVersion: string; lastRevision: string; redTeam: string[];
   versionHistory: VersionEntry[];
 }
@@ -85,7 +84,7 @@ const EDITORIAL: Record<string, PageEdit> = {
     },
     groundingStatus:"verified", groundingNote:"Verificado contra MS Learn – Build and push Docker image to ACR y Azure CLI Reference.",
     sources:["MS Learn – Build and push to ACR Quick Start","MS Learn – ACR Tasks documentation","Docker Official Docs – docker push"],
-    editorialStatus:"approved_minor", qaTotal:9.36,
+    editorialStatus:"approved", qaTotal:9.36,
     qaDims:{artDir:9.4, editCons:9.3, legib:9.5, techAcc:9.2, densidad:9.1, riesgoComercial:9.5},
     contractVersion:"v24", lastRevision:"2026-05-19",
     redTeam:["Controlar varianza iconográfica entre comandos CLI y portal UI — pendiente v3","Asegurar numeración homogénea de pasos en el flujo de build"],
@@ -143,7 +142,7 @@ const EDITORIAL: Record<string, PageEdit> = {
     },
     groundingStatus:"verified", groundingNote:"Verificado contra MS Learn – ACR Private Link y Azure Private DNS documentation.",
     sources:["MS Learn – ACR Private Endpoints","MS Learn – Azure Private DNS Zones","Azure Architecture Center – Network security"],
-    editorialStatus:"visual_fix", qaTotal:9.12,
+    editorialStatus:"needs_revision", qaTotal:9.12,
     qaDims:{artDir:9.0, editCons:9.2, legib:9.3, techAcc:9.0, densidad:8.9, riesgoComercial:9.2},
     contractVersion:"v24", lastRevision:"2026-05-21",
     redTeam:["Mejorar jerarquía de títulos en la sección DNS — actualmente poco diferenciada","Verificar que el diagrama de red no recorta la capa de subred privada","Diagrama de firewall rules necesita contraste mayor entre allow/deny"],
@@ -201,7 +200,7 @@ const EDITORIAL: Record<string, PageEdit> = {
     },
     groundingStatus:"verified", groundingNote:"Verificado contra MS Learn – ACR Geo-Replication y Azure Availability Zones documentation.",
     sources:["MS Learn – ACR Geo-Replication","MS Learn – Zone Redundancy","Azure Architecture Center – Multi-region apps"],
-    editorialStatus:"approved_minor", qaTotal:9.25,
+    editorialStatus:"approved", qaTotal:9.25,
     qaDims:{artDir:9.2, editCons:9.3, legib:9.1, techAcc:9.4, densidad:9.2, riesgoComercial:9.5},
     contractVersion:"v24", lastRevision:"2026-05-19",
     redTeam:["Validar que el mapa de regiones no muestre zonas deprecated","Evitar respuesta autocheck duplicada entre preguntas 2 y 3 — revisar en v3"],
@@ -259,7 +258,7 @@ const EDITORIAL: Record<string, PageEdit> = {
     },
     groundingStatus:"partial", groundingNote:"Parcialmente verificado — documentación de managed environments actualizada en GA. Verificar configuración de identidad con referencia 2026.",
     sources:["MS Learn – Container Apps with ACR","Azure Container Apps Docs","MS Learn – Managed Environments"],
-    editorialStatus:"pending_regen", qaTotal:8.96,
+    editorialStatus:"needs_revision", qaTotal:8.96,
     qaDims:{artDir:9.0, editCons:8.9, legib:9.0, techAcc:8.9, densidad:8.7, riesgoComercial:9.0},
     contractVersion:"v24", lastRevision:"2026-05-20",
     redTeam:["Regeneración selectiva recomendada para sección de configuración de managed environment","Densidad de contexto excesiva en zona de trampas — refactorizar","Score general por debajo de 9.0 en 3 dimensiones — no apta para aprobación"],
@@ -316,7 +315,7 @@ const EDITORIAL: Record<string, PageEdit> = {
     },
     groundingStatus:"verified", groundingNote:"Verificado contra MS Learn – ACR Troubleshooting y Azure Monitor Logs for ACR.",
     sources:["MS Learn – Troubleshooting ACR","Azure Monitor Docs","ACR Error Reference – az acr check-health"],
-    editorialStatus:"pending_qa", qaTotal:8.84,
+    editorialStatus:"qa_pending", qaTotal:8.84,
     qaDims:{artDir:8.9, editCons:8.8, legib:8.9, techAcc:8.7, densidad:8.8, riesgoComercial:9.1},
     contractVersion:"v24", lastRevision:"2026-05-22",
     redTeam:["Pendiente revisión QA completa — primera iteración","Verificar que la tabla de errores cubre todos los códigos HTTP relevantes","Confirmar cobertura de escenarios de autenticación fallida"],
@@ -327,17 +326,19 @@ const EDITORIAL: Record<string, PageEdit> = {
 };
 
 /* ─── Config estados ─────────────────────────────────────────────────────── */
-const STATUS_CFG: Record<EStatus, {
+const STATUS_CFG: Record<PageStatus, {
   label: string; color: string; bg: string; dot: string;
   icon: React.ComponentType<{className?:string}>
 }> = {
-  approved:          { label:"Aprobada",                 color:"text-emerald-400", bg:"bg-emerald-500/10 border-emerald-500/20", dot:"bg-emerald-500", icon:CheckCircle2  },
-  approved_minor:    { label:"Aprobada c/obs.",          color:"text-teal-400",    bg:"bg-teal-500/10 border-teal-500/20",       dot:"bg-teal-400",    icon:CheckCircle2  },
-  qa_review:         { label:"En revisión QA",           color:"text-blue-400",    bg:"bg-blue-500/10 border-blue-500/20",       dot:"bg-blue-400",    icon:Clock         },
-  visual_fix:        { label:"Ajuste visual",            color:"text-amber-400",   bg:"bg-amber-500/10 border-amber-500/20",     dot:"bg-amber-400",   icon:AlertTriangle },
-  pending_regen:     { label:"Pendiente regeneración",   color:"text-orange-400",  bg:"bg-orange-500/10 border-orange-500/20",   dot:"bg-orange-400",  icon:RotateCcw     },
-  grounding_pending: { label:"Grounding pendiente",      color:"text-violet-400",  bg:"bg-violet-500/10 border-violet-500/20",   dot:"bg-violet-400",  icon:AlertTriangle },
-  pending_qa:        { label:"Pendiente de QA",          color:"text-white/40",    bg:"bg-white/5 border-white/10",              dot:"bg-white/20",    icon:Clock         },
+  draft:             { label:"Borrador",             color:"text-white/30",    bg:"bg-white/5 border-white/10",              dot:"bg-white/15",    icon:Clock         },
+  grounding_pending: { label:"Grounding pendiente",  color:"text-orange-400",  bg:"bg-orange-500/10 border-orange-500/20",   dot:"bg-orange-400",  icon:AlertTriangle },
+  grounded:          { label:"Grounded",             color:"text-cyan-400",    bg:"bg-cyan-500/10 border-cyan-500/20",       dot:"bg-cyan-400",    icon:CheckCircle2  },
+  generating:        { label:"Generando…",           color:"text-violet-400",  bg:"bg-violet-500/10 border-violet-500/20",   dot:"bg-violet-400",  icon:RotateCcw     },
+  qa_pending:        { label:"QA pendiente",         color:"text-sky-400",     bg:"bg-sky-500/10 border-sky-500/20",         dot:"bg-sky-400",     icon:Clock         },
+  qa_review:         { label:"En revisión QA",       color:"text-blue-400",    bg:"bg-blue-500/10 border-blue-500/20",       dot:"bg-blue-400",    icon:Shield        },
+  needs_revision:    { label:"Requiere ajuste",      color:"text-amber-400",   bg:"bg-amber-500/10 border-amber-500/20",     dot:"bg-amber-400",   icon:AlertTriangle },
+  approved:          { label:"Aprobada",             color:"text-emerald-400", bg:"bg-emerald-500/10 border-emerald-500/20", dot:"bg-emerald-500", icon:CheckCircle2  },
+  exported:          { label:"Exportada",            color:"text-teal-400",    bg:"bg-teal-500/10 border-teal-500/20",       dot:"bg-teal-400",    icon:Download      },
 };
 
 const STANDARD = 9.5;
@@ -346,43 +347,21 @@ const DOMAIN_COLOR = "#0369a1";
 /* ─── Componente principal ───────────────────────────────────────────────── */
 export default function Biblioteca() {
   const [selectedNum, setSelectedNum] = useState("01");
-  const [localStatus, setLocalStatus] = useState<Record<string, EStatus>>({});
-  const queryClient = useQueryClient();
-  const { data: pages = [], isLoading } = useListPages();
-  const approveMut  = useApprovePage();
-  const revisionMut = useRequestRevision();
-  const updateMut   = useUpdatePage();
+  const { state, executeGrounding, startGeneration, executeQA, approvePage, requestRevision, regenerateSelective, exportPage, getPage } = useStudio();
 
-  const pageMap = Object.fromEntries(pages.map(p => [p.pageNumber, p]));
   const selected   = EDITORIAL[selectedNum];
-  const selectedPage = pageMap[selectedNum];
-  const effectiveStatus = (localStatus[selectedNum] ?? selected?.editorialStatus) as EStatus;
-
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["listPages"] });
-
-  const isMutating = approveMut.isPending || revisionMut.isPending || updateMut.isPending;
-
-  function handleApprove() {
-    if (selectedPage) {
-      approveMut.mutate({ id: selectedPage.id }, { onSuccess: invalidate });
-    }
-    setLocalStatus(s => ({ ...s, [selectedNum]: "approved" }));
-  }
-  function handleRevision() {
-    if (selectedPage) revisionMut.mutate({ id: selectedPage.id, data: { comment: "Corrección solicitada por red team" } }, { onSuccess: invalidate });
-    setLocalStatus(s => ({ ...s, [selectedNum]: "qa_review" }));
-  }
-  function handleRegen() {
-    if (selectedPage) updateMut.mutate({ id: selectedPage.id, data: { status: "generating" } }, { onSuccess: invalidate });
-    setLocalStatus(s => ({ ...s, [selectedNum]: "pending_regen" }));
-  }
-  function handleExport() {
-    if (selectedPage) updateMut.mutate({ id: selectedPage.id, data: { status: "exported" } }, { onSuccess: invalidate });
-    setLocalStatus(s => ({ ...s, [selectedNum]: "approved" }));
-  }
+  // Status comes from the store; fallback to EDITORIAL's editorialStatus mapped to PageStatus
+  const storeStatus = getPage(selectedNum)?.status;
+  const effectiveStatus: PageStatus = storeStatus ?? "draft";
 
   const all = Object.values(EDITORIAL);
   const avgQA = all.reduce((s,p) => s+p.qaTotal,0) / all.length;
+
+  // Live counts from store (batch 01–10 pages)
+  const batch10Pages = state.pages.filter(p => parseInt(p.id, 10) >= 1 && parseInt(p.id, 10) <= 10);
+  const approvedCount = batch10Pages.filter(p => p.status === "approved" || p.status === "exported").length;
+  const reviewCount   = batch10Pages.filter(p => p.status === "qa_review" || p.status === "needs_revision").length;
+  const blockedCount  = batch10Pages.filter(p => p.status === "grounding_pending" || p.status === "draft" || p.status === "grounded").length;
 
   return (
     <Layout title="Visual Atlas — Batch 01–10">
@@ -398,9 +377,9 @@ export default function Biblioteca() {
             </div>
             <div className="grid grid-cols-3 gap-1 mb-2">
               {[
-                { label:"Aprobadas", value: all.filter(p=>["approved","approved_minor"].includes(localStatus[p.num]??p.editorialStatus)).length, color:"text-emerald-400" },
-                { label:"Revisión",  value: all.filter(p=>["qa_review","visual_fix"].includes(localStatus[p.num]??p.editorialStatus)).length, color:"text-amber-400" },
-                { label:"Bloqueadas",value: all.filter(p=>["pending_regen","grounding_pending","pending_qa"].includes(localStatus[p.num]??p.editorialStatus)).length, color:"text-white/30" },
+                { label:"Aprobadas", value: approvedCount, color:"text-emerald-400" },
+                { label:"Revisión",  value: reviewCount,   color:"text-amber-400" },
+                { label:"Pendientes",value: blockedCount,  color:"text-white/30" },
               ].map(c => (
                 <div key={c.label} className="bg-white/[0.03] border border-white/[0.06] rounded-sm px-1.5 py-1 text-center">
                   <p className={cn("text-sm font-black tabular-nums",c.color)}>{c.value}</p>
@@ -425,38 +404,35 @@ export default function Biblioteca() {
 
           {/* Page list */}
           <div className="flex-1 overflow-y-auto">
-            {isLoading
-              ? Array.from({length:10}).map((_,i)=><div key={i} className="mx-2 my-1 h-12 bg-white/[0.04] rounded-sm animate-pulse"/>)
-              : Object.values(EDITORIAL).map(ed => {
-                  const st = (localStatus[ed.num] ?? ed.editorialStatus) as EStatus;
-                  const cfg = STATUS_CFG[st];
-                  const Icon = cfg.icon;
-                  return (
-                    <button key={ed.num} onClick={() => setSelectedNum(ed.num)}
-                      className={cn(
-                        "w-full text-left px-3 py-2.5 border-b border-white/[0.04] flex items-start gap-2 transition-all",
-                        selectedNum === ed.num
-                          ? "bg-blue-500/10 border-l-2 border-l-blue-400 pl-[10px]"
-                          : "hover:bg-white/[0.03] border-l-2 border-l-transparent"
-                      )}>
-                      <MiniThumb num={ed.num} status={st} score={ed.qaTotal} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1 mb-0.5">
-                          <span className="text-[9px] font-bold text-white/30">#{ed.num}</span>
-                          <Icon className={cn("w-2 h-2 shrink-0", cfg.color)} />
-                        </div>
-                        <p className="text-[9px] font-medium text-white/70 leading-snug line-clamp-2">{ed.title}</p>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className={cn("text-[7px] font-bold", cfg.color)}>{cfg.label}</span>
-                          <span className={cn("text-[9px] font-bold tabular-nums", ed.qaTotal>=9.3?"text-emerald-400":ed.qaTotal>=9.0?"text-amber-400":"text-orange-400")}>
-                            {ed.qaTotal.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })
-            }
+            {Object.values(EDITORIAL).map(ed => {
+              const st: PageStatus = getPage(ed.num)?.status ?? "draft";
+              const cfg = STATUS_CFG[st];
+              const Icon = cfg.icon;
+              return (
+                <button key={ed.num} onClick={() => setSelectedNum(ed.num)}
+                  className={cn(
+                    "w-full text-left px-3 py-2.5 border-b border-white/[0.04] flex items-start gap-2 transition-all",
+                    selectedNum === ed.num
+                      ? "bg-blue-500/10 border-l-2 border-l-blue-400 pl-[10px]"
+                      : "hover:bg-white/[0.03] border-l-2 border-l-transparent"
+                  )}>
+                  <MiniThumb num={ed.num} status={st} score={ed.qaTotal} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <span className="text-[9px] font-bold text-white/30">#{ed.num}</span>
+                      <Icon className={cn("w-2 h-2 shrink-0", cfg.color)} />
+                    </div>
+                    <p className="text-[9px] font-medium text-white/70 leading-snug line-clamp-2">{ed.title}</p>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className={cn("text-[7px] font-bold", cfg.color)}>{cfg.label}</span>
+                      <span className={cn("text-[9px] font-bold tabular-nums", ed.qaTotal>=9.3?"text-emerald-400":ed.qaTotal>=9.0?"text-amber-400":"text-orange-400")}>
+                        {ed.qaTotal.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </aside>
 
@@ -466,11 +442,13 @@ export default function Biblioteca() {
             <PageDetail
               ed={selected}
               effectiveStatus={effectiveStatus}
-              isMutating={isMutating}
-              onApprove={handleApprove}
-              onRevision={handleRevision}
-              onRegen={handleRegen}
-              onExport={handleExport}
+              onApprove={() => approvePage(selectedNum)}
+              onRevision={() => requestRevision(selectedNum, "Corrección solicitada por red team")}
+              onRegen={() => regenerateSelective(selectedNum)}
+              onExport={() => exportPage(selectedNum, "PDF")}
+              onGrounding={() => executeGrounding(selectedNum)}
+              onGenerate={() => startGeneration(selectedNum)}
+              onQA={() => executeQA(selectedNum)}
             />
           ) : (
             <div className="flex items-center justify-center h-full">
@@ -484,7 +462,7 @@ export default function Biblioteca() {
 }
 
 /* ─── Mini thumbnail ─────────────────────────────────────────────────────── */
-function MiniThumb({num, status, score}: {num:string; status:EStatus; score:number}) {
+function MiniThumb({num, status, score}: {num:string; status:PageStatus; score:number}) {
   const cfg = STATUS_CFG[status];
   return (
     <div className="w-9 h-9 rounded-sm shrink-0 overflow-hidden relative flex flex-col border border-white/[0.08]"
@@ -506,9 +484,10 @@ function MiniThumb({num, status, score}: {num:string; status:EStatus; score:numb
 }
 
 /* ─── Page detail ────────────────────────────────────────────────────────── */
-function PageDetail({ed, effectiveStatus, isMutating, onApprove, onRevision, onRegen, onExport}: {
-  ed: PageEdit; effectiveStatus: EStatus; isMutating: boolean;
+function PageDetail({ed, effectiveStatus, onApprove, onRevision, onRegen, onExport, onGrounding, onGenerate, onQA}: {
+  ed: PageEdit; effectiveStatus: PageStatus;
   onApprove:()=>void; onRevision:()=>void; onRegen:()=>void; onExport:()=>void;
+  onGrounding:()=>void; onGenerate:()=>void; onQA:()=>void;
 }) {
   const [tab, setTab] = useState<Tab>("contenido");
   const [groundingRunning, setGroundingRunning] = useState(false);
@@ -518,15 +497,17 @@ function PageDetail({ed, effectiveStatus, isMutating, onApprove, onRevision, onR
 
   const cfg = STATUS_CFG[effectiveStatus];
   const Icon = cfg.icon;
-  const canApprove = ["qa_review","visual_fix","approved_minor"].includes(effectiveStatus);
-  const canExport  = ["approved","approved_minor"].includes(effectiveStatus);
+  const canApprove = (["qa_review", "needs_revision"] as PageStatus[]).includes(effectiveStatus);
+  const canExport  = (["approved", "exported"] as PageStatus[]).includes(effectiveStatus);
 
   function runGrounding() {
     setGroundingRunning(true);
+    onGrounding();
     setTimeout(() => { setGroundingRunning(false); setGroundingDone(true); }, 2000);
   }
   function runQA() {
     setQaRunning(true);
+    onQA();
     setTimeout(() => { setQaRunning(false); setQaDone(true); }, 2200);
   }
 
@@ -601,14 +582,13 @@ function PageDetail({ed, effectiveStatus, isMutating, onApprove, onRevision, onR
 
           {/* Actions */}
           <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/[0.06] flex-wrap">
-            <ActBtn icon={Activity} label="Ejecutar grounding" variant="ghost" onClick={runGrounding} loading={groundingRunning} />
-            <ActBtn icon={Zap} label="Generar preview" variant="ghost" onClick={() => setTab("preview")} />
+            <ActBtn icon={FlaskConical} label="Ejecutar grounding" variant="ghost" onClick={runGrounding} loading={groundingRunning} done={groundingDone} />
+            <ActBtn icon={Zap} label="Generar" variant="ghost" onClick={() => { onGenerate(); setTab("preview"); }} />
             <ActBtn icon={Shield} label="Ejecutar QA" variant="ghost" onClick={runQA} loading={qaRunning} done={qaDone} />
-            <ActBtn icon={ThumbsUp} label="Aprobar" variant="primary" disabled={!canApprove||isMutating} onClick={onApprove} />
-            <ActBtn icon={MessageSquare} label="Corrección" variant="secondary" disabled={isMutating} onClick={onRevision} />
-            <ActBtn icon={RefreshCw} label="Regenerar" variant="warning" disabled={isMutating} onClick={onRegen} />
-            <ActBtn icon={Download} label="Exportar" variant="ghost" disabled={!canExport||isMutating} onClick={onExport} />
-            {isMutating && <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin" />}
+            <ActBtn icon={ThumbsUp} label="Aprobar" variant="primary" disabled={!canApprove} onClick={onApprove} />
+            <ActBtn icon={MessageSquare} label="Corrección" variant="secondary" onClick={onRevision} />
+            <ActBtn icon={RefreshCw} label="Regenerar" variant="warning" onClick={onRegen} />
+            <ActBtn icon={Download} label="Exportar" variant="ghost" disabled={!canExport} onClick={onExport} />
           </div>
         </div>
       </div>
@@ -911,7 +891,7 @@ function PageDetail({ed, effectiveStatus, isMutating, onApprove, onRevision, onR
 /* ─── AtlasPagePreview ───────────────────────────────────────────────────── */
 function AtlasPagePreview({ed, size}: {ed: PageEdit; size: "sm"|"lg"}) {
   const isLg = size==="lg";
-  const cfg = STATUS_CFG[ed.editorialStatus];
+  const cfg = STATUS_CFG[ed.editorialStatus as PageStatus] ?? STATUS_CFG["draft"];
   return (
     <div className={cn(
       "relative flex flex-col overflow-hidden",

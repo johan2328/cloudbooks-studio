@@ -5,18 +5,22 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, FileText, CheckSquare, Download, Palette,
   LogOut, ChevronRight, Layers, BookOpen, Activity,
-  DollarSign, Shield, Map, HelpCircle, Table2, Zap,
+  DollarSign, Shield, Map, HelpCircle, Table2, Zap, Code2,
 } from "lucide-react";
+import { useStudio } from "@/lib/studio-store";
 
 /* ── Estructura de navegación del Studio ─────────────────────────────────── */
-
 const NAV_PRODUCTION = [
-  { href: "/contenido/1", label: "Contenido y Grounding", icon: Activity     },
-  { href: "/generacion",  label: "Producción / Gen.",    icon: FileText      },
-  { href: "/qa/1",        label: "QA y Aprobación",      icon: Shield        },
-  { href: "/contrato",    label: "Contratos editoriales",icon: Palette       },
-  { href: "/exportacion", label: "Exportación",           icon: Download      },
-  { href: "/ejecuciones", label: "Costos y Ejecuciones", icon: DollarSign    },
+  { href: "/contenido/1", label: "Contenido y Grounding", icon: Activity,   segment: "contenido" },
+  { href: "/generacion",  label: "Producción / Gen.",    icon: FileText,    segment: "generacion" },
+  { href: "/qa/1",        label: "QA y Aprobación",      icon: Shield,      segment: "qa" },
+  { href: "/contrato",    label: "Contratos editoriales",icon: Palette,     segment: "contrato" },
+  { href: "/exportacion", label: "Exportación",           icon: Download,    segment: "exportacion" },
+];
+
+const NAV_TOOLS = [
+  { href: "/actividad",  label: "Historial de actividad", icon: Activity, segment: "actividad" },
+  { href: "/conectores", label: "Conectores pipeline",    icon: Code2,    segment: "conectores" },
 ];
 
 const AI200_FORMATS = [
@@ -45,16 +49,24 @@ interface LayoutProps {
 export default function Layout({ children, title }: LayoutProps) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
+  const { state } = useStudio();
 
   function handleLogout() {
     logout();
     setLocation("/login");
   }
 
-  /* Helpers para determinar si sección de biblioteca está abierta */
   const inBiblioteca = location.startsWith("/catalogo") || location.startsWith("/azure") ||
     location.startsWith("/ai-200") || location.startsWith("/biblioteca");
   const inAI200 = location.startsWith("/ai-200") || location.startsWith("/biblioteca");
+
+  /* Live stats for sidebar */
+  const pendingActions = state.actionLog.filter(l =>
+    new Date(l.createdAt).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10)
+  ).length;
+
+  const approvedCount = state.pages.filter(p => p.status === "approved" || p.status === "exported").length;
+  const needsAttention = state.pages.filter(p => p.status === "needs_revision" || p.status === "grounding_pending").length;
 
   return (
     <div className="flex h-screen bg-[#0a1220] overflow-hidden">
@@ -100,7 +112,6 @@ export default function Layout({ children, title }: LayoutProps) {
               <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Biblioteca editorial</span>
             </div>
 
-            {/* Azure */}
             <div className="pl-3 mt-0.5">
               <div className={cn(
                 "flex items-center gap-1.5 px-2 py-1 rounded-sm text-[9px] font-bold transition-colors",
@@ -110,7 +121,6 @@ export default function Layout({ children, title }: LayoutProps) {
                 <span>Azure</span>
               </div>
 
-              {/* Certificaciones Azure */}
               <div className="pl-3 mt-0.5 space-y-px">
                 {AZURE_CERTS.map(cert => (
                   <div key={cert.label}>
@@ -132,7 +142,6 @@ export default function Layout({ children, title }: LayoutProps) {
                       </div>
                     )}
 
-                    {/* AI-200 → formatos expandidos */}
                     {cert.label === "AI-200" && inAI200 && (
                       <div className="pl-3 mt-0.5 space-y-px">
                         {AI200_FORMATS.map(fmt => {
@@ -178,33 +187,67 @@ export default function Layout({ children, title }: LayoutProps) {
               <span className="text-[6px] text-blue-400/40 font-bold">AI-200</span>
             </div>
             <div className="space-y-px">
-              {NAV_PRODUCTION.map(({ href, label, icon: Icon }) => {
-                const segment = href.split("/")[1];
-                const active = segment ? location.startsWith(`/${segment}`) : location === href;
-                const isDisabled = href === "/ejecuciones";
+              {NAV_PRODUCTION.map(({ href, label, icon: Icon, segment }) => {
+                const active = location.startsWith(`/${segment}`);
                 return (
-                  <div key={href}>
-                    {isDisabled ? (
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-sm text-[10px] text-white/20 cursor-not-allowed">
-                        <Icon className="w-3 h-3 shrink-0 text-white/10" />
-                        <span className="truncate">{label}</span>
-                        <span className="ml-auto text-[6px] text-white/15">pronto</span>
-                      </div>
-                    ) : (
-                      <Link href={href}
-                        className={cn(
-                          "flex items-center gap-2 px-3 py-1.5 rounded-sm text-[10px] font-medium transition-all",
-                          active
-                            ? "bg-gradient-to-r from-blue-600/20 to-violet-600/10 text-white border-l-2 border-blue-400 pl-[10px]"
-                            : "text-white/35 hover:text-white/70 hover:bg-white/5"
-                        )}>
-                        <Icon className={cn("w-3 h-3 shrink-0", active ? "text-blue-400" : "text-white/20")} />
-                        <span className="truncate">{label}</span>
-                      </Link>
-                    )}
-                  </div>
+                  <Link key={href} href={href}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 rounded-sm text-[10px] font-medium transition-all",
+                      active
+                        ? "bg-gradient-to-r from-blue-600/20 to-violet-600/10 text-white border-l-2 border-blue-400 pl-[10px]"
+                        : "text-white/35 hover:text-white/70 hover:bg-white/5"
+                    )}>
+                    <Icon className={cn("w-3 h-3 shrink-0", active ? "text-blue-400" : "text-white/20")} />
+                    <span className="truncate">{label}</span>
+                  </Link>
                 );
               })}
+            </div>
+          </div>
+
+          <div className="mx-3 h-px bg-white/[0.05] my-2" />
+
+          {/* ── Herramientas ────────────────────────────────────────────── */}
+          <div className="px-2">
+            <div className="px-3 py-1 flex items-center gap-2 justify-between">
+              <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Herramientas</span>
+              {pendingActions > 0 && (
+                <span className="text-[7px] bg-blue-500/20 text-blue-300 border border-blue-500/20 px-1 py-px rounded-sm font-bold">{pendingActions} hoy</span>
+              )}
+            </div>
+            <div className="space-y-px">
+              {NAV_TOOLS.map(({ href, label, icon: Icon, segment }) => {
+                const active = location.startsWith(`/${segment}`);
+                return (
+                  <Link key={href} href={href}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 rounded-sm text-[10px] font-medium transition-all",
+                      active
+                        ? "bg-gradient-to-r from-blue-600/20 to-violet-600/10 text-white border-l-2 border-blue-400 pl-[10px]"
+                        : "text-white/35 hover:text-white/70 hover:bg-white/5"
+                    )}>
+                    <Icon className={cn("w-3 h-3 shrink-0", active ? "text-blue-400" : "text-white/20")} />
+                    <span className="truncate">{label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── Live stats ─────────────────────────────────────────────── */}
+          <div className="mx-2 mt-2 bg-white/[0.02] border border-white/[0.05] rounded-sm p-2.5 space-y-1">
+            <p className="text-[7px] text-white/15 uppercase tracking-widest font-bold">Estado del atlas</p>
+            <div className="flex justify-between">
+              <span className="text-[8px] text-white/25">Aprobadas</span>
+              <span className="text-[8px] font-bold text-emerald-400">{approvedCount}/61</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[8px] text-white/25">Requieren atención</span>
+              <span className="text-[8px] font-bold text-amber-400">{needsAttention}</span>
+            </div>
+            <div className="h-0.5 bg-white/[0.04] rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-blue-500 to-violet-500 rounded-full"
+                style={{ width: `${(approvedCount / 61) * 100}%` }} />
             </div>
           </div>
         </nav>

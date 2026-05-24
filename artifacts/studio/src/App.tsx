@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { CartProvider, CartPanel } from "@/lib/cart";
+import { StudioProvider } from "@/lib/studio-store";
 
 /* ── Portal comercial ── */
 import Landing from "@/pages/landing";
@@ -27,6 +28,8 @@ import Generacion from "@/pages/generacion";
 import QAPage from "@/pages/qa";
 import Exportacion from "@/pages/exportacion";
 import Contrato from "@/pages/contrato";
+import Actividad from "@/pages/actividad";
+import Conectores from "@/pages/conectores";
 
 import NotFound from "@/pages/not-found";
 
@@ -61,12 +64,10 @@ function Router() {
       <Route path="/demo" component={DemoPage} />
 
       {/* ── Production Studio ──────────────────────────────────────── */}
-      {/* Dashboard principal del Studio */}
       <Route path="/studio">
         <PrivateRoute><StudioDashboard /></PrivateRoute>
       </Route>
 
-      {/* Catálogo jerárquico */}
       <Route path="/catalogo">
         <PrivateRoute><Catalogo /></PrivateRoute>
       </Route>
@@ -74,12 +75,10 @@ function Router() {
         <PrivateRoute><Azure /></PrivateRoute>
       </Route>
 
-      {/* AI-200 Collection (vista de módulos de producción) */}
       <Route path="/ai-200">
         <PrivateRoute><AI200Collection /></PrivateRoute>
       </Route>
 
-      {/* Visual Atlas — herramientas de producción */}
       <Route path="/biblioteca">
         <PrivateRoute><Biblioteca /></PrivateRoute>
       </Route>
@@ -110,9 +109,16 @@ function Router() {
         <PrivateRoute><Contrato /></PrivateRoute>
       </Route>
 
-      {/* Ejecuciones / Costos — próximamente */}
+      <Route path="/actividad">
+        <PrivateRoute><Actividad /></PrivateRoute>
+      </Route>
+
+      <Route path="/conectores">
+        <PrivateRoute><Conectores /></PrivateRoute>
+      </Route>
+
       <Route path="/ejecuciones">
-        <PrivateRoute><StudioDashboard /></PrivateRoute>
+        <Redirect to="/actividad" />
       </Route>
 
       <Route component={NotFound} />
@@ -124,15 +130,17 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <CartProvider>
-          <TooltipProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
-            </WouterRouter>
-            <Toaster />
-            <CartPanel />
-          </TooltipProvider>
-        </CartProvider>
+        <StudioProvider>
+          <CartProvider>
+            <TooltipProvider>
+              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                <Router />
+              </WouterRouter>
+              <Toaster />
+              <CartPanel />
+            </TooltipProvider>
+          </CartProvider>
+        </StudioProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

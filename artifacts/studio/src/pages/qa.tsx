@@ -1,430 +1,397 @@
 import { useState } from "react";
 import { useRoute, useLocation } from "wouter";
-import { useGetPage, useGetQA, useApprovePage, useRequestRevision, useCreateRun, getGetPageQueryKey, getListPagesQueryKey } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/Layout";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn, statusColorDark, statusLabel, scoreColorDark } from "@/lib/utils";
-import { CheckCircle2, RotateCcw, AlertTriangle, ChevronLeft, ChevronRight, ShieldCheck, Eye } from "lucide-react";
+import { cn, statusColorDark, statusLabel, scoreColorDark, formatDateTime } from "@/lib/utils";
+import { useStudio } from "@/lib/studio-store";
+import {
+  CheckCircle2, RotateCcw, AlertTriangle, ChevronLeft, ChevronRight,
+  ShieldCheck, Shield, Eye, Loader2, History,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const QA_DIMS = [
-  { key: "artDirection",          label: "Dirección de Arte",       desc: "Composición, grid 8px, alineación, jerarquía visual" },
-  { key: "editorialConsistency",  label: "Consistencia Editorial",   desc: "Iconografía uniforme, paleta correcta, tipografía" },
-  { key: "readability",           label: "Legibilidad",              desc: "Tamaño de texto, contraste, claridad de lectura" },
-  { key: "technicalAccuracy",     label: "Precisión Técnica",        desc: "Correctitud de conceptos, terminología Microsoft" },
-  { key: "total",                 label: "QA Total",                 desc: "Score compuesto ponderado · Red team objetivo ≥ 9.5" },
+  { key: "artDirection",         label: "Dirección de Arte",      desc: "Composición, grid 8px, alineación, jerarquía visual" },
+  { key: "editorialConsistency", label: "Consistencia Editorial", desc: "Iconografía uniforme, paleta correcta, tipografía" },
+  { key: "readability",          label: "Legibilidad",            desc: "Tamaño de texto, contraste, claridad de lectura" },
+  { key: "technicalAccuracy",    label: "Precisión Técnica",      desc: "Correctitud de conceptos, terminología Microsoft" },
+  { key: "density",              label: "Densidad útil",          desc: "Relación información relevante / espacio utilizado" },
+  { key: "commercialRisk",       label: "Riesgo comercial",       desc: "Ausencia de copy comercial o lenguaje de venta" },
+  { key: "total",                label: "QA Total",               desc: "Score compuesto ponderado · Red team objetivo ≥ 9.5" },
 ] as const;
 
 const DEFECT_TYPES = [
-  { id: "icon_variance",    label: "Varianza iconográfica",               desc: "Iconos de distinta familia en la misma página" },
-  { id: "type_drift",       label: "Alteración tipográfica",              desc: "Tamaños o pesos de fuente que rompen la jerarquía" },
-  { id: "label_dup",        label: "Duplicación de etiquetas",            desc: "Mismo concepto aparece dos veces con nombres distintos" },
-  { id: "empty_gap",        label: "Huecos no informativos",              desc: "Espacio vacío sin propósito narrativo" },
-  { id: "title_conflict",   label: "Título compite con diagrama",         desc: "El título visual eclipsa el diagrama o viceversa" },
-  { id: "crop",             label: "Recorte de elementos",                desc: "Texto o iconos cortados por borde de página" },
-  { id: "color_incoherence","label": "Incoherencia cromática",            desc: "Colores fuera del sistema de paleta del atlas" },
-  { id: "autocheck_repeat", label: "Respuesta autocheck repetida",        desc: "La respuesta correcta es idéntica a una opción incorrecta" },
+  { id: "icon_variance",    label: "Varianza iconográfica",   desc: "Iconos de distinta familia en la misma página" },
+  { id: "type_drift",       label: "Alteración tipográfica",  desc: "Tamaños o pesos de fuente que rompen la jerarquía" },
+  { id: "label_dup",        label: "Duplicación de etiquetas",desc: "Mismo concepto aparece dos veces con nombres distintos" },
+  { id: "empty_gap",        label: "Huecos no informativos",  desc: "Espacio vacío sin propósito narrativo" },
+  { id: "title_conflict",   label: "Título compite con diagrama", desc: "El título visual eclipsa el diagrama o viceversa" },
+  { id: "crop",             label: "Recorte de elementos",   desc: "Texto o iconos cortados por borde de página" },
+  { id: "color_incoherence",label: "Incoherencia cromática",  desc: "Colores fuera del sistema de paleta del atlas" },
+  { id: "autocheck_repeat", label: "Autocheck repetido",      desc: "La respuesta correcta es idéntica a una opción incorrecta" },
 ];
 
-const DOMAIN_COLORS: Record<string, string> = {
-  "Azure AI Vision":                  "#0891b2",
-  "Azure AI Language":                "#7c3aed",
-  "Azure AI Speech":                  "#0d9488",
-  "Azure AI Document Intelligence":   "#d97706",
-  "Azure AI Search":                  "#2563eb",
-  "Azure OpenAI Service":             "#059669",
-  "Conceptos Fundamentales de IA":    "#64748b",
-  "Azure AI Services":                "#1d4ed8",
-};
-
-export default function QA() {
+export default function QAPage() {
   const [, params] = useRoute("/qa/:id");
-  const id = parseInt(params?.id ?? "1", 10);
+  const pageNum = params?.id ? String(parseInt(params.id, 10)).padStart(2, "0") : "01";
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+
+  const { state, executeQA, approvePage, requestRevision, regenerateSelective, getPage, getQAForPage, getRunsForPage } = useStudio();
+
   const [revisionComment, setRevisionComment] = useState("");
   const [showRevisionInput, setShowRevisionInput] = useState(false);
   const [checkedDefects, setCheckedDefects] = useState<Set<string>>(new Set());
+  const [qaRunning, setQaRunning] = useState(false);
+  const [activeTab, setActiveTab] = useState<"qa" | "historial">("qa");
 
-  const { data: page, isLoading: pageLoading } = useGetPage(id, { query: { enabled: !!id, queryKey: getGetPageQueryKey(id) } });
-  const { data: qa, isLoading: qaLoading } = useGetQA(id, { query: { enabled: !!id, queryKey: ["getQA", id] } });
-  const approvePage = useApprovePage();
-  const requestRevision = useRequestRevision();
-  const createRun = useCreateRun();
+  const page = getPage(pageNum);
+  const qa   = getQAForPage(pageNum);
+  const runs = getRunsForPage(pageNum);
+  const currentPageNum = parseInt(pageNum, 10);
+
+  function handleRunQA() {
+    setQaRunning(true);
+    executeQA(pageNum);
+    setTimeout(() => setQaRunning(false), 2500);
+    toast({ title: "QA ejecutado", description: `Página ${pageNum} — análisis completado` });
+  }
 
   function handleApprove() {
-    approvePage.mutate({ id }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetPageQueryKey(id) });
-        queryClient.invalidateQueries({ queryKey: getListPagesQueryKey() });
-        toast({ title: "✓ Página aprobada", description: `Pág. ${page?.pageNumber} — lista para exportación.` });
-      }
-    });
+    approvePage(pageNum);
+    toast({ title: "Página aprobada", description: `Pág. ${pageNum} marcada como aprobada — lista para exportación` });
   }
 
   function handleRevision() {
-    if (!revisionComment.trim()) { setShowRevisionInput(true); return; }
-    requestRevision.mutate({ id, data: { comment: revisionComment } }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetPageQueryKey(id) });
-        queryClient.invalidateQueries({ queryKey: getListPagesQueryKey() });
-        setShowRevisionInput(false);
-        setRevisionComment("");
-        toast({ title: "Corrección solicitada", description: "La página volvió a Pendiente para regeneración." });
-      }
-    });
+    requestRevision(pageNum, revisionComment || "Corrección solicitada desde panel QA");
+    setShowRevisionInput(false);
+    setRevisionComment("");
+    toast({ title: "Corrección solicitada", description: `Pág. ${pageNum} devuelta para corrección` });
   }
 
-  function handleRegenerate() {
-    createRun.mutate({ data: { pageId: id } }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetPageQueryKey(id) });
-        queryClient.invalidateQueries({ queryKey: getListPagesQueryKey() });
-        toast({ title: "Regeneración iniciada", description: "La versión anterior queda en historial." });
-      }
-    });
+  function handleRegen() {
+    regenerateSelective(pageNum);
+    toast({ title: "Regeneración selectiva iniciada", description: `Pág. ${pageNum} — nueva versión en proceso` });
   }
 
-  function toggleDefect(idStr: string) {
-    setCheckedDefects((prev) => {
+  function toggleDefect(id: string) {
+    setCheckedDefects(prev => {
       const next = new Set(prev);
-      if (next.has(idStr)) next.delete(idStr); else next.add(idStr);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
 
-  if (pageLoading) return (
-    <Layout title="QA y Aprobación">
-      <div className="p-6 space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-16 bg-white/[0.04]" />)}</div>
-    </Layout>
-  );
+  const canApprove = page?.status === "qa_review";
+  const canRegen   = page?.status === "needs_revision" || page?.status === "qa_review" || page?.status === "qa_pending";
 
-  if (!page) return (
-    <Layout title="QA y Aprobación">
-      <div className="p-6 text-sm text-white/30">Página no encontrada.</div>
-    </Layout>
-  );
-
-  const prevId = id > 1 ? id - 1 : null;
-  const nextId = id < 61 ? id + 1 : null;
-  const color = DOMAIN_COLORS[page.domain ?? ""] ?? "#0d1629";
-  const totalScore = qa ? (qa as any).total as number : null;
-  const redTeamScore = totalScore != null ? (totalScore / 10).toFixed(1) : null;
-  const isProductionReady = totalScore != null && totalScore >= 95;
+  if (!page) {
+    return (
+      <Layout title="QA y Aprobación">
+        <div className="flex items-center justify-center h-full bg-[#0a1220]">
+          <p className="text-sm text-white/25">Página {pageNum} no encontrada en el store</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
-    <Layout title={`QA y Aprobación — Pág. ${page.pageNumber}`}>
-      {/* Topbar */}
-      <div className="bg-[#0d1629] border-b border-white/[0.06] px-6 py-2.5 flex items-center gap-3">
-        <button onClick={() => setLocation("/biblioteca")} className="text-xs text-white/30 hover:text-white/70 flex items-center gap-1">
-          <ChevronLeft className="w-3.5 h-3.5" /> Biblioteca
-        </button>
-        <span className="text-white/10">|</span>
-        {prevId && <button onClick={() => setLocation(`/qa/${prevId}`)} className="text-xs text-white/30 hover:text-white/70 flex items-center gap-0.5"><ChevronLeft className="w-3 h-3" /> Anterior</button>}
-        {nextId && <button onClick={() => setLocation(`/qa/${nextId}`)} className="text-xs text-white/30 hover:text-white/70 flex items-center gap-0.5">Siguiente <ChevronRight className="w-3 h-3" /></button>}
+    <Layout title="QA y Aprobación">
+      <div className="flex flex-col h-full bg-[#0a1220] overflow-hidden">
 
-        <div className="ml-auto flex items-center gap-3">
-          {isProductionReady && (
-            <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-sm">
-              <ShieldCheck className="w-3 h-3" /> Lista para producción
-            </span>
-          )}
-          <span className={cn("inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium", statusColorDark(page.status))}>
-            {statusLabel(page.status)}
-          </span>
-          {totalScore != null && (
-            <span className={cn("text-base font-bold tabular-nums", scoreColorDark(totalScore))}>{totalScore}</span>
-          )}
-        </div>
-      </div>
-
-      <div className="flex min-h-0 overflow-hidden" style={{ height: "calc(100vh - 106px)" }}>
-        {/* Center: Infografia preview */}
-        <div className="flex-1 p-5 overflow-y-auto bg-[#0a1220]">
-          <div className="flex items-center gap-2 mb-3">
-            <Eye className="w-3.5 h-3.5 text-white/30" />
-            <p className="text-xs text-white/40 font-medium uppercase tracking-wide">Vista editorial — {page.pageNumber}/61</p>
-            <span className="text-[10px] text-white/15">AI-200 Visual Study Atlas · Contrato Visual v1.4</span>
+        {/* ── Topbar ── */}
+        <div className="bg-[#0d1629] border-b border-white/[0.06] px-5 py-2.5 flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <button onClick={() => setLocation("/biblioteca")}
+              className="text-white/20 hover:text-white/60 transition-colors shrink-0">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">QA · Pág. {pageNum}</span>
+                <span className={cn("text-[8px] font-bold px-1.5 py-0.5 rounded-sm border", statusColorDark(page.status))}>
+                  {statusLabel(page.status)}
+                </span>
+                <span className="text-[8px] text-white/15">Versión {page.currentVersion}</span>
+              </div>
+              <p className="text-xs font-bold text-white/75 truncate">{page.title}</p>
+            </div>
           </div>
-          <InfografiaPreview page={page} color={color} />
+
+          {/* Nav pages */}
+          <div className="flex items-center gap-1 shrink-0">
+            {currentPageNum > 1 && (
+              <button onClick={() => setLocation(`/qa/${currentPageNum - 1}`)}
+                className="text-[9px] text-white/25 hover:text-white/60 flex items-center gap-0.5 transition-colors">
+                <ChevronLeft className="w-3 h-3" />Ant.
+              </button>
+            )}
+            {currentPageNum < 10 && (
+              <button onClick={() => setLocation(`/qa/${currentPageNum + 1}`)}
+                className="text-[9px] text-white/25 hover:text-white/60 flex items-center gap-0.5 transition-colors">
+                Sig.<ChevronRight className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Score */}
+          {page.qaScore != null && (
+            <div className="text-center shrink-0">
+              <p className={cn("text-lg font-black tabular-nums leading-none", scoreColorDark(page.qaScore))}>
+                {page.qaScore.toFixed(1)}
+              </p>
+              <p className="text-[7px] text-white/20">Score QA</p>
+            </div>
+          )}
         </div>
 
-        {/* Right: QA Panel */}
-        <div className="w-80 shrink-0 border-l border-white/[0.06] bg-[#0d1629] flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-4 space-y-5">
-            {/* Scores */}
-            <section>
-              <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest mb-3">Diagnóstico Editorial</p>
-              {qaLoading ? (
-                <div className="space-y-2">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-10 bg-white/[0.04]" />)}</div>
-              ) : qa ? (
-                <div className="space-y-1.5">
-                  {QA_DIMS.map(({ key, label, desc }) => {
-                    const score = (qa as any)[key] as number;
-                    const redTeam = (score / 10).toFixed(1);
-                    return (
-                      <div key={key} className={cn("px-2.5 py-2 rounded-sm border",
-                        key === "total" ? "border-white/[0.08] bg-white/[0.03] mt-2" : "border-white/[0.04]")}>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className={cn("text-[10px] font-semibold", key === "total" ? "text-white" : "text-white/60")}>{label}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[9px] text-white/25 tabular-nums">{redTeam}/10</span>
-                            <span className={cn("text-xs font-bold tabular-nums", scoreColorDark(score))}>{Math.round(score)}</span>
-                          </div>
-                        </div>
-                        <div className="w-full bg-white/[0.06] rounded-full h-1">
-                          <div className={cn("h-1 rounded-full transition-all",
-                            score >= 95 ? "bg-emerald-500" : score >= 90 ? "bg-teal-500" : score >= 75 ? "bg-amber-400" : "bg-red-400")}
-                            style={{ width: `${score}%` }} />
-                        </div>
-                        {key === "total" && (
-                          <p className="text-[9px] text-white/25 mt-1">{desc}</p>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {redTeamScore && (
-                    <div className={cn("flex items-center justify-between px-2.5 py-2 rounded-sm border text-xs font-bold",
-                      parseFloat(redTeamScore) >= 9.5 ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400" : "border-amber-500/20 bg-amber-500/10 text-amber-400")}>
-                      <span>Score Red Team</span>
-                      <span className="tabular-nums">{redTeamScore} / 10</span>
+        {/* ── Tabs ── */}
+        <div className="flex border-b border-white/[0.06] bg-[#0d1629] shrink-0">
+          {([["qa", "QA y Aprobación"], ["historial", "Historial de runs"]] as const).map(([id, label]) => (
+            <button key={id} onClick={() => setActiveTab(id)}
+              className={cn(
+                "px-4 py-2.5 text-[9px] font-bold uppercase tracking-wider transition-all",
+                activeTab === id ? "border-b-2 border-blue-400 text-blue-300 bg-blue-500/5" : "text-white/25 hover:text-white/50"
+              )}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex-1 overflow-hidden">
+          {activeTab === "qa" && (
+            <div className="flex h-full overflow-hidden">
+              {/* ── Panel izquierdo: diagnóstico ── */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-4 max-w-xl">
+
+                {/* Acciones */}
+                <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                  <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">Acciones de aprobación</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={handleRunQA} disabled={qaRunning}
+                      className="flex items-center gap-1.5 h-8 px-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 rounded-sm text-[10px] font-semibold text-blue-300 transition-all disabled:opacity-40">
+                      {qaRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3" />}
+                      {qaRunning ? "Ejecutando QA…" : "Ejecutar QA"}
+                    </button>
+                    <button onClick={handleApprove} disabled={!canApprove}
+                      className="flex items-center gap-1.5 h-8 px-3 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 rounded-sm text-[10px] font-semibold text-emerald-300 transition-all disabled:opacity-30">
+                      <CheckCircle2 className="w-3 h-3" />Aprobar página
+                    </button>
+                    <button onClick={() => setShowRevisionInput(v => !v)}
+                      className="flex items-center gap-1.5 h-8 px-3 bg-amber-600/10 hover:bg-amber-600/20 border border-amber-500/20 rounded-sm text-[10px] font-semibold text-amber-300/80 transition-all">
+                      <AlertTriangle className="w-3 h-3" />Solicitar corrección
+                    </button>
+                    <button onClick={handleRegen} disabled={!canRegen}
+                      className="flex items-center gap-1.5 h-8 px-3 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-sm text-[10px] font-semibold text-white/40 transition-all disabled:opacity-30">
+                      <RotateCcw className="w-3 h-3" />Regenerar selectivo
+                    </button>
+                  </div>
+
+                  {showRevisionInput && (
+                    <div className="mt-3 space-y-2">
+                      <textarea
+                        value={revisionComment}
+                        onChange={e => setRevisionComment(e.target.value)}
+                        placeholder="Describe el problema a corregir…"
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-sm px-3 py-2 text-[10px] text-white/70 placeholder:text-white/20 resize-none h-16 focus:outline-none focus:border-amber-500/40"
+                      />
+                      <button onClick={handleRevision}
+                        className="h-7 px-3 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 rounded-sm text-[9px] font-bold text-amber-300 transition-all">
+                        Confirmar corrección
+                      </button>
                     </div>
                   )}
                 </div>
-              ) : (
-                <div className="text-xs text-white/25 text-center py-4 border border-dashed border-white/[0.06] rounded-sm">
-                  Sin datos QA registrados para esta página.
+
+                {/* QA Score dims */}
+                <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                  <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">Score por dimensión</p>
+                  <div className="space-y-2.5">
+                    {QA_DIMS.map(dim => {
+                      const val = qa?.dimensions?.[dim.key as keyof typeof qa.dimensions] ?? page.qaScore ?? 0;
+                      const pct = Math.min(100, (val / 100) * 100);
+                      return (
+                        <div key={dim.key}>
+                          <div className="flex justify-between mb-0.5">
+                            <span className="text-[9px] text-white/50 font-medium">{dim.label}</span>
+                            <span className={cn("text-[9px] font-bold tabular-nums", scoreColorDark(val))}>{val.toFixed(1)}</span>
+                          </div>
+                          <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
+                            <div className={cn("h-full rounded-full transition-all", val >= 95 ? "bg-emerald-500" : val >= 90 ? "bg-teal-500" : val >= 75 ? "bg-amber-400" : "bg-red-400")}
+                              style={{ width: `${pct}%` }} />
+                          </div>
+                          <p className="text-[7px] text-white/20 mt-0.5">{dim.desc}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
-            </section>
 
-            {/* Observations */}
-            {qa && (qa.observations as string[]).length > 0 && (
-              <section>
-                <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest mb-2">Observaciones</p>
-                <ul className="space-y-1.5">
-                  {(qa.observations as string[]).map((obs, i) => (
-                    <li key={i} className="text-[10px] text-white/50 flex items-start gap-2 leading-relaxed">
-                      <span className="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1 shrink-0" />
-                      {obs}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
+                {/* Defect checklist */}
+                <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                  <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">
+                    Checklist de defectos
+                    {checkedDefects.size > 0 && (
+                      <span className="ml-2 text-amber-400">· {checkedDefects.size} marcados</span>
+                    )}
+                  </p>
+                  <div className="space-y-1.5">
+                    {DEFECT_TYPES.map(defect => {
+                      const fromQA = qa?.defectsFound?.includes(defect.id);
+                      const checked = checkedDefects.has(defect.id) || fromQA;
+                      return (
+                        <label key={defect.id}
+                          className={cn(
+                            "flex items-start gap-2.5 px-3 py-2 rounded-sm border cursor-pointer transition-all",
+                            checked
+                              ? "bg-amber-500/8 border-amber-500/20"
+                              : "bg-white/[0.02] border-white/[0.05] hover:border-white/10"
+                          )}>
+                          <input type="checkbox" checked={checked} onChange={() => toggleDefect(defect.id)}
+                            className="mt-0.5 shrink-0 accent-amber-400" />
+                          <div className="flex-1 min-w-0">
+                            <p className={cn("text-[10px] font-semibold", checked ? "text-amber-300" : "text-white/50")}>{defect.label}</p>
+                            <p className="text-[8px] text-white/25 leading-snug">{defect.desc}</p>
+                          </div>
+                          {fromQA && <span className="text-[7px] text-amber-400/60 shrink-0">Auto</span>}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
 
-            {/* Red team log */}
-            {qa && (qa.redTeam as string[]).length > 0 && (
-              <section>
-                <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest mb-2">Log Red Team</p>
-                <ul className="space-y-1.5">
-                  {(qa.redTeam as string[]).map((r, i) => (
-                    <li key={i} className={cn("text-[10px] flex items-start gap-2 leading-relaxed",
-                      r.startsWith("✓") ? "text-emerald-400" : r.startsWith("⚠") ? "text-amber-400" : "text-white/40")}>
-                      <span className="shrink-0">{r.slice(0, 1)}</span>
-                      <span>{r.slice(2)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
-            {/* Defect checklist */}
-            <section>
-              <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest mb-2">Control de defectos</p>
-              <div className="space-y-1">
-                {DEFECT_TYPES.map((d) => (
-                  <label key={d.id} className={cn(
-                    "flex items-start gap-2 px-2 py-1.5 rounded-sm cursor-pointer group border transition-colors",
-                    checkedDefects.has(d.id) ? "border-red-500/20 bg-red-500/5" : "border-transparent hover:border-white/[0.06] hover:bg-white/[0.02]"
-                  )}>
-                    <input type="checkbox" className="mt-0.5 shrink-0 accent-red-500"
-                      checked={checkedDefects.has(d.id)}
-                      onChange={() => toggleDefect(d.id)} />
-                    <div>
-                      <p className={cn("text-[10px] font-medium", checkedDefects.has(d.id) ? "text-red-400" : "text-white/60")}>{d.label}</p>
-                      <p className="text-[9px] text-white/25">{d.desc}</p>
+              {/* ── Panel derecho: preview + observaciones ── */}
+              <div className="w-72 border-l border-white/[0.06] flex flex-col bg-[#0d1629] overflow-hidden shrink-0">
+                {/* Preview */}
+                <div className="p-4 border-b border-white/[0.06]">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Eye className="w-3 h-3 text-white/20" />
+                    <p className="text-[9px] font-bold text-white/25 uppercase tracking-widest">Preview editorial</p>
+                  </div>
+                  <div className="aspect-[4/3] bg-[#0a1220] rounded-sm border border-white/[0.06] flex items-center justify-center overflow-hidden">
+                    <div className="w-full h-full p-2 flex flex-col text-[5px] text-white/30 space-y-1">
+                      <div className="h-3 rounded-sm flex items-center px-1.5 gap-1" style={{ backgroundColor: "#0078d420" }}>
+                        <span className="font-black text-[#0078d4]/70">ACR · #{pageNum}</span>
+                        <span className="ml-auto text-white/20">{page.contractVersion}</span>
+                      </div>
+                      <div className="font-bold text-[6px] text-white/50 line-clamp-1">{page.title}</div>
+                      {[70, 55, 85, 60, 45].map((w,i) => (
+                        <div key={i} className="h-px bg-white/10 rounded-full" style={{ width: `${w}%` }} />
+                      ))}
+                      <div className="flex gap-1 flex-1 mt-1">
+                        <div className="flex-1 bg-blue-500/10 rounded-sm" />
+                        <div className="flex-1 bg-teal-500/10 rounded-sm" />
+                      </div>
+                      <div className="h-3 bg-teal-500/10 rounded-sm border border-teal-500/20 flex items-center px-1 gap-1">
+                        <span className="text-teal-400/60 font-bold">Autocheck</span>
+                      </div>
                     </div>
-                  </label>
-                ))}
-              </div>
-              {checkedDefects.size > 0 && (
-                <p className="text-[10px] text-red-400 font-semibold mt-2 px-1">
-                  {checkedDefects.size} defecto{checkedDefects.size !== 1 ? "s" : ""} marcado{checkedDefects.size !== 1 ? "s" : ""} — requiere corrección
-                </p>
-              )}
-            </section>
-          </div>
+                  </div>
+                </div>
 
-          {/* Actions — sticky bottom */}
-          <div className="border-t border-white/[0.06] p-3 space-y-1.5 bg-[#0d1629] shrink-0">
-            <Button onClick={handleApprove}
-              disabled={page.status === "approved" || approvePage.isPending || checkedDefects.size > 0}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8"
-              data-testid="button-approve">
-              <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-              {page.status === "approved" ? "Ya aprobada" : checkedDefects.size > 0 ? "Defectos pendientes" : "Aprobar página"}
-            </Button>
+                {/* QA report observations */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {qa && (
+                    <>
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <ShieldCheck className="w-3 h-3 text-blue-400" />
+                          <p className="text-[9px] font-bold text-white/30">Veredicto</p>
+                        </div>
+                        <div className={cn("px-3 py-2 rounded-sm border text-[10px] font-semibold", qa.verdict === "approved" ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-300" : "bg-amber-500/10 border-amber-500/25 text-amber-300")}>
+                          {qa.verdict === "approved" ? "✓ Lista para aprobación editorial" : "⚠ Requiere corrección antes de aprobar"}
+                        </div>
+                      </div>
 
-            {showRevisionInput ? (
-              <div className="space-y-1.5">
-                <textarea rows={2}
-                  className="w-full text-[10px] border border-amber-500/20 rounded-sm p-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-amber-500/40 bg-[#0a1220] text-white/70 placeholder:text-white/20"
-                  placeholder="Motivo de la corrección..."
-                  value={revisionComment}
-                  onChange={(e) => setRevisionComment(e.target.value)}
-                  data-testid="input-revision-comment" />
-                <div className="flex gap-1.5">
-                  <Button onClick={handleRevision} disabled={requestRevision.isPending}
-                    variant="outline" className="flex-1 text-xs h-7 border-amber-500/25 text-amber-400 hover:bg-amber-500/10 bg-transparent">
-                    Confirmar
-                  </Button>
-                  <Button onClick={() => setShowRevisionInput(false)} variant="ghost" className="text-xs h-7 text-white/30 hover:text-white/60 hover:bg-white/[0.03]">
-                    Cancelar
-                  </Button>
+                      {qa.observations.length > 0 && (
+                        <div>
+                          <p className="text-[9px] font-bold text-white/25 uppercase tracking-widest mb-2">Observaciones</p>
+                          <div className="space-y-1.5">
+                            {qa.observations.map((obs, i) => (
+                              <p key={i} className="text-[9px] text-white/45 leading-snug">· {obs}</p>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {qa.redTeamLog.length > 0 && (
+                        <div>
+                          <p className="text-[9px] font-bold text-white/25 uppercase tracking-widest mb-2">Red team log</p>
+                          <div className="space-y-1">
+                            {qa.redTeamLog.map((entry, i) => (
+                              <p key={i} className={cn("text-[8px] leading-snug font-mono", entry.startsWith("✓") ? "text-emerald-400/60" : "text-amber-400/60")}>
+                                {entry}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {!qa && (
+                    <div className="text-center py-8">
+                      <Shield className="w-6 h-6 text-white/10 mx-auto mb-2" />
+                      <p className="text-[9px] text-white/20">Sin reporte QA todavía</p>
+                      <p className="text-[8px] text-white/15 mt-0.5">Ejecuta QA para ver el diagnóstico</p>
+                    </div>
+                  )}
+
+                  {/* Contract info */}
+                  <div className="border-t border-white/[0.05] pt-3">
+                    <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest mb-1.5">Contrato editorial</p>
+                    <div className="space-y-1 text-[8px] text-white/30">
+                      <p>Versión: <span className="text-white/50">{page.contractVersion}</span></p>
+                      <p>Score mínimo: <span className="text-amber-400">95/100</span></p>
+                      <p>Grounding: <span className={page.groundingStatus === "verified" ? "text-emerald-400" : "text-amber-400"}>{page.groundingStatus}</span></p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            ) : (
-              <Button onClick={() => setShowRevisionInput(true)} variant="outline"
-                className="w-full text-xs h-8 border-amber-500/20 text-amber-400 hover:bg-amber-500/10 bg-transparent"
-                data-testid="button-request-revision">
-                <AlertTriangle className="w-3.5 h-3.5 mr-1.5" />
-                Solicitar corrección
-              </Button>
-            )}
+            </div>
+          )}
 
-            <Button onClick={handleRegenerate} variant="outline" disabled={createRun.isPending}
-              className="w-full text-xs h-8 border-white/[0.08] text-white/40 hover:bg-white/[0.03] bg-transparent"
-              data-testid="button-regenerate">
-              <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-              {createRun.isPending ? "Iniciando..." : "Regenerar selectivamente"}
-            </Button>
-          </div>
+          {activeTab === "historial" && (
+            <div className="overflow-y-auto h-full p-5 space-y-2 max-w-2xl">
+              <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-4">Runs de generación · Pág. {pageNum}</p>
+              {runs.length === 0 ? (
+                <div className="text-center py-12">
+                  <History className="w-6 h-6 text-white/10 mx-auto mb-2" />
+                  <p className="text-sm text-white/20">Sin runs de generación todavía</p>
+                </div>
+              ) : (
+                runs.map(run => (
+                  <div key={run.id} className="bg-[#0d1629] border border-white/[0.07] rounded-sm p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-bold text-white/20 font-mono">{run.version}</span>
+                        <span className={cn("text-[8px] px-1.5 py-0.5 rounded-sm font-semibold",
+                          run.type === "selective_regeneration" ? "bg-sky-500/15 text-sky-400" : "bg-violet-500/15 text-violet-400")}>
+                          {run.type === "selective_regeneration" ? "Regeneración selectiva" : "Generación completa"}
+                        </span>
+                        <span className={cn("text-[8px] px-1.5 py-0.5 rounded-sm font-semibold",
+                          run.status === "completed" ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400")}>
+                          {run.status === "completed" ? "Completada" : run.status}
+                        </span>
+                      </div>
+                      <span className="text-[9px] text-white/20">{formatDateTime(run.createdAt)}</span>
+                    </div>
+                    {run.note && <p className="text-[9px] text-white/40 mb-2">{run.note}</p>}
+                    {run.promptTokens && (
+                      <div className="flex gap-4 text-[8px] text-white/20">
+                        <span>Modelo: <span className="text-white/40 font-mono">{run.model}</span></span>
+                        <span>Prompt: <span className="text-white/40">{run.promptTokens.toLocaleString()}</span></span>
+                        <span>Completion: <span className="text-white/40">{run.completionTokens?.toLocaleString()}</span></span>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
       </div>
     </Layout>
-  );
-}
-
-function InfografiaPreview({ page, color }: { page: any; color: string }) {
-  const hasTrap = !!page.examTraps;
-  const hasAutocheck = !!page.autocheckQuestion;
-  const concepts = page.concepts?.split(",").map((c: string) => c.trim()).filter(Boolean) ?? [];
-
-  return (
-    <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm shadow-sm overflow-hidden max-w-xl mx-auto"
-      data-testid={`preview-page-${page.id}`}>
-      {/* Header — stable zone */}
-      <div style={{ backgroundColor: color }} className="px-5 py-3.5 text-white">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[9px] uppercase tracking-widest opacity-60 font-semibold">AI-200 Visual Study Atlas</span>
-              <span className="text-[9px] opacity-40">·</span>
-              <span className="text-[9px] uppercase tracking-wider opacity-60">{page.domain}</span>
-            </div>
-            <h2 className="text-sm font-bold leading-snug">{page.title}</h2>
-          </div>
-          <div className="text-right shrink-0">
-            <div className="text-3xl font-black opacity-15 leading-none">{page.pageNumber}</div>
-            <div className="text-[9px] opacity-40 mt-0.5">/ 61</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Contexto */}
-      {page.context && (
-        <div className="px-5 pt-4 pb-2">
-          <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5" style={{ color }}>Contexto</p>
-          <p className="text-[10px] text-white/50 leading-relaxed">
-            {page.context.slice(0, 280)}{page.context.length > 280 ? "…" : ""}
-          </p>
-        </div>
-      )}
-
-      {/* Conceptos clave */}
-      {concepts.length > 0 && (
-        <div className="px-5 py-3">
-          <p className="text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color }}>Conceptos clave</p>
-          <div className="grid grid-cols-2 gap-1.5">
-            {concepts.slice(0, 8).map((c: string, i: number) => (
-              <div key={i} className="flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.06] rounded-sm px-2 py-1.5">
-                <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                <span className="text-[9px] text-white/50 leading-tight">{c}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Diagrama placeholder */}
-      <div className="px-5 py-3 border-t border-white/[0.04]">
-        <p className="text-[9px] font-bold uppercase tracking-widest mb-2 text-white/25">Diagrama visual</p>
-        <div className="h-16 border border-dashed border-white/[0.08] rounded-sm flex items-center justify-center bg-white/[0.02]">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1.5 mb-1">
-              {[1,2,3].map((i) => (
-                <div key={i} className="px-2 py-1 rounded-sm text-[8px] font-semibold text-white"
-                  style={{ backgroundColor: color, opacity: 0.6 + (i * 0.15) }}>
-                  {i === 1 ? "A" : i === 2 ? "B" : "C"}
-                </div>
-              ))}
-            </div>
-            <p className="text-[8px] text-white/20">Storytelling visual flexible · Asset local pendiente</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Trampas + Autocheck — stable zones */}
-      <div className="flex gap-0">
-        {/* Trampas — lower left */}
-        <div className={cn("flex-1 border-t px-3 py-2.5", hasTrap ? "border-red-500/10 bg-red-500/5" : "border-white/[0.04] bg-white/[0.02]")}>
-          <p className={cn("text-[8px] font-bold uppercase tracking-widest mb-1.5", hasTrap ? "text-red-400" : "text-white/20")}>
-            Trampa de examen
-          </p>
-          {hasTrap ? (
-            <div className="border border-red-500/15 rounded-sm px-2 py-1.5 bg-[#0a1220]">
-              <p className="text-[9px] text-red-300/80 leading-snug">
-                {page.examTraps.split("\n")[0].slice(0, 120)}
-                {page.examTraps.length > 120 ? "…" : ""}
-              </p>
-            </div>
-          ) : (
-            <div className="h-6 border border-dashed border-red-500/10 rounded-sm" />
-          )}
-        </div>
-
-        {/* Autocheck — lower right */}
-        <div className={cn("flex-1 border-t border-l px-3 py-2.5", hasAutocheck ? "border-teal-500/10 bg-teal-500/5" : "border-white/[0.04] bg-white/[0.02]")}>
-          <p className={cn("text-[8px] font-bold uppercase tracking-widest mb-1.5", hasAutocheck ? "text-teal-400" : "text-white/20")}>
-            Autocheck
-          </p>
-          {hasAutocheck ? (
-            <div className="border border-teal-500/15 rounded-sm px-2 py-1.5 bg-[#0a1220] space-y-0.5">
-              <p className="text-[9px] text-white/50 leading-snug font-medium">
-                {page.autocheckQuestion.slice(0, 80)}{page.autocheckQuestion.length > 80 ? "…" : ""}
-              </p>
-              <p className="text-[9px] text-teal-300/80 font-semibold">R: {page.autocheckAnswer}</p>
-            </div>
-          ) : (
-            <div className="h-6 border border-dashed border-teal-500/10 rounded-sm" />
-          )}
-        </div>
-      </div>
-
-      {/* Footer — stable zone */}
-      <div className="border-t border-white/[0.04] px-5 py-2 flex items-center justify-between bg-white/[0.02]">
-        <p className="text-[8px] text-white/15 font-mono truncate max-w-xs">
-          {page.sources?.split("\n")[0]?.slice(0, 60) ?? "learn.microsoft.com/es-es/azure/ai-services"}
-        </p>
-        <div className="flex items-center gap-2 shrink-0">
-          <p className="text-[8px] text-white/15">Contrato v1.4</p>
-          <p className="text-[8px] text-white/15">{page.pageNumber}/61</p>
-        </div>
-      </div>
-    </div>
   );
 }
