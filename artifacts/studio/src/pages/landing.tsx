@@ -71,13 +71,13 @@ export default function Landing() {
                 <span className="text-[9px] font-bold text-teal-400 uppercase tracking-[0.2em] bg-teal-400/10 border border-teal-400/20 px-2 py-1 rounded-sm">Editorial inteligente · Certificaciones cloud</span>
               </div>
               <h1 className="text-3xl md:text-[2.6rem] font-black text-white leading-[1.15] tracking-tight mb-4">
-                Una biblioteca inteligente para{" "}
+                Una biblioteca inteligente<br />
                 <span className="bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">
-                  aprobar certificaciones cloud.
+                  para aprobar certificaciones cloud.
                 </span>
               </h1>
               <p className="text-sm text-white/50 leading-relaxed mb-7 max-w-lg">
-                Colecciones de estudio completas por certificación. Seis formatos complementarios para cada ciclo: comprensión, visualización, práctica y repaso.
+                CloudBooks produce colecciones de estudio completas por certificación. Cada colección incluye seis formatos complementarios diseñados para cubrir todo el ciclo de preparación.
               </p>
               <div className="flex items-center gap-3 flex-wrap">
                 <button onClick={() => setLocation("/books")}
