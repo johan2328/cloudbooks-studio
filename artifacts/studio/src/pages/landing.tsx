@@ -201,43 +201,41 @@ export default function Landing() {
       {/* ── Seis formatos ────────────────────────────────────────────────── */}
       <section className="py-24 bg-[#0d1629] relative overflow-hidden">
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/30 to-transparent" />
-        <div className="max-w-5xl mx-auto px-6">
+        <div className="max-w-6xl mx-auto px-6">
           <div className="mb-14 max-w-2xl">
             <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em] mb-3">Sistema editorial</p>
             <h2 className="text-3xl font-black text-white">Seis formatos. Una ruta completa de estudio.</h2>
             <p className="text-base text-white/55 mt-4 leading-relaxed">Cada colección CloudBooks se produce en seis formatos complementarios, diseñados para cubrir todo el ciclo de preparación: comprensión profunda, estudio visual, práctica de examen y repaso final.</p>
           </div>
 
-          {/* Timeline pipeline — cronológico, no repetir cards */}
-          <div className="relative flex flex-col md:flex-row items-stretch gap-0">
-            {/* Desktop: línea horizontal de conexión */}
-            <div className="hidden md:block absolute top-[26px] left-8 right-8 h-px bg-gradient-to-r from-blue-500/20 via-violet-500/30 to-teal-500/20 pointer-events-none" />
+          {/* Timeline pipeline — cronológico */}
+          <div className="relative flex flex-col md:flex-row items-stretch gap-6 md:gap-8">
+            {/* Desktop: línea punteada pasa por el centro de los círculos (detrás) */}
+            <div className="hidden md:block absolute top-[20px] left-5 right-5 h-0 border-t border-dashed border-white/[0.12] pointer-events-none z-0" />
 
             {[
               { num: "01", label: "Master Book", tag: "Aprendizaje profundo", color: "#2563eb",
-                desc: "Libro completo para construir comprensión técnica de dominios, servicios, arquitectura y decisiones de examen." },
+                desc: "Libro completo. Dominios, servicios y arquitectura." },
               { num: "02", label: "Visual Atlas", tag: "Estudio visual", color: "#7c3aed",
-                desc: "Atlas infográfico para acelerar comprensión, memoria visual, comparaciones, flujos y mapas de decisión." },
+                desc: "Infografías, mapas de decisión y comparaciones." },
               { num: "03", label: "Exam Traps", tag: "Criterio de examen", color: "#0d9488",
-                desc: "Trampas, distractores, ambigüedades, excepciones y señales que suelen definir la respuesta correcta." },
+                desc: "Trampas, distractores y señales de respuesta." },
               { num: "04", label: "Question Bank", tag: "Práctica", color: "#0284c7",
-                desc: "Preguntas con respuestas explicadas, análisis de distractores, dificultad progresiva y razonamiento." },
+                desc: "Preguntas con razonamiento y dificultad progresiva." },
               { num: "05", label: "Cheat Sheets", tag: "Repaso", color: "#d97706",
-                desc: "Hojas de referencia con límites, tablas de decisión, diferencias entre servicios y señales rápidas." },
+                desc: "Tablas de decisión, límites y señales rápidas." },
               { num: "06", label: "Rapid Review", tag: "Cierre", color: "#059669",
-                desc: "Checklist de dominio, preguntas críticas y mapas de memoria para los últimos días antes del examen." },
+                desc: "Checklist y mapas de memoria pre-examen." },
             ].map((f, i) => (
-              <div key={f.num} className="relative flex-1 group">
+              <div key={f.num} className="relative flex-1 z-10">
                 {/* Mobile conector vertical */}
-                {i > 0 && <div className="md:hidden absolute top-0 left-[19px] -translate-y-8 w-px h-8 bg-white/10" />}
+                {i > 0 && <div className="md:hidden absolute top-0 left-[19px] -translate-y-6 w-px h-6 bg-white/10" />}
 
-                <div className="flex md:flex-col items-start md:items-center gap-4 md:gap-0 md:pt-0 pt-0 pb-8 md:pb-0">
-                  {/* Dot + número */}
-                  <div className="relative shrink-0">
-                    <div className="w-10 h-10 rounded-full border-2 flex items-center justify-center font-mono text-xs font-black tracking-wider"
-                      style={{borderColor: `${f.color}50`, color: f.color, backgroundColor: `${f.color}15`}}>
-                      {f.num}
-                    </div>
+                <div className="flex md:flex-col items-start md:items-center gap-4 md:gap-0">
+                  {/* Círculo con bg sólido para cubrir la línea */}
+                  <div className="w-10 h-10 rounded-full border-2 flex items-center justify-center font-mono text-xs font-black tracking-wider shrink-0 z-10"
+                    style={{borderColor: `${f.color}50`, color: f.color, backgroundColor: `#0d1629`}}>
+                    {f.num}
                   </div>
 
                   {/* Texto */}
@@ -245,7 +243,7 @@ export default function Landing() {
                     <p className="text-[9px] font-bold uppercase tracking-widest mb-1"
                       style={{color: f.color}}>{f.tag}</p>
                     <h3 className="text-base font-black text-white mb-1">{f.label}</h3>
-                    <p className="text-[10px] text-white/50 leading-relaxed max-w-[200px] mx-auto hidden md:block">{f.desc}</p>
+                    <p className="text-[9px] text-white/45 leading-relaxed hidden md:block max-w-[140px] mx-auto">{f.desc}</p>
                     <p className="text-[11px] text-white/50 leading-relaxed md:hidden">{f.desc}</p>
                   </div>
                 </div>
