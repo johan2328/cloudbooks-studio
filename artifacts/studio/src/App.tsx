@@ -8,6 +8,8 @@ import Landing from "@/pages/landing";
 import Books from "@/pages/books";
 import AI200Packs from "@/pages/ai200-packs";
 import Login from "@/pages/login";
+import NuestraLaborPage from "@/pages/nuestra-labor";
+import EmpresasPage from "@/pages/empresas";
 import Catalogo from "@/pages/catalogo";
 import Azure from "@/pages/azure";
 import AI200Collection from "@/pages/ai200";
@@ -45,8 +47,10 @@ function Router() {
       <Route path="/portal" component={Landing} />
       <Route path="/books" component={Books} />
       <Route path="/ai-200-packs" component={AI200Packs} />
+      <Route path="/nuestra-labor" component={NuestraLaborPage} />
+      <Route path="/empresas" component={EmpresasPage} />
 
-      {/* ── Catálogo jerárquico ─────────────────────────── */}
+      {/* ── Catálogo jerárquico ───────────────────── */}
       {/* Nivel 1: Proveedores cloud */}
       <Route path="/catalogo">
         <PrivateRoute><Catalogo /></PrivateRoute>
