@@ -261,7 +261,7 @@ export default function AI200Packs() {
       <footer className="bg-[#0d1629] border-t border-white/[0.06] py-6">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-6 w-auto opacity-40" draggable={false} />
+            <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-9 w-auto opacity-60" draggable={false} />
             <span className="text-[9px] text-white/15">Editorial inteligente de certificaciones cloud</span>
           </div>
           <button onClick={() => setLocation("/books")}

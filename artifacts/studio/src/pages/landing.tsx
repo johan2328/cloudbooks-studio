@@ -15,7 +15,7 @@ export function CommercialNav({ active }: { active?: string }) {
     <header className="fixed top-0 inset-x-0 z-50 bg-[#0d1629]/95 backdrop-blur-sm border-b border-white/[0.06]">
       <div className="max-w-6xl mx-auto px-6 h-14 flex items-center gap-6">
         <button onClick={() => setLocation("/")} className="shrink-0">
-          <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-8 w-auto" draggable={false} />
+          <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-12 w-auto" draggable={false} />
         </button>
         <nav className="hidden md:flex items-center gap-5 ml-4">
           {[
@@ -447,7 +447,7 @@ export default function Landing() {
       <footer className="bg-[#0d1629] border-t border-white/[0.06] py-6">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-6 w-auto opacity-40" draggable={false} />
+            <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-9 w-auto opacity-60" draggable={false} />
             <span className="text-[9px] text-white/15">Editorial inteligente de certificaciones cloud</span>
           </div>
           <div className="text-[9px] text-white/15 font-mono">© 2026 CloudBooks</div>
