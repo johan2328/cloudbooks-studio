@@ -88,7 +88,7 @@ export function CommercialNav({ active }: { active?: string }) {
               <Globe className="w-3.5 h-3.5" />
               <span className="font-mono tracking-wider">EN</span>
             </a>
-            <button onClick={() => setLocation("/demo")}
+            <button onClick={() => setLocation(user ? "/studio" : "/login")}
               className="flex items-center gap-1.5 border border-white/15 hover:border-white/30 text-white/60 hover:text-white/90 text-xs font-medium px-3 h-7 rounded-sm transition-all">
               {user ? "Abrir Studio" : "Studio"}
             </button>
