@@ -104,8 +104,8 @@ export default function Azure() {
 
   return (
     <CatalogLayout crumbs={[
-      { label: "CloudBooks Library", href: "/catalogo" },
-      { label: "Microsoft Azure" },
+      { label: "Biblioteca", href: "/catalogo" },
+      { label: "Azure" },
     ]}>
       <div className="px-8 py-8 max-w-5xl mx-auto w-full">
 

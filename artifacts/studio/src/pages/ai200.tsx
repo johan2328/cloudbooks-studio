@@ -103,8 +103,8 @@ export default function AI200Collection() {
 
   return (
     <CatalogLayout crumbs={[
-      { label: "CloudBooks Library", href: "/catalogo" },
-      { label: "Microsoft Azure", href: "/azure" },
+      { label: "Biblioteca", href: "/catalogo" },
+      { label: "Azure", href: "/azure" },
       { label: "AI-200 Certification Collection" },
     ]}>
       <div className="px-8 py-8 max-w-5xl mx-auto w-full">

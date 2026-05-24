@@ -71,14 +71,14 @@ export default function Catalogo() {
   const [, setLocation] = useLocation();
 
   return (
-    <CatalogLayout crumbs={[{ label: "CloudBooks Library" }]}>
+    <CatalogLayout crumbs={[{ label: "Biblioteca" }]}>
       <div className="px-8 py-8 max-w-5xl mx-auto w-full">
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight">CloudBooks Library</h1>
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Biblioteca</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Biblioteca editorial de certificaciones cloud. Selecciona un proveedor para explorar sus colecciones.
+            Colecciones editoriales de certificación cloud. Selecciona un proveedor para explorar sus certificaciones.
           </p>
         </div>
 
@@ -148,7 +148,7 @@ export default function Catalogo() {
 
         {/* Modelo editorial */}
         <div className="border border-dashed border-gray-200 rounded-sm px-5 py-4">
-          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">Modelo editorial CloudBooks</p>
+          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">Modelo editorial</p>
           <div className="flex items-center gap-2 flex-wrap">
             {["Proveedor Cloud", "Certificación", "Colección editorial", "Formato de estudio", "Infografía / Módulo", "Output"].map((item, i, arr) => (
               <div key={item} className="flex items-center gap-2">
