@@ -65,25 +65,35 @@ export default function Landing() {
         <div className="absolute top-16 right-1/3 w-56 h-56 rounded-full blur-3xl opacity-8 bg-violet-600 pointer-events-none" />
 
         <div className="relative max-w-6xl mx-auto px-6 pt-20 pb-16">
-          <div className="max-w-3xl">
-            <div className="flex items-center gap-2 mb-6">
-              <span className="text-[9px] font-bold text-teal-400 uppercase tracking-[0.2em] bg-teal-400/10 border border-teal-400/20 px-2 py-1 rounded-sm">Editorial inteligente · Certificaciones cloud</span>
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <div className="flex items-center gap-2 mb-6">
+                <span className="text-[9px] font-bold text-teal-400 uppercase tracking-[0.2em] bg-teal-400/10 border border-teal-400/20 px-2 py-1 rounded-sm">Editorial inteligente · Certificaciones cloud</span>
+              </div>
+              <h1 className="text-4xl md:text-5xl font-black text-white leading-[1.1] tracking-tight mb-5">
+                Una biblioteca inteligente<br />
+                <span className="bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">
+                  para aprobar certificaciones cloud.
+                </span>
+              </h1>
+              <p className="text-base text-white/50 leading-relaxed mb-8">
+                CloudBooks produce colecciones de estudio completas por certificación. Cada colección incluye seis formatos complementarios diseñados para cubrir todo el ciclo de preparación.
+              </p>
+              <div className="flex items-center gap-3 flex-wrap">
+                <button onClick={() => setLocation("/books")}
+                  className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white font-semibold px-5 h-10 rounded-sm transition-all text-sm">
+                  Ver colecciones disponibles
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button onClick={() => { document.getElementById("metodologia")?.scrollIntoView({behavior:"smooth"}); }}
+                  className="flex items-center gap-1.5 text-sm text-white/35 hover:text-white/60 transition-colors font-medium">
+                  Conocer metodología <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-white leading-[1.1] tracking-tight mb-5">
-              Una biblioteca inteligente<br />
-              <span className="bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">
-                para aprobar certificaciones cloud.
-              </span>
-            </h1>
-            <p className="text-base text-white/50 leading-relaxed mb-8 max-w-xl">
-              CloudBooks produce colecciones de estudio completas por certificación. Cada colección incluye formatos complementarios diseñados para cubrir todo el ciclo de preparación.
-            </p>
-            <div className="flex items-center gap-3 flex-wrap">
-              <button onClick={() => setLocation("/books")}
-                className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white font-semibold px-5 h-10 rounded-sm transition-all text-sm">
-                Ver colecciones disponibles
-                <ArrowRight className="w-4 h-4" />
-              </button>
+            <div className="hidden md:flex items-center justify-center">
+              <img src="/hero-editorial.png" alt="CloudBooks Editorial"
+                className="w-full max-w-sm rounded-sm opacity-85 shadow-2xl shadow-black/40 ring-1 ring-white/10" />
             </div>
           </div>
         </div>
@@ -110,7 +120,7 @@ export default function Landing() {
                     <div className="flex items-center gap-2 mb-0.5">
                       <p className="text-sm font-bold text-white/80">{p.label}</p>
                       {p.best && <span className="text-[7px] font-bold bg-teal-400/20 text-teal-300 border border-teal-400/25 px-1.5 py-0.5 rounded-sm">BEST VALUE</span>}
-                      {p.active && !p.best && <span className="text-[7px] font-bold bg-violet-400/20 text-violet-300 border border-violet-400/25 px-1.5 py-0.5 rounded-sm">EN PRODUCCIÓN</span>}
+                      {p.active && !p.best && <span className="text-[7px] font-bold bg-violet-400/20 text-violet-300 border border-violet-400/25 px-1.5 py-0.5 rounded-sm">DISPONIBLE</span>}
                     </div>
                     <p className="text-[9px] text-white/35 uppercase tracking-wide font-medium">{p.tag}</p>
                     <p className="text-[10px] text-white/30 mt-1">{p.desc}</p>
@@ -175,10 +185,16 @@ export default function Landing() {
       {/* ── Seis formatos ────────────────────────────────────────────────── */}
       <section className="py-16 bg-white border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="mb-10">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">Sistema editorial</p>
-            <h2 className="text-2xl font-black text-gray-900">Seis formatos. Una ruta completa de estudio.</h2>
-            <p className="text-sm text-gray-500 mt-2 max-w-xl">Cada colección CloudBooks se produce en seis formatos complementarios, diseñados para cubrir todo el ciclo de preparación: comprensión, visualización, práctica y repaso final.</p>
+          <div className="mb-10 grid md:grid-cols-2 gap-10 items-center">
+            <div>
+              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">Sistema editorial</p>
+              <h2 className="text-2xl font-black text-gray-900">Seis formatos. Una ruta completa de estudio.</h2>
+              <p className="text-sm text-gray-500 mt-3 leading-relaxed">Cada colección CloudBooks se produce en seis formatos complementarios, diseñados para cubrir todo el ciclo de preparación: comprensión profunda, estudio visual, práctica de examen y repaso final.</p>
+            </div>
+            <div className="hidden md:block">
+              <img src="/formats-collection.png" alt="Colección editorial CloudBooks"
+                className="w-full rounded-sm shadow-sm ring-1 ring-gray-200 object-cover" />
+            </div>
           </div>
           <div className="grid md:grid-cols-3 gap-3">
             {[
@@ -224,65 +240,65 @@ export default function Landing() {
       </section>
 
       {/* ── Elige tu paquete ─────────────────────────────────────────────── */}
-      <section className="py-16 bg-[#0d1629] border-b border-white/[0.06]">
+      <section className="py-16 bg-gray-50 border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6">
           <div className="mb-10">
-            <p className="text-[9px] font-bold text-teal-400/50 uppercase tracking-[0.2em] mb-3">Paquetes de compra</p>
-            <h2 className="text-2xl font-black text-white">Elige tu paquete.</h2>
-            <p className="text-sm text-white/40 mt-2">Tres opciones de compra por certificación. Empieza con lo que necesitas ahora.</p>
+            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">Paquetes de compra</p>
+            <h2 className="text-2xl font-black text-gray-900">Elige tu paquete.</h2>
+            <p className="text-sm text-gray-500 mt-2">Tres opciones por certificación. Empieza donde necesites y completa cuando estés listo.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-4">
             {/* Master Book */}
-            <div className="bg-white/[0.04] border border-white/[0.09] rounded-sm p-5 flex flex-col relative overflow-hidden hover:border-blue-500/30 transition-colors">
+            <div className="bg-white border border-gray-200 rounded-sm p-5 flex flex-col relative overflow-hidden hover:border-blue-200 hover:shadow-sm transition-all">
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-600 to-blue-400" />
-              <div className="w-9 h-9 rounded-sm flex items-center justify-center mb-3 bg-blue-500/15 border border-blue-500/25">
-                <BookOpen className="w-4.5 h-4.5 text-blue-400" />
+              <div className="w-9 h-9 rounded-sm flex items-center justify-center mb-3 bg-blue-50 border border-blue-100">
+                <BookOpen className="w-4.5 h-4.5 text-blue-600" />
               </div>
-              <p className="text-[9px] font-bold text-blue-400/60 uppercase tracking-widest mb-1">Aprendizaje profundo</p>
-              <h3 className="text-lg font-black text-white mb-2">Master Book</h3>
-              <p className="text-xs text-white/45 leading-relaxed flex-1">
-                Comprensión profunda de cada dominio, servicio, arquitectura y decisión técnica. El punto de partida de cualquier preparación seria.
+              <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest mb-1">Aprendizaje profundo</p>
+              <h3 className="text-lg font-black text-gray-900 mb-2">Master Book</h3>
+              <p className="text-xs text-gray-500 leading-relaxed flex-1">
+                Construye criterio técnico con explicaciones completas de dominios, servicios, arquitecturas, límites y decisiones de examen.
               </p>
-              <div className="mt-4 pt-4 border-t border-white/[0.07] space-y-1.5">
+              <div className="mt-4 pt-4 border-t border-gray-100 space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                  <span className="text-xs text-white/50">Master Book completo (PDF + digital)</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                  <span className="text-xs text-gray-600">Incluye Master Book completo</span>
                 </div>
               </div>
-              <button onClick={() => setLocation("/books")}
-                className="mt-4 w-full h-8 border border-white/[0.12] hover:border-blue-500/40 rounded-sm text-xs font-semibold text-white/60 hover:text-white/90 transition-colors flex items-center justify-center gap-1.5">
-                Ver colecciones <ChevronRight className="w-3 h-3" />
+              <button onClick={() => setLocation("/ai-200-packs")}
+                className="mt-4 w-full h-8 border border-gray-200 hover:border-blue-300 hover:bg-blue-50 rounded-sm text-xs font-semibold text-gray-600 hover:text-blue-700 transition-all flex items-center justify-center gap-1.5">
+                Ver Master Book <ChevronRight className="w-3 h-3" />
               </button>
             </div>
 
             {/* Visual Atlas */}
-            <div className="bg-white/[0.04] border border-violet-500/25 rounded-sm p-5 flex flex-col relative overflow-hidden hover:border-violet-500/40 transition-colors">
+            <div className="bg-white border border-violet-200 rounded-sm p-5 flex flex-col relative overflow-hidden hover:border-violet-300 hover:shadow-sm transition-all">
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-500 to-blue-500" />
-              <div className="w-9 h-9 rounded-sm flex items-center justify-center mb-3 bg-violet-500/15 border border-violet-500/25">
-                <Map className="w-4.5 h-4.5 text-violet-400" />
+              <div className="w-9 h-9 rounded-sm flex items-center justify-center mb-3 bg-violet-50 border border-violet-100">
+                <Map className="w-4.5 h-4.5 text-violet-600" />
               </div>
               <div className="flex items-center gap-2 mb-1">
-                <p className="text-[9px] font-bold text-violet-400/60 uppercase tracking-widest">Estudio visual</p>
-                <span className="text-[7px] font-bold bg-violet-400/15 text-violet-300 border border-violet-400/25 px-1 py-px rounded-sm">EN PRODUCCIÓN</span>
+                <p className="text-[9px] font-bold text-violet-500 uppercase tracking-widest">Estudio visual acelerado</p>
+                <span className="text-[7px] font-bold bg-violet-100 text-violet-700 border border-violet-200 px-1 py-px rounded-sm">DISPONIBLE</span>
               </div>
-              <h3 className="text-lg font-black text-white mb-2">Visual Atlas</h3>
-              <p className="text-xs text-white/45 leading-relaxed flex-1">
-                Páginas infográficas, diagramas, trampas visuales, autochecks y mapas de decisión para estudiar más rápido. 61 páginas · 13 batches.
+              <h3 className="text-lg font-black text-gray-900 mb-2">Visual Atlas</h3>
+              <p className="text-xs text-gray-500 leading-relaxed flex-1">
+                Estudio visual acelerado de conceptos. Diagramas, mapas de decisión, comparaciones y autochecks para comprender más rápido.
               </p>
-              <div className="mt-4 pt-4 border-t border-white/[0.07] space-y-1.5">
+              <div className="mt-4 pt-4 border-t border-gray-100 space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-                  <span className="text-xs text-white/50">Visual Atlas completo (61 infografías)</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+                  <span className="text-xs text-gray-600">Incluye Visual Atlas</span>
                 </div>
               </div>
-              <button onClick={() => setLocation("/books")}
+              <button onClick={() => setLocation("/ai-200-packs")}
                 className="mt-4 w-full h-8 bg-violet-600 hover:bg-violet-700 rounded-sm text-xs font-semibold text-white transition-colors flex items-center justify-center gap-1.5">
-                Ver colecciones <ChevronRight className="w-3 h-3" />
+                Ver Visual Atlas <ChevronRight className="w-3 h-3" />
               </button>
             </div>
 
             {/* Collection Pack */}
-            <div className="bg-teal-950/60 border border-teal-500/30 rounded-sm p-5 flex flex-col relative overflow-hidden">
+            <div className="bg-[#0d1629] rounded-sm p-5 flex flex-col relative overflow-hidden shadow-lg">
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal-400 to-blue-500" />
               <div className="w-9 h-9 rounded-sm flex items-center justify-center mb-3 bg-teal-400/15 border border-teal-400/25">
                 <Package className="w-4.5 h-4.5 text-teal-400" />
@@ -292,10 +308,11 @@ export default function Landing() {
                 <span className="text-[7px] font-bold bg-teal-400/20 text-teal-300 border border-teal-400/30 px-1.5 py-0.5 rounded-sm">BEST VALUE</span>
               </div>
               <h3 className="text-lg font-black text-white mb-2">Collection Pack</h3>
-              <p className="text-xs text-white/50 leading-relaxed flex-1">
-                Todo lo necesario para preparar y aprobar la certificación: aprendizaje profundo, estudio visual, trampas de examen, práctica exhaustiva, hojas de repaso y revisión final.
+              <p className="text-xs text-white/55 leading-relaxed flex-1">
+                Todo lo necesario para preparar y aprobar: aprendizaje profundo, estudio visual, trampas de examen, práctica exhaustiva, cheat sheets y repaso final.
               </p>
-              <div className="mt-4 pt-4 border-t border-teal-400/[0.12] space-y-1.5">
+              <div className="mt-4 pt-4 border-t border-white/[0.08] space-y-1.5">
+                <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-2">Incluye los 6 formatos</p>
                 {["Master Book", "Visual Atlas", "Exam Traps Guide", "Question Bank", "Cheat Sheets", "Rapid Review Pack"].map(f => (
                   <div key={f} className="flex items-center gap-2">
                     <CheckCircle2 className="w-3 h-3 text-teal-400 shrink-0" />
@@ -303,9 +320,9 @@ export default function Landing() {
                   </div>
                 ))}
               </div>
-              <button onClick={() => setLocation("/books")}
+              <button onClick={() => setLocation("/ai-200-packs")}
                 className="mt-4 w-full h-8 bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-600 hover:to-blue-700 rounded-sm text-xs font-semibold text-white transition-all flex items-center justify-center gap-1.5">
-                Ver colecciones <ArrowRight className="w-3 h-3" />
+                Ver Collection Pack <ArrowRight className="w-3 h-3" />
               </button>
             </div>
           </div>
@@ -313,12 +330,12 @@ export default function Landing() {
       </section>
 
       {/* ── Azure Books ──────────────────────────────────────────────────── */}
-      <section className="py-16 bg-[#0d1629] border-b border-white/[0.06]">
+      <section className="py-16 bg-white border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6">
           <div className="mb-8">
-            <p className="text-[9px] font-bold text-blue-400/60 uppercase tracking-[0.2em] mb-3">Azure Books</p>
-            <h2 className="text-2xl font-black text-white">Certificaciones Azure disponibles.</h2>
-            <p className="text-sm text-white/40 mt-2">Primera cloud activa. Más certificaciones en producción editorial.</p>
+            <p className="text-[9px] font-bold text-blue-500 uppercase tracking-[0.2em] mb-3">Azure Books</p>
+            <h2 className="text-2xl font-black text-gray-900">Certificaciones Azure disponibles.</h2>
+            <p className="text-sm text-gray-500 mt-2">Colecciones Azure disponibles ahora. Más certificaciones próximamente.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-3">
             {[
@@ -331,20 +348,20 @@ export default function Landing() {
             ].map(c => (
               <div key={c.cert} className={cn(
                 "rounded-sm border p-4 relative overflow-hidden",
-                c.status === "active" ? "bg-white/[0.05] border-teal-500/30" : "bg-white/[0.02] border-white/[0.07]"
+                c.status === "active" ? "bg-teal-50 border-teal-200" : "bg-gray-50 border-gray-200"
               )}>
                 {c.status === "active" && <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal-500 to-blue-500" />}
                 <div className="flex items-start justify-between mb-2">
-                  <span className={cn("text-xs font-black tracking-wide font-mono", c.status === "active" ? "text-teal-400" : "text-white/25")}>{c.cert}</span>
+                  <span className={cn("text-xs font-black tracking-wide font-mono", c.status === "active" ? "text-teal-600" : "text-gray-300")}>{c.cert}</span>
                   {c.status === "active"
-                    ? <span className="text-[8px] font-bold bg-teal-400/10 text-teal-400 border border-teal-400/20 px-1.5 py-0.5 rounded-sm flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"/>ACTIVO</span>
-                    : <Clock className="w-3 h-3 text-white/20" />}
+                    ? <span className="text-[8px] font-bold bg-teal-100 text-teal-700 border border-teal-200 px-1.5 py-0.5 rounded-sm flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"/>ACTIVO</span>
+                    : <Clock className="w-3 h-3 text-gray-300" />}
                 </div>
-                <p className={cn("text-sm font-semibold mb-1", c.status === "active" ? "text-white/80" : "text-white/30")}>{c.title}</p>
-                <p className="text-[9px] text-white/25">{c.note}</p>
+                <p className={cn("text-sm font-semibold mb-1", c.status === "active" ? "text-gray-900" : "text-gray-300")}>{c.title}</p>
+                <p className="text-[9px] text-gray-400">{c.note}</p>
                 {c.status === "active" && (
                   <button onClick={() => setLocation("/ai-200-packs")}
-                    className="mt-3 flex items-center gap-1 text-[9px] text-teal-400 hover:text-teal-300 font-semibold transition-colors">
+                    className="mt-3 flex items-center gap-1 text-[9px] text-teal-600 hover:text-teal-700 font-semibold transition-colors">
                     Ver paquetes <ChevronRight className="w-3 h-3" />
                   </button>
                 )}
@@ -355,12 +372,18 @@ export default function Landing() {
       </section>
 
       {/* ── Metodología ──────────────────────────────────────────────────── */}
-      <section id="metodologia" className="py-16 bg-gray-50 border-b border-gray-100">
+      <section id="metodologia" className="py-16 bg-[#0d1629] border-b border-white/[0.06]">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="mb-8">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">Metodología editorial</p>
-            <h2 className="text-2xl font-black text-gray-900">Producción sistemática con estándar QA ≥ 9.5.</h2>
-            <p className="text-sm text-gray-500 mt-2 max-w-xl">Cada formato se produce a través de un proceso editorial estructurado, validado con scoring multidimensional antes de publicación.</p>
+          <div className="mb-8 grid md:grid-cols-2 gap-10 items-center">
+            <div>
+              <p className="text-[9px] font-bold text-teal-400/60 uppercase tracking-[0.2em] mb-3">Metodología editorial</p>
+              <h2 className="text-2xl font-black text-white">Producción sistemática con estándar QA ≥ 9.5.</h2>
+              <p className="text-sm text-white/40 mt-3 leading-relaxed max-w-md">Cada formato se produce a través de un proceso editorial estructurado de seis fases, validado con scoring multidimensional antes de publicación.</p>
+            </div>
+            <div className="hidden md:block">
+              <img src="/methodology-pipeline.png" alt="Pipeline editorial CloudBooks"
+                className="w-full rounded-sm opacity-80 ring-1 ring-white/10 shadow-xl" />
+            </div>
           </div>
           <div className="grid md:grid-cols-3 gap-3">
             {[
@@ -373,14 +396,14 @@ export default function Landing() {
             ].map(d => {
               const Icon = d.icon;
               return (
-                <div key={d.label} className="bg-white border border-gray-200 rounded-sm p-4">
+                <div key={d.label} className="bg-white/[0.04] border border-white/[0.07] rounded-sm p-4 hover:border-white/[0.12] transition-colors">
                   <div className="flex items-center gap-2.5 mb-2">
-                    <div className="w-7 h-7 rounded-sm bg-[#0d1629] flex items-center justify-center shrink-0">
+                    <div className="w-7 h-7 rounded-sm bg-blue-500/20 border border-blue-500/25 flex items-center justify-center shrink-0">
                       <Icon className="w-3.5 h-3.5 text-blue-400" />
                     </div>
-                    <h3 className="text-xs font-bold text-gray-900">{d.label}</h3>
+                    <h3 className="text-xs font-bold text-white/80">{d.label}</h3>
                   </div>
-                  <p className="text-[10px] text-gray-500 leading-relaxed">{d.desc}</p>
+                  <p className="text-[10px] text-white/35 leading-relaxed">{d.desc}</p>
                 </div>
               );
             })}
@@ -419,7 +442,7 @@ export default function Landing() {
             <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-6 w-auto opacity-40" draggable={false} />
             <span className="text-[9px] text-white/15">Editorial inteligente de certificaciones cloud</span>
           </div>
-          <div className="text-[9px] text-white/15 font-mono">Azure Books · Primera línea editorial activa</div>
+          <div className="text-[9px] text-white/15 font-mono">© 2026 CloudBooks</div>
         </div>
       </footer>
     </div>

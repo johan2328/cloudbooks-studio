@@ -1,0 +1,20 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "Uto1g7OlJvjjljZ8BCIJf"
+uri = "file://artifacts/studio/public/hero-editorial.png"
+type = "image"
+title = "hero editorial library navy"
+
+[[generated]]
+id = "bSEYzfed1K1vkYLaGkw8V"
+uri = "file://artifacts/studio/public/formats-collection.png"
+type = "image"
+title = "six formats editorial collection"
+
+[[generated]]
+id = "f_uIz90mXounOIkj3Guih"
+uri = "file://artifacts/studio/public/methodology-pipeline.png"
+type = "image"
+title = "methodology editorial pipeline navy"
