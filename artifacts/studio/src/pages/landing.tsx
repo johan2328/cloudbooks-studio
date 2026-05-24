@@ -200,7 +200,7 @@ export default function Landing() {
             {/* ── Izquierda: texto ── */}
             <div>
               <div className="flex items-center gap-2 mb-6">
-                <span className="text-[9px] font-bold text-teal-400 uppercase tracking-[0.2em] bg-teal-400/10 border border-teal-400/20 px-2 py-1 rounded-sm">Editorial inteligente · Certificaciones cloud</span>
+                <span className="text-[9px] font-bold text-teal-400 uppercase tracking-[0.2em] bg-teal-400/10 border border-teal-400/20 px-2 py-1 rounded-sm">Contenido conectado · aprendizaje inmersivo</span>
               </div>
               <h1 className="text-4xl md:text-[3.2rem] font-black text-white leading-[1.08] tracking-tight mb-6 max-w-2xl">
                 Una biblioteca inteligente<br />
