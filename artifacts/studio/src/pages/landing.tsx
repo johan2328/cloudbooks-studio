@@ -303,7 +303,7 @@ export default function Landing() {
                           className="h-full bg-gradient-to-r from-red-500/70 to-red-400/50 rounded-full origin-left"
                           style={{
                             width: `${r.q}%`,
-                            animation: sourcesInView ? `barFill 0.8s ${i * 0.15}s ease-out forwards, barShimmer 6s ${i * 0.15 + 0.6}s linear infinite` : 'none',
+                            animation: sourcesInView ? `barFill 0.8s ${i * 0.15}s ease-out forwards, barShimmer 4s ${i * 0.15 + 0.6}s linear infinite` : 'none',
                             backgroundSize: '200% 100%',
                           }}
                         />
