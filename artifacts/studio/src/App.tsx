@@ -4,6 +4,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import Landing from "@/pages/landing";
+import Books from "@/pages/books";
+import AI200Packs from "@/pages/ai200-packs";
 import Login from "@/pages/login";
 import Catalogo from "@/pages/catalogo";
 import Azure from "@/pages/azure";
@@ -37,9 +39,11 @@ function Router() {
     <Switch>
       <Route path="/login" component={Login} />
 
-      {/* Root → Portal landing (público) */}
+      {/* Portal comercial (público) */}
       <Route path="/" component={Landing} />
       <Route path="/portal" component={Landing} />
+      <Route path="/books" component={Books} />
+      <Route path="/ai-200-packs" component={AI200Packs} />
 
       {/* ── Catálogo jerárquico ─────────────────────────── */}
       {/* Nivel 1: Proveedores cloud */}
