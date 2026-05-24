@@ -205,7 +205,7 @@ export default function Landing() {
               <h1 className="text-4xl md:text-[3.2rem] font-black text-white leading-[1.08] tracking-tight mb-6 max-w-2xl">
                 Una biblioteca inteligente<br />
                 <span className="bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">
-                  para aprobar certificaciones cloud.
+                  para aprobar certificaciones cloud
                 </span>
               </h1>
               <p className="text-base text-white/55 leading-relaxed mb-8 max-w-lg">
@@ -245,7 +245,7 @@ export default function Landing() {
             <div>
               <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em] mb-4">El problema</p>
               <h2 className="text-3xl font-black text-white leading-tight mb-5">
-                Estudiar certificaciones cloud está fragmentado.
+                Estudiar certificaciones cloud está fragmentado
               </h2>
               <p className="text-base text-white/55 leading-relaxed mb-7">
                 Documentación extensa sin priorización, cursos desactualizados, dumps sin contexto y resúmenes de calidad inconsistente. Sin una ruta clara ni un estándar de calidad medible.
@@ -302,7 +302,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-16 max-w-2xl">
             <p className="text-[11px] font-bold text-white/40 uppercase tracking-[0.2em] mb-3">Sistema editorial</p>
-            <h2 className="text-3xl md:text-4xl font-black text-white">Seis formatos. Una ruta completa de estudio.</h2>
+            <h2 className="text-3xl md:text-4xl font-black text-white">Seis formatos. Una ruta completa de estudio</h2>
             <p className="text-base text-white/55 mt-4 leading-relaxed">Cada colección CloudBooks se produce en seis formatos complementarios, diseñados para cubrir todo el ciclo de preparación: comprensión profunda, estudio visual, práctica de examen y repaso final.</p>
           </div>
 
@@ -524,7 +524,7 @@ export default function Landing() {
           <div className="text-center mb-14"
             style={{opacity: methodInView ? 1 : 0, transform: methodInView ? "translateY(0) scale(1)" : "translateY(22px) scale(0.97)", transition: "opacity 0.8s cubic-bezier(0.22,1,0.36,1), transform 0.8s cubic-bezier(0.22,1,0.36,1)"}}>
             <p className="text-[11px] font-bold text-teal-400/60 uppercase tracking-[0.25em] mb-3">Metodología editorial</p>
-            <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">Un estudio editorial humano-agentes.</h2>
+            <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">Un estudio editorial humano-agentes</h2>
             <p className="text-sm text-white/55 mt-4 leading-relaxed max-w-2xl mx-auto">
               Una batería de agentes especializados distribuidos por dominios produce cada formato.
               Un auditor humano valida la entrega final antes de publicación.
