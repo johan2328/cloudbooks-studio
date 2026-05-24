@@ -381,7 +381,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="mb-10">
             <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em] mb-3">Paquetes de compra</p>
-            <h2 className="text-2xl font-black text-white">Elige tu paquete.</h2>
+            <h2 className="text-2xl font-black text-white">Elige tu paquete</h2>
             <p className="text-sm text-white/55 mt-2">Tres opciones por certificación. Empieza donde necesites y completa cuando estés listo.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-4">
@@ -472,7 +472,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="mb-8">
             <p className="text-[9px] font-bold text-blue-400 uppercase tracking-[0.2em] mb-3">Azure Books</p>
-            <h2 className="text-2xl font-black text-white">Certificaciones Azure disponibles.</h2>
+            <h2 className="text-2xl font-black text-white">Certificaciones Azure disponibles</h2>
             <p className="text-sm text-white/55 mt-2">Colecciones Azure disponibles ahora. Más certificaciones próximamente.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-3">
@@ -670,7 +670,7 @@ export default function Landing() {
         <div className="relative max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8">
           <div>
             <p className="text-[9px] font-bold text-white/25 uppercase tracking-[0.2em] mb-3">CloudBooks Editorial</p>
-            <h2 className="text-2xl font-black text-white mb-2">Colecciones completas para certificaciones cloud.</h2>
+            <h2 className="text-2xl font-black text-white mb-2">Colecciones completas para certificaciones cloud</h2>
             <p className="text-sm text-white/40 max-w-md leading-relaxed">Libros maestros, atlas visuales y packs de preparación. Azure es la primera línea editorial activa.</p>
           </div>
           <div className="flex flex-col gap-3 shrink-0">
