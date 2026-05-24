@@ -209,7 +209,7 @@ export default function Landing() {
                 </span>
               </h1>
               <p className="text-base text-white/55 leading-relaxed mb-8 max-w-lg">
-                CloudBooks produce colecciones de estudio completas por certificación. Cada colección incluye seis formatos complementarios diseñados para cubrir todo el ciclo de preparación.
+                CloudBooks produce colecciones de estudio completas por certificación. Cada colección incluye estrategias de aprendizaje diseñadas para cubrir todo el ciclo de preparación.
               </p>
               <div className="flex items-center gap-3 flex-wrap">
                 <button onClick={() => setLocation("/books")}
