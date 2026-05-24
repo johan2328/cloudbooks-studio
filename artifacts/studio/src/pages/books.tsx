@@ -178,7 +178,7 @@ export default function Books() {
       <footer className="bg-[#0d1629] border-t border-white/[0.06] py-6 mt-10">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex items-center justify-center">
-            <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-12 w-auto opacity-70" draggable={false} />
+            <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-16 w-auto opacity-70" draggable={false} />
           </div>
           <LegalRow />
         </div>
