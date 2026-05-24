@@ -432,16 +432,20 @@ export default function Landing() {
                 teal:   { ring:"ring-teal-500/20",   bg:"bg-teal-500/[0.04]",   tint:"from-teal-500/[0.08]",   text:"text-teal-300",   line:"bg-teal-500/50",   bar:"bg-teal-500",   chip:"bg-teal-500/15 ring-teal-500/40" },
               };
 
+              const connectorBetween = ["from-blue-500/25 to-violet-500/25", "from-violet-500/25 to-teal-500/25"];
               return (
                 <div className="relative">
-                  {/* Bus vertical PCB conectando los 3 chips de dominio (solo desktop) */}
-                  <div className="hidden md:block absolute left-1/2 -translate-x-1/2 top-12 bottom-12 w-px bg-gradient-to-b from-blue-500/40 via-violet-500/40 to-teal-500/40 pointer-events-none" />
-
-                  <div className="flex flex-col gap-3">
-                    {domains.map((d) => {
+                  <div className="flex flex-col">
+                    {domains.map((d, di) => {
                       const c = palette[d.color];
                       return (
-                        <div key={d.label} className="grid md:grid-cols-[1fr_auto_1fr] gap-3 md:gap-0 items-center">
+                        <div key={d.label}>
+                        {di > 0 && (
+                          <div className="hidden md:flex justify-center my-1" aria-hidden>
+                            <div className={`w-px h-6 bg-gradient-to-b ${connectorBetween[di-1]}`} />
+                          </div>
+                        )}
+                        <div className="grid md:grid-cols-[1fr_auto_1fr] gap-3 md:gap-0 items-center">
                           {d.agents.map((a, ai) => {
                             const Icon = a.icon;
                             const isLeft = ai === 0;
@@ -479,6 +483,7 @@ export default function Landing() {
                               <span className={`text-[9px] font-mono uppercase tracking-[0.25em] ${c.text}`}>Dominio · {d.label}</span>
                             </div>
                           </div>
+                        </div>
                         </div>
                       );
                     })}
