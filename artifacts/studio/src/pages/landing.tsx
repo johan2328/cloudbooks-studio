@@ -176,9 +176,9 @@ export default function Landing() {
       <section className="py-16 bg-white border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6">
           <div className="mb-10">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">Paquetes disponibles</p>
-            <h2 className="text-2xl font-black text-gray-900">Tres formas de preparar la AI-200.</h2>
-            <p className="text-sm text-gray-500 mt-2">Elige el nivel de preparación que necesitas.</p>
+            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">Formatos editoriales</p>
+            <h2 className="text-2xl font-black text-gray-900">Tres formatos para cada certificación cloud.</h2>
+            <p className="text-sm text-gray-500 mt-2">Cada colección CloudBooks incluye tres niveles de preparación complementarios.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-4">
             {/* Master Book */}
@@ -197,9 +197,9 @@ export default function Landing() {
                   <span className="text-xs text-gray-600">Master Book completo (PDF + digital)</span>
                 </div>
               </div>
-              <button onClick={() => setLocation("/ai-200-packs")}
+              <button onClick={() => setLocation("/books")}
                 className="mt-4 w-full h-8 border border-gray-200 rounded-sm text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5">
-                Ver detalles <ChevronRight className="w-3 h-3" />
+                Ver colecciones <ChevronRight className="w-3 h-3" />
               </button>
             </div>
 
@@ -223,9 +223,9 @@ export default function Landing() {
                   <span className="text-xs text-gray-600">Visual Atlas completo (61 infografías)</span>
                 </div>
               </div>
-              <button onClick={() => setLocation("/ai-200-packs")}
+              <button onClick={() => setLocation("/books")}
                 className="mt-4 w-full h-8 bg-violet-600 hover:bg-violet-700 rounded-sm text-xs font-semibold text-white transition-colors flex items-center justify-center gap-1.5">
-                Ver detalles <ChevronRight className="w-3 h-3" />
+                Ver colecciones <ChevronRight className="w-3 h-3" />
               </button>
             </div>
 
@@ -251,9 +251,9 @@ export default function Landing() {
                   </div>
                 ))}
               </div>
-              <button onClick={() => setLocation("/ai-200-packs")}
+              <button onClick={() => setLocation("/books")}
                 className="mt-4 w-full h-8 bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-600 hover:to-blue-700 rounded-sm text-xs font-semibold text-white transition-all flex items-center justify-center gap-1.5">
-                Ver Collection Pack <ArrowRight className="w-3 h-3" />
+                Ver colecciones <ArrowRight className="w-3 h-3" />
               </button>
             </div>
           </div>
@@ -343,18 +343,18 @@ export default function Landing() {
         <div className="absolute right-0 top-0 w-96 h-96 rounded-full blur-3xl opacity-5 bg-violet-600 pointer-events-none" />
         <div className="relative max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8">
           <div>
-            <p className="text-[9px] font-bold text-white/25 uppercase tracking-[0.2em] mb-3">AI-200 Certification Collection</p>
-            <h2 className="text-2xl font-black text-white mb-2">La preparación más completa para la AI-200.</h2>
-            <p className="text-sm text-white/40 max-w-md leading-relaxed">Master Book · Visual Atlas · Exam Traps Guide · Question Bank · Cheat Sheets · Rapid Review Pack</p>
+            <p className="text-[9px] font-bold text-white/25 uppercase tracking-[0.2em] mb-3">CloudBooks Editorial</p>
+            <h2 className="text-2xl font-black text-white mb-2">Colecciones completas para certificaciones cloud.</h2>
+            <p className="text-sm text-white/40 max-w-md leading-relaxed">Libros maestros, atlas visuales y packs de preparación. Azure es la primera línea editorial activa.</p>
           </div>
           <div className="flex flex-col gap-3 shrink-0">
-            <button onClick={() => setLocation("/ai-200-packs")}
+            <button onClick={() => setLocation("/books")}
               className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-600 hover:to-blue-700 text-white font-semibold px-6 h-11 rounded-sm transition-all text-sm">
-              Ver Collection Pack AI-200 <ArrowRight className="w-4 h-4" />
+              Ver colecciones disponibles <ArrowRight className="w-4 h-4" />
             </button>
             <button onClick={() => setLocation(user ? "/catalogo" : "/login")}
               className="flex items-center gap-2 border border-white/10 hover:border-white/20 text-white/40 hover:text-white/70 font-medium px-5 h-9 rounded-sm transition-all text-xs justify-center">
-              Entrar al Production Studio
+              Conocer metodología
             </button>
           </div>
         </div>
@@ -367,7 +367,7 @@ export default function Landing() {
             <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-6 w-auto opacity-40" draggable={false} />
             <span className="text-[9px] text-white/15">Editorial inteligente de certificaciones cloud</span>
           </div>
-          <div className="text-[9px] text-white/15 font-mono">Azure AI-200 · Visual Atlas en producción</div>
+          <div className="text-[9px] text-white/15 font-mono">Azure Books · Primera línea editorial activa</div>
         </div>
       </footer>
     </div>
