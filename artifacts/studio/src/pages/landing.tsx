@@ -140,50 +140,58 @@ export default function Landing() {
       </section>
 
       {/* ── Problema ─────────────────────────────────────────────────────── */}
-      <section className="py-20 bg-[#0a1220] relative">
+      <section className="py-24 bg-[#0a1220] relative">
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
         <div className="max-w-6xl mx-auto px-6">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="grid md:grid-cols-2 gap-16 items-center">
             <div>
               <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em] mb-4">El problema</p>
-              <h2 className="text-2xl font-black text-white leading-tight mb-4">
+              <h2 className="text-3xl font-black text-white leading-tight mb-5">
                 Estudiar certificaciones cloud está fragmentado.
               </h2>
-              <p className="text-sm text-white/55 leading-relaxed mb-6">
+              <p className="text-base text-white/55 leading-relaxed mb-7">
                 Documentación extensa sin priorización, cursos desactualizados, dumps sin contexto y resúmenes de calidad inconsistente. Sin una ruta clara ni un estándar de calidad medible.
               </p>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {[
                   "Fuentes sin coherencia editorial entre sí",
                   "Formatos de estudio aislados, sin ruta integrada",
                   "Sin validación técnica sistemática del contenido",
                 ].map((item) => (
-                  <div key={item} className="flex items-start gap-2.5">
-                    <div className="w-4 h-4 rounded-sm bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0 mt-0.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-red-400"/>
+                  <div key={item} className="flex items-start gap-3">
+                    <div className="w-5 h-5 rounded-sm bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                      <div className="w-2 h-2 rounded-full bg-red-400"/>
                     </div>
-                    <p className="text-sm text-white/65">{item}</p>
+                    <p className="text-sm text-white/70">{item}</p>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="bg-white/[0.04] border border-white/10 rounded-sm p-6">
-              <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mb-4">Fuentes típicas de preparación</p>
-              <div className="space-y-2.5">
-                {[
-                  { src: "Documentación oficial",   q: 40, note: "Muy extensa, sin priorización" },
-                  { src: "Cursos en plataformas",   q: 55, note: "Calidad y actualización variables" },
-                  { src: "Dumps de preguntas",       q: 25, note: "Sin contexto ni explicación" },
-                  { src: "Resúmenes de terceros",    q: 35, note: "Inconsistentes, sin estándar" },
-                ].map((r) => (
-                  <div key={r.src} className="flex items-center gap-3">
-                    <span className="text-[9px] text-white/50 w-36 shrink-0">{r.src}</span>
-                    <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-red-500/60 rounded-full" style={{width:`${r.q}%`}} />
+            <div className="relative bg-white/[0.04] border border-white/[0.08] rounded-sm p-8 shadow-2xl shadow-black/40">
+              <div className="absolute -inset-px rounded-sm bg-gradient-to-b from-white/[0.06] to-transparent pointer-events-none" />
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-6">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                  <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Fuentes típicas de preparación</p>
+                </div>
+                <div className="space-y-5">
+                  {[
+                    { src: "Documentación oficial",   q: 40, note: "Muy extensa, sin priorización" },
+                    { src: "Cursos en plataformas",   q: 55, note: "Calidad y actualización variables" },
+                    { src: "Dumps de preguntas",       q: 25, note: "Sin contexto ni explicación" },
+                    { src: "Resúmenes de terceros",    q: 35, note: "Inconsistentes, sin estándar" },
+                  ].map((r) => (
+                    <div key={r.src}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-medium text-white/70">{r.src}</span>
+                        <span className="text-[10px] text-white/40">{r.note}</span>
+                      </div>
+                      <div className="h-2 bg-white/[0.08] rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-red-500/70 to-red-400/50 rounded-full" style={{width:`${r.q}%`}} />
+                      </div>
                     </div>
-                    <span className="text-[8px] text-white/40 w-32 shrink-0">{r.note}</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
