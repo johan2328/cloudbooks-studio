@@ -1,7 +1,6 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
-import { EditorialBlueprint } from "@/components/EditorialBlueprint";
 import {
   BookOpen, Map, Package, ArrowRight, ChevronRight,
   CheckCircle2, Clock, Database, Layers, Edit3, Eye, Shield, Package as Pkg,
@@ -65,37 +64,29 @@ export default function Landing() {
         <div className="absolute top-24 left-1/4 w-72 h-72 rounded-full blur-3xl opacity-10 bg-blue-600 pointer-events-none" />
         <div className="absolute top-16 right-1/3 w-56 h-56 rounded-full blur-3xl opacity-8 bg-violet-600 pointer-events-none" />
 
-        <div className="relative max-w-6xl mx-auto px-6 pt-20 pb-16">
-          <div className="grid md:grid-cols-[3fr_2fr] gap-10 items-center">
-            <div>
-              <div className="flex items-center gap-2 mb-5">
-                <span className="text-[9px] font-bold text-teal-400 uppercase tracking-[0.2em] bg-teal-400/10 border border-teal-400/20 px-2 py-1 rounded-sm">Editorial inteligente · Certificaciones cloud</span>
-              </div>
-              <h1 className="text-3xl md:text-[2.6rem] font-black text-white leading-[1.15] tracking-tight mb-4">
-                Una biblioteca inteligente<br />
-                <span className="bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">
-                  para aprobar certificaciones cloud.
-                </span>
-              </h1>
-              <p className="text-sm text-white/50 leading-relaxed mb-7 max-w-lg">
-                CloudBooks produce colecciones de estudio completas por certificación. Cada colección incluye seis formatos complementarios diseñados para cubrir todo el ciclo de preparación.
-              </p>
-              <div className="flex items-center gap-3 flex-wrap">
-                <button onClick={() => setLocation("/books")}
-                  className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white font-semibold px-5 h-10 rounded-sm transition-all text-sm">
-                  Ver colecciones disponibles
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-                <button onClick={() => { document.getElementById("metodologia")?.scrollIntoView({behavior:"smooth"}); }}
-                  className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white/70 transition-colors font-medium">
-                  Conocer metodología <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-            <div className="hidden md:flex items-center justify-center relative">
-              <div className="absolute inset-0 bg-gradient-radial from-blue-500/[0.04] to-transparent blur-2xl pointer-events-none" />
-              <EditorialBlueprint className="w-full max-w-md relative" />
-            </div>
+        <div className="relative max-w-4xl mx-auto px-6 pt-28 pb-20">
+          <div className="flex items-center gap-2 mb-6">
+            <span className="text-[9px] font-bold text-teal-400 uppercase tracking-[0.2em] bg-teal-400/10 border border-teal-400/20 px-2 py-1 rounded-sm">Editorial inteligente · Certificaciones cloud</span>
+          </div>
+          <h1 className="text-4xl md:text-[3.4rem] font-black text-white leading-[1.08] tracking-tight mb-6 max-w-3xl">
+            Una biblioteca inteligente<br />
+            <span className="bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">
+              para aprobar certificaciones cloud.
+            </span>
+          </h1>
+          <p className="text-base text-white/55 leading-relaxed mb-8 max-w-xl">
+            CloudBooks produce colecciones de estudio completas por certificación. Cada colección incluye seis formatos complementarios diseñados para cubrir todo el ciclo de preparación.
+          </p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <button onClick={() => setLocation("/books")}
+              className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white font-semibold px-5 h-10 rounded-sm transition-all text-sm">
+              Ver colecciones disponibles
+              <ArrowRight className="w-4 h-4" />
+            </button>
+            <button onClick={() => { document.getElementById("metodologia")?.scrollIntoView({behavior:"smooth"}); }}
+              className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white/70 transition-colors font-medium">
+              Conocer metodología <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
