@@ -196,7 +196,7 @@ export default function Landing() {
         <div className="absolute top-16 right-1/3 w-56 h-56 rounded-full blur-3xl opacity-8 bg-violet-600 pointer-events-none" />
 
         <div className="relative max-w-7xl mx-auto px-6 pt-20 pb-10 flex-1 flex flex-col justify-center">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="grid lg:grid-cols-[1fr_1.35fr] gap-6 items-center">
             {/* ── Izquierda: texto ── */}
             <div>
               <div className="flex items-center gap-2 mb-6">
@@ -226,14 +226,12 @@ export default function Landing() {
 
             {/* ── Derecha: imagen hero ── */}
             <div className="relative hidden lg:flex items-center justify-center">
-              <div className="relative">
-                <img
-                  src="/hero-devices.png"
-                  alt="CloudBooks — Biblioteca multi-formato en todos los dispositivos"
-                  className="w-full max-w-[735px] h-auto object-contain"
-                  draggable={false}
-                />
-              </div>
+              <img
+                src="/hero-devices.png"
+                alt="CloudBooks — Biblioteca multi-formato en todos los dispositivos"
+                className="w-full max-w-[920px] h-auto object-contain"
+                draggable={false}
+              />
             </div>
           </div>
         </div>
