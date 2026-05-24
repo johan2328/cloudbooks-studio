@@ -184,6 +184,20 @@ export default function Landing() {
     return () => obs.disconnect();
   }, []);
 
+  /* Intersection Observer para barras de fuentes */
+  const [sourcesInView, setSourcesInView] = useState(false);
+  const sourcesRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sourcesRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setSourcesInView(true); obs.disconnect(); } },
+      { threshold: 0.25 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   return (
     <div className="min-h-screen bg-white font-sans">
       <CommercialNav active="Inicio" />
@@ -272,20 +286,27 @@ export default function Landing() {
                   <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
                   <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Fuentes típicas de preparación</p>
                 </div>
-                <div className="space-y-5">
+                <div className="space-y-5" ref={sourcesRef}>
                   {[
                     { src: "Documentación oficial",   q: 40, note: "Muy extensa, sin priorización" },
                     { src: "Cursos en plataformas",   q: 55, note: "Calidad y actualización variables" },
                     { src: "Dumps de preguntas",       q: 25, note: "Sin contexto ni explicación" },
                     { src: "Resúmenes de terceros",    q: 35, note: "Inconsistentes, sin estándar" },
-                  ].map((r) => (
+                  ].map((r, i) => (
                     <div key={r.src}>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-[11px] font-medium text-white/70">{r.src}</span>
                         <span className="text-[10px] text-white/40">{r.note}</span>
                       </div>
                       <div className="h-2 bg-white/[0.08] rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-red-500/70 to-red-400/50 rounded-full" style={{width:`${r.q}%`}} />
+                        <div
+                          className="h-full bg-gradient-to-r from-red-500/70 to-red-400/50 rounded-full origin-left"
+                          style={{
+                            width: `${r.q}%`,
+                            animation: sourcesInView ? `barFill 0.8s ${i * 0.15}s ease-out forwards, barShimmer 2s ${i * 0.15 + 0.6}s linear infinite` : 'none',
+                            backgroundSize: '200% 100%',
+                          }}
+                        />
                       </div>
                     </div>
                   ))}
