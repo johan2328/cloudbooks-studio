@@ -5,13 +5,14 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, FileText, CheckSquare, Download, Palette,
   LogOut, ChevronRight, Layers, BookOpen, Activity,
-  DollarSign, Shield, Map, HelpCircle, Table2, Zap, Code2, Database,
+  DollarSign, Shield, Map, HelpCircle, Table2, Zap, Code2, Database, BookMarked,
 } from "lucide-react";
 import { useStudio } from "@/lib/studio-store";
 
 /* ── Estructura de navegación del Studio ─────────────────────────────────── */
 const NAV_PRODUCTION = [
-  { href: "/contenido/1", label: "Contenido y Grounding", icon: Activity,   segment: "contenido" },
+  { href: "/contenido-base", label: "Base editorial AI-200", icon: BookMarked, segment: "contenido-base" },
+  { href: "/contenido/1",    label: "Contenido y Grounding", icon: Activity,   segment: "contenido" },
   { href: "/generacion",  label: "Producción / Gen.",    icon: FileText,    segment: "generacion" },
   { href: "/qa/1",        label: "QA y Aprobación",      icon: Shield,      segment: "qa" },
   { href: "/contrato",    label: "Contratos editoriales",icon: Palette,     segment: "contrato" },

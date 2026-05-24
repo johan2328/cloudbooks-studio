@@ -31,6 +31,7 @@ import Contrato from "@/pages/contrato";
 import Actividad from "@/pages/actividad";
 import Conectores from "@/pages/conectores";
 import Assets from "@/pages/assets";
+import ContenidoGrounding from "@/pages/contenido-grounding";
 
 import NotFound from "@/pages/not-found";
 
@@ -120,6 +121,10 @@ function Router() {
 
       <Route path="/assets">
         <PrivateRoute><Assets /></PrivateRoute>
+      </Route>
+
+      <Route path="/contenido-base">
+        <PrivateRoute><ContenidoGrounding /></PrivateRoute>
       </Route>
 
       <Route path="/ejecuciones">
