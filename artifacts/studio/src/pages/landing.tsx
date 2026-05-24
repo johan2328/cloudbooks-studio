@@ -172,55 +172,107 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Tres productos ───────────────────────────────────────────────── */}
+      {/* ── Seis formatos ────────────────────────────────────────────────── */}
       <section className="py-16 bg-white border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6">
           <div className="mb-10">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">Formatos editoriales</p>
-            <h2 className="text-2xl font-black text-gray-900">Tres formatos para cada certificación cloud.</h2>
-            <p className="text-sm text-gray-500 mt-2">Cada colección CloudBooks incluye tres niveles de preparación complementarios.</p>
+            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3">Sistema editorial</p>
+            <h2 className="text-2xl font-black text-gray-900">Seis formatos. Una ruta completa de estudio.</h2>
+            <p className="text-sm text-gray-500 mt-2 max-w-xl">Cada colección CloudBooks se produce en seis formatos complementarios, diseñados para cubrir todo el ciclo de preparación: comprensión, visualización, práctica y repaso final.</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-3">
+            {[
+              {
+                num: "01", label: "Master Book", tag: "Aprendizaje profundo", color: "#2563eb",
+                desc: "El libro completo para construir comprensión técnica de cada dominio, servicio, arquitectura y decisión de examen.",
+              },
+              {
+                num: "02", label: "Visual Atlas", tag: "Estudio visual", color: "#7c3aed",
+                desc: "Atlas infográfico para acelerar comprensión, memoria visual, comparaciones, flujos y mapas de decisión.",
+              },
+              {
+                num: "03", label: "Exam Traps Guide", tag: "Criterio de examen", color: "#0d9488",
+                desc: "Guía de trampas, distractores, ambigüedades, excepciones y señales que suelen definir la respuesta correcta.",
+              },
+              {
+                num: "04", label: "Question Bank", tag: "Práctica exhaustiva", color: "#0284c7",
+                desc: "Banco de preguntas con respuestas explicadas, análisis de distractores, dificultad progresiva y razonamiento de examen.",
+              },
+              {
+                num: "05", label: "Cheat Sheets", tag: "Repaso compacto", color: "#7c3aed",
+                desc: "Hojas de referencia con límites, tablas de decisión, diferencias entre servicios y señales rápidas de examen.",
+              },
+              {
+                num: "06", label: "Rapid Review Pack", tag: "Cierre final", color: "#0d9488",
+                desc: "Pack de repaso para los últimos días antes del examen: checklist de dominio, preguntas críticas y mapas de memoria.",
+              },
+            ].map(f => (
+              <div key={f.num} className="bg-gray-50 border border-gray-200 rounded-sm p-4 flex flex-col gap-2 hover:border-gray-300 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black text-gray-300 font-mono tracking-wider">{f.num}</span>
+                  <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm"
+                    style={{color: f.color, backgroundColor: `${f.color}12`, border: `1px solid ${f.color}25`}}>
+                    {f.tag}
+                  </span>
+                </div>
+                <h3 className="text-sm font-black text-gray-900">{f.label}</h3>
+                <p className="text-[10px] text-gray-500 leading-relaxed flex-1">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Elige tu paquete ─────────────────────────────────────────────── */}
+      <section className="py-16 bg-[#0d1629] border-b border-white/[0.06]">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="mb-10">
+            <p className="text-[9px] font-bold text-teal-400/50 uppercase tracking-[0.2em] mb-3">Paquetes de compra</p>
+            <h2 className="text-2xl font-black text-white">Elige tu paquete.</h2>
+            <p className="text-sm text-white/40 mt-2">Tres opciones de compra por certificación. Empieza con lo que necesitas ahora.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-4">
             {/* Master Book */}
-            <div className="bg-white border border-gray-200 rounded-sm p-5 flex flex-col">
-              <div className="w-9 h-9 rounded-sm flex items-center justify-center mb-3 bg-blue-50 border border-blue-100">
-                <BookOpen className="w-4.5 h-4.5 text-blue-600" />
+            <div className="bg-white/[0.04] border border-white/[0.09] rounded-sm p-5 flex flex-col relative overflow-hidden hover:border-blue-500/30 transition-colors">
+              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-600 to-blue-400" />
+              <div className="w-9 h-9 rounded-sm flex items-center justify-center mb-3 bg-blue-500/15 border border-blue-500/25">
+                <BookOpen className="w-4.5 h-4.5 text-blue-400" />
               </div>
-              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Aprendizaje profundo</p>
-              <h3 className="text-lg font-black text-gray-900 mb-2">Master Book</h3>
-              <p className="text-xs text-gray-500 leading-relaxed flex-1">
+              <p className="text-[9px] font-bold text-blue-400/60 uppercase tracking-widest mb-1">Aprendizaje profundo</p>
+              <h3 className="text-lg font-black text-white mb-2">Master Book</h3>
+              <p className="text-xs text-white/45 leading-relaxed flex-1">
                 Comprensión profunda de cada dominio, servicio, arquitectura y decisión técnica. El punto de partida de cualquier preparación seria.
               </p>
-              <div className="mt-4 pt-4 border-t border-gray-100 space-y-1.5">
+              <div className="mt-4 pt-4 border-t border-white/[0.07] space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                  <span className="text-xs text-gray-600">Master Book completo (PDF + digital)</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <span className="text-xs text-white/50">Master Book completo (PDF + digital)</span>
                 </div>
               </div>
               <button onClick={() => setLocation("/books")}
-                className="mt-4 w-full h-8 border border-gray-200 rounded-sm text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5">
+                className="mt-4 w-full h-8 border border-white/[0.12] hover:border-blue-500/40 rounded-sm text-xs font-semibold text-white/60 hover:text-white/90 transition-colors flex items-center justify-center gap-1.5">
                 Ver colecciones <ChevronRight className="w-3 h-3" />
               </button>
             </div>
 
             {/* Visual Atlas */}
-            <div className="bg-white border border-violet-200 rounded-sm p-5 flex flex-col relative overflow-hidden">
+            <div className="bg-white/[0.04] border border-violet-500/25 rounded-sm p-5 flex flex-col relative overflow-hidden hover:border-violet-500/40 transition-colors">
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-500 to-blue-500" />
-              <div className="w-9 h-9 rounded-sm flex items-center justify-center mb-3 bg-violet-50 border border-violet-100">
-                <Map className="w-4.5 h-4.5 text-violet-600" />
+              <div className="w-9 h-9 rounded-sm flex items-center justify-center mb-3 bg-violet-500/15 border border-violet-500/25">
+                <Map className="w-4.5 h-4.5 text-violet-400" />
               </div>
               <div className="flex items-center gap-2 mb-1">
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Estudio visual</p>
-                <span className="text-[7px] font-bold bg-violet-100 text-violet-700 border border-violet-200 px-1 py-px rounded-sm">EN PRODUCCIÓN</span>
+                <p className="text-[9px] font-bold text-violet-400/60 uppercase tracking-widest">Estudio visual</p>
+                <span className="text-[7px] font-bold bg-violet-400/15 text-violet-300 border border-violet-400/25 px-1 py-px rounded-sm">EN PRODUCCIÓN</span>
               </div>
-              <h3 className="text-lg font-black text-gray-900 mb-2">Visual Atlas</h3>
-              <p className="text-xs text-gray-500 leading-relaxed flex-1">
+              <h3 className="text-lg font-black text-white mb-2">Visual Atlas</h3>
+              <p className="text-xs text-white/45 leading-relaxed flex-1">
                 Páginas infográficas, diagramas, trampas visuales, autochecks y mapas de decisión para estudiar más rápido. 61 páginas · 13 batches.
               </p>
-              <div className="mt-4 pt-4 border-t border-gray-100 space-y-1.5">
+              <div className="mt-4 pt-4 border-t border-white/[0.07] space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-violet-500 shrink-0" />
-                  <span className="text-xs text-gray-600">Visual Atlas completo (61 infografías)</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                  <span className="text-xs text-white/50">Visual Atlas completo (61 infografías)</span>
                 </div>
               </div>
               <button onClick={() => setLocation("/books")}
@@ -230,20 +282,20 @@ export default function Landing() {
             </div>
 
             {/* Collection Pack */}
-            <div className="bg-[#0d1629] rounded-sm p-5 flex flex-col relative overflow-hidden">
+            <div className="bg-teal-950/60 border border-teal-500/30 rounded-sm p-5 flex flex-col relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal-400 to-blue-500" />
               <div className="w-9 h-9 rounded-sm flex items-center justify-center mb-3 bg-teal-400/15 border border-teal-400/25">
                 <Package className="w-4.5 h-4.5 text-teal-400" />
               </div>
               <div className="flex items-center gap-2 mb-1">
-                <p className="text-[9px] font-bold text-teal-400/60 uppercase tracking-widest">Preparación completa</p>
-                <span className="text-[7px] font-bold bg-teal-400/15 text-teal-300 border border-teal-400/25 px-1.5 py-0.5 rounded-sm">BEST VALUE</span>
+                <p className="text-[9px] font-bold text-teal-400/70 uppercase tracking-widest">Preparación completa</p>
+                <span className="text-[7px] font-bold bg-teal-400/20 text-teal-300 border border-teal-400/30 px-1.5 py-0.5 rounded-sm">BEST VALUE</span>
               </div>
               <h3 className="text-lg font-black text-white mb-2">Collection Pack</h3>
               <p className="text-xs text-white/50 leading-relaxed flex-1">
                 Todo lo necesario para preparar y aprobar la certificación: aprendizaje profundo, estudio visual, trampas de examen, práctica exhaustiva, hojas de repaso y revisión final.
               </p>
-              <div className="mt-4 pt-4 border-t border-white/[0.08] space-y-1.5">
+              <div className="mt-4 pt-4 border-t border-teal-400/[0.12] space-y-1.5">
                 {["Master Book", "Visual Atlas", "Exam Traps Guide", "Question Bank", "Cheat Sheets", "Rapid Review Pack"].map(f => (
                   <div key={f} className="flex items-center gap-2">
                     <CheckCircle2 className="w-3 h-3 text-teal-400 shrink-0" />
