@@ -1,266 +1,395 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
-import CatalogLayout from "@/components/CatalogLayout";
+import Layout from "@/components/Layout";
 import { cn } from "@/lib/utils";
-import { ArrowRight, Lock, BookOpen, FileText, Target, HelpCircle, Table2, Zap, ChevronRight } from "lucide-react";
-import { useListPages } from "@workspace/api-client-react";
+import {
+  BookOpen, FileText, Target, HelpCircle, Table2, Zap,
+  ArrowRight, ChevronRight, Clock, CheckCircle2, AlertTriangle,
+  Cpu, Download, Activity, Eye, Shield,
+} from "lucide-react";
 
-interface Format {
+/* ─── Tipos ─────────────────────────────────────────────────────────────── */
+type FormatStatus = "active" | "pending" | "planned";
+
+interface FormatModule {
   id: string;
+  num: string;
   name: string;
   tagline: string;
   role: string;
   icon: React.ComponentType<{ className?: string }>;
-  status: "active" | "planned";
-  href: string | null;
+  status: FormatStatus;
+  owner: string;
+  lastUpdated: string | null;
+  progress: { done: number; total: number } | null;
+  qaScore: number | null;
+  qaTarget: number;
+  batches: string | null;
   color: string;
-  bgActive: string;
-  borderActive: string;
+  href: string | null;
+  statusLabel: string;
+  notes: string;
 }
 
-const FORMATS: Format[] = [
-  {
-    id: "master-book",
-    name: "Master Book",
-    tagline: "Comprensión profunda",
-    role: "Texto completo del dominio con explicaciones detalladas, analogías y marcos conceptuales. Base de referencia del equipo editorial.",
-    icon: BookOpen,
-    status: "planned",
-    href: null,
-    color: "text-violet-600",
-    bgActive: "bg-violet-50",
-    borderActive: "border-violet-200",
-  },
+const MODULES: FormatModule[] = [
   {
     id: "visual-atlas",
+    num: "02",
     name: "Visual Atlas",
-    tagline: "Lectura visual acelerada",
-    role: "61 páginas organizadas en 13 batches por dominio. Comunicación visual densa y precisa. El formato en producción activa.",
+    tagline: "Estudio visual acelerado",
+    role: "61 infografías organizadas en 13 batches por dominio Azure. El formato en producción activa — comunicación visual densa y técnicamente precisa.",
     icon: FileText,
     status: "active",
+    owner: "Visual Agent + Editorial",
+    lastUpdated: "2026-05-21",
+    progress: { done: 6, total: 61 },
+    qaScore: 9.2,
+    qaTarget: 9.5,
+    batches: "Batch 01–10 migrado · batch 11–20 pendiente grounding",
+    color: "#2563eb",
     href: "/biblioteca",
-    color: "text-blue-600",
-    bgActive: "bg-blue-50",
-    borderActive: "border-blue-200",
+    statusLabel: "Activo",
+    notes: "QA promedio 9.2 — requiere llegar a 9.5. Riesgos: varianza iconográfica y espacios vacíos en páginas 03–06.",
+  },
+  {
+    id: "master-book",
+    num: "01",
+    name: "Master Book",
+    tagline: "Comprensión profunda",
+    role: "Texto completo del dominio con explicaciones detalladas, analogías y marcos conceptuales. Base de referencia del equipo editorial y punto de entrada de cada certificación.",
+    icon: BookOpen,
+    status: "pending",
+    owner: "Pedagogy Agent + Editorial Lead",
+    lastUpdated: null,
+    progress: null,
+    qaScore: null,
+    qaTarget: 9.5,
+    batches: null,
+    color: "#7c3aed",
+    href: null,
+    statusLabel: "Estructura pendiente",
+    notes: "Requiere: definir plantilla de capítulo, estructura de dominios, longitud por sección y criterio de producción.",
   },
   {
     id: "exam-traps",
+    num: "03",
     name: "Exam Traps Guide",
     tagline: "Trampas y distractores",
-    role: "Guía de ambigüedades del examen: distractores frecuentes, señales de preguntas trampa y patrones de error por dominio.",
+    role: "Guía de ambigüedades del examen: distractores frecuentes, señales de preguntas trampa y patrones de error por dominio Azure.",
     icon: Target,
-    status: "planned",
+    status: "pending",
+    owner: "QA / Red Team",
+    lastUpdated: null,
+    progress: null,
+    qaScore: null,
+    qaTarget: 9.5,
+    batches: null,
+    color: "#0d9488",
     href: null,
-    color: "text-orange-600",
-    bgActive: "bg-orange-50",
-    borderActive: "border-orange-200",
+    statusLabel: "Contenido base pendiente",
+    notes: "Depende del grounding completo del Visual Atlas. El Red Team extraerá trampas identificadas en el proceso de QA.",
   },
   {
     id: "question-bank",
+    num: "04",
     name: "Question Bank",
     tagline: "Práctica exhaustiva",
-    role: "Banco de preguntas con explicación completa de por qué cada opción es correcta o incorrecta. Cubre todos los dominios del examen.",
+    role: "Banco de preguntas con explicación completa de por qué cada opción es correcta o incorrecta. Cubre todos los dominios del examen AI-200.",
     icon: HelpCircle,
-    status: "planned",
+    status: "pending",
+    owner: "Editorial Agent + Pedagogy",
+    lastUpdated: null,
+    progress: null,
+    qaScore: null,
+    qaTarget: 9.5,
+    batches: null,
+    color: "#0284c7",
     href: null,
-    color: "text-emerald-600",
-    bgActive: "bg-emerald-50",
-    borderActive: "border-emerald-200",
+    statusLabel: "Diseño funcional pendiente",
+    notes: "Requiere definir estructura de pregunta, categorías de dificultad y formato de exportación antes de producción.",
   },
   {
     id: "cheat-sheets",
+    num: "05",
     name: "Cheat Sheets",
     tagline: "Repaso compacto",
-    role: "Hojas de referencia rápida con tablas de decisión, comparativas de servicios y criterios de selección por escenario.",
+    role: "Hojas de referencia rápida con tablas de decisión, comparativas de servicios y criterios de selección por escenario de examen.",
     icon: Table2,
     status: "planned",
+    owner: "Editorial Agent",
+    lastUpdated: null,
+    progress: null,
+    qaScore: null,
+    qaTarget: 9.5,
+    batches: null,
+    color: "#d97706",
     href: null,
-    color: "text-teal-600",
-    bgActive: "bg-teal-50",
-    borderActive: "border-teal-200",
+    statusLabel: "Planificado",
+    notes: "Formato derivado del Visual Atlas — se produce tras consolidar contenido de batches 01–30.",
   },
   {
     id: "rapid-review",
+    num: "06",
     name: "Rapid Review Pack",
-    tagline: "Repaso final",
-    role: "Sesión condensada de repaso para las últimas 48–72 horas antes del examen. Flashcards, síntesis y puntos críticos.",
+    tagline: "Cierre pre-examen",
+    role: "Sesión condensada para las últimas 48–72h antes del examen. Flashcards, síntesis de dominios, puntos críticos y checklist final.",
     icon: Zap,
     status: "planned",
+    owner: "Editorial Lead",
+    lastUpdated: null,
+    progress: null,
+    qaScore: null,
+    qaTarget: 9.5,
+    batches: null,
+    color: "#059669",
     href: null,
-    color: "text-amber-600",
-    bgActive: "bg-amber-50",
-    borderActive: "border-amber-200",
+    statusLabel: "Planificado",
+    notes: "Último formato de la colección — producción inicia tras completar Visual Atlas, Cheat Sheets y Question Bank.",
   },
 ];
 
+function QABadge({ score, target }: { score: number | null; target: number }) {
+  if (!score) return <span className="text-white/15 text-lg font-black leading-none">—</span>;
+  const ok = score >= target;
+  return (
+    <div className="text-right">
+      <span className={`text-lg font-black leading-none ${ok ? "text-emerald-400" : "text-amber-400"}`}>{score.toFixed(1)}</span>
+      <p className="text-[7px] text-white/25 mt-px">{ok ? "✓ objetivo" : `obj. ${target}`}</p>
+    </div>
+  );
+}
+
+function StatusBadge({ status, label }: { status: FormatStatus; label: string }) {
+  if (status === "active") return (
+    <span className="flex items-center gap-1 text-[8px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 px-1.5 py-px rounded-sm uppercase tracking-wide">
+      <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />{label}
+    </span>
+  );
+  if (status === "pending") return (
+    <span className="text-[8px] font-bold bg-amber-500/10 text-amber-400/80 border border-amber-500/20 px-1.5 py-px rounded-sm uppercase tracking-wide">{label}</span>
+  );
+  return (
+    <span className="text-[8px] font-bold bg-white/5 text-white/25 border border-white/10 px-1.5 py-px rounded-sm uppercase tracking-wide">{label}</span>
+  );
+}
+
 export default function AI200Collection() {
   const [, setLocation] = useLocation();
-  const pagesQuery = useListPages();
-  const pages = pagesQuery.data ?? [];
-  const approved = pages.filter(p => p.status === "approved").length;
-  const avgQA = pages.filter(p => p.qaScore && p.qaScore > 0).length > 0
-    ? (pages.reduce((s, p) => s + (p.qaScore ?? 0), 0) / pages.filter(p => p.qaScore && p.qaScore > 0).length).toFixed(1)
-    : "—";
+  const [expanded, setExpanded] = useState<string | null>("visual-atlas");
+
+  const activeModules = MODULES.filter(m => m.status === "active").length;
+  const pendingModules = MODULES.filter(m => m.status === "pending").length;
 
   return (
-    <CatalogLayout crumbs={[
-      { label: "Biblioteca", href: "/catalogo" },
-      { label: "Azure", href: "/azure" },
-      { label: "AI-200 Certification Collection" },
-    ]}>
-      <div className="px-8 py-8 max-w-5xl mx-auto w-full">
+    <Layout title="AI-200 Collection">
+      <div className="h-full overflow-y-auto bg-[#0a1220]">
 
-        {/* Collection header */}
-        <div className="bg-white border border-blue-200 rounded-sm px-6 py-5 mb-6 flex items-start gap-5 shadow-sm">
-          <div className="w-12 h-12 rounded-sm bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
-            AI<br className="hidden" />200
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[9px] font-bold bg-[#0078d4] text-white px-1.5 py-0.5 rounded-sm tracking-wider uppercase">Azure · Associate</span>
-              <span className="flex items-center gap-1 text-[9px] font-semibold text-emerald-600">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> En producción
-              </span>
+        {/* ── Header ─────────────────────────────────────────────────────── */}
+        <div className="bg-[#0d1629] border-b border-white/[0.06] px-6 py-4">
+          <div className="flex items-start gap-4 max-w-5xl">
+            <div className="w-10 h-10 rounded-sm bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center text-white text-[11px] font-black shrink-0 leading-none">
+              AI<br />200
             </div>
-            <h1 className="text-lg font-bold text-gray-900 tracking-tight">AI-200 Certification Collection</h1>
-            <p className="text-xs text-gray-500 mt-0.5">Azure AI Fundamentals · 6 formatos editoriales · {pages.length} páginas en Visual Atlas</p>
-          </div>
-          {/* Live stats */}
-          <div className="hidden md:flex items-center gap-5 shrink-0">
-            {[
-              { label: "Infografías", value: pages.length.toString() },
-              { label: "Aprobadas", value: approved.toString() },
-              { label: "Score QA", value: avgQA },
-            ].map(s => (
-              <div key={s.label} className="text-center">
-                <p className="text-[8px] text-gray-400 uppercase tracking-wider font-medium">{s.label}</p>
-                <p className="text-base font-bold text-blue-600 leading-none mt-0.5">{s.value}</p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-[8px] font-bold bg-[#0078d4] text-white px-1.5 py-0.5 rounded-sm tracking-wider uppercase">Azure · Associate</span>
+                <span className="flex items-center gap-1 text-[8px] font-semibold text-emerald-400">
+                  <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" /> En producción activa
+                </span>
               </div>
-            ))}
+              <h1 className="text-base font-black text-white tracking-tight">AI-200 Certification Collection</h1>
+              <p className="text-[10px] text-white/40 mt-0.5">Colección editorial interna · 6 formatos · producción por batches · flujo QA ≥ 9.5</p>
+            </div>
+            <div className="hidden md:flex items-center gap-6 shrink-0">
+              {[
+                { label: "Formatos activos", value: String(activeModules) },
+                { label: "En preparación", value: String(pendingModules) },
+                { label: "QA Visual Atlas", value: "9.2" },
+              ].map(s => (
+                <div key={s.label} className="text-center">
+                  <p className="text-[7px] text-white/25 uppercase tracking-wider font-medium">{s.label}</p>
+                  <p className="text-base font-black text-white leading-none mt-0.5">{s.value}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Formats grid */}
-        <div className="mb-2">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Formatos de la colección</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {FORMATS.map((fmt) => {
-              const Icon = fmt.icon;
-              const isActive = fmt.status === "active";
-              return (
+        {/* ── Módulos de producción ───────────────────────────────────────── */}
+        <div className="p-6 max-w-5xl space-y-2">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Módulos editoriales de producción</span>
+            <div className="flex-1 h-px bg-white/[0.05]" />
+          </div>
+
+          {MODULES.map(mod => {
+            const Icon = mod.icon;
+            const isExpanded = expanded === mod.id;
+            const isActive = mod.status === "active";
+
+            return (
+              <div key={mod.id}
+                className={cn(
+                  "bg-[#0d1629] border rounded-sm overflow-hidden transition-all duration-200",
+                  isActive ? "border-white/[0.1]" : "border-white/[0.05] opacity-80"
+                )}>
+
+                {/* ── Fila resumen ── */}
                 <div
-                  key={fmt.id}
-                  className={cn(
-                    "bg-white border rounded-sm flex flex-col transition-all",
-                    isActive
-                      ? `${fmt.borderActive} shadow-sm hover:shadow-md`
-                      : "border-gray-200 opacity-70"
-                  )}
-                >
-                  {/* Header */}
-                  <div className={cn(
-                    "px-4 pt-4 pb-3 border-b",
-                    isActive ? `${fmt.bgActive} ${fmt.borderActive}` : "bg-gray-50/50 border-gray-100"
-                  )}>
-                    <div className="flex items-center justify-between mb-2">
-                      <Icon className={cn("w-4 h-4", isActive ? fmt.color : "text-gray-300")} />
-                      {!isActive && <Lock className="w-3 h-3 text-gray-300" />}
-                      {isActive && (
-                        <span className="flex items-center gap-1 text-[9px] font-semibold text-emerald-600">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Activo
-                        </span>
-                      )}
-                    </div>
-                    <p className={cn("text-sm font-bold leading-tight", isActive ? "text-gray-900" : "text-gray-500")}>
-                      {fmt.name}
-                    </p>
-                    <p className={cn("text-[10px] mt-0.5 font-medium", isActive ? fmt.color : "text-gray-400")}>
-                      {fmt.tagline}
-                    </p>
+                  className="px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                  onClick={() => setExpanded(isExpanded ? null : mod.id)}>
+
+                  {/* Número */}
+                  <span className="text-[9px] font-mono text-white/20 w-4 shrink-0">{mod.num}</span>
+
+                  {/* Icono */}
+                  <div className="w-7 h-7 rounded-sm flex items-center justify-center shrink-0"
+                    style={{ background: `${mod.color}15`, color: mod.color }}>
+                    <Icon className="w-3.5 h-3.5" />
                   </div>
-                  {/* Role description */}
-                  <div className="px-4 py-3 flex-1">
-                    <p className="text-[10px] text-gray-500 leading-relaxed">{fmt.role}</p>
-                    {isActive && (
-                      <div className="mt-2 pt-2 border-t border-gray-100">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[9px] text-gray-400">Progreso · {approved}/{pages.length} páginas</span>
-                          <span className="text-[9px] font-bold text-blue-600">
-                            {pages.length > 0 ? Math.round((approved / pages.length) * 100) : 0}%
-                          </span>
+
+                  {/* Nombre + badge */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-xs font-bold ${isActive ? "text-white" : "text-white/50"}`}>{mod.name}</span>
+                      <StatusBadge status={mod.status} label={mod.statusLabel} />
+                    </div>
+                    <p className="text-[9px] text-white/30 mt-0.5">{mod.tagline}</p>
+                  </div>
+
+                  {/* Progreso / QA */}
+                  {mod.progress && (
+                    <div className="hidden md:flex items-center gap-2 shrink-0">
+                      <div className="w-24 h-1 bg-white/[0.06] rounded-full overflow-hidden">
+                        <div className="h-full rounded-full transition-all"
+                          style={{ width: `${Math.round((mod.progress.done / mod.progress.total) * 100)}%`, background: mod.color }} />
+                      </div>
+                      <span className="text-[8px] text-white/25">{mod.progress.done}/{mod.progress.total}</span>
+                    </div>
+                  )}
+                  <QABadge score={mod.qaScore} target={mod.qaTarget} />
+                  <ChevronRight className={`w-3 h-3 text-white/15 shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                </div>
+
+                {/* ── Panel expandido ── */}
+                {isExpanded && (
+                  <div className="border-t border-white/[0.05] px-4 py-4 space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {/* Info */}
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-[8px] text-white/25 uppercase tracking-wider mb-1">Descripción del formato</p>
+                          <p className="text-[11px] text-white/65 leading-relaxed">{mod.role}</p>
                         </div>
-                        <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-gradient-to-r from-blue-500 to-violet-500 rounded-full"
-                            style={{ width: `${pages.length > 0 ? Math.round((approved / pages.length) * 100) : 0}%` }} />
+                        <div>
+                          <p className="text-[8px] text-white/25 uppercase tracking-wider mb-1">Nota operativa</p>
+                          <p className="text-[10px] text-amber-400/70 leading-relaxed">{mod.notes}</p>
                         </div>
                       </div>
-                    )}
-                  </div>
-                  {/* CTA */}
-                  <div className="px-4 pb-4">
-                    {isActive ? (
+                      {/* Metadata */}
+                      <div className="space-y-2">
+                        {[
+                          { label: "Responsable", value: mod.owner },
+                          { label: "Última actualización", value: mod.lastUpdated ?? "Sin iniciar" },
+                          { label: "Batches", value: mod.batches ?? "Pendiente de planificación" },
+                          { label: "Score objetivo", value: `≥ ${mod.qaTarget}` },
+                        ].map(m => (
+                          <div key={m.label} className="flex items-start gap-2">
+                            <span className="text-[8px] text-white/25 uppercase tracking-wider w-28 shrink-0 pt-px">{m.label}</span>
+                            <span className="text-[10px] text-white/60 font-medium">{m.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Acciones */}
+                    <div className="flex flex-wrap gap-2 pt-1 border-t border-white/[0.05]">
                       <button
-                        onClick={() => fmt.href && setLocation(fmt.href)}
-                        className="w-full flex items-center justify-center gap-2 h-8 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white text-xs font-semibold rounded-sm transition-all shadow-sm"
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                        Abrir estudio
-                        <ArrowRight className="w-3 h-3 ml-auto" />
+                        onClick={() => mod.href && setLocation(mod.href)}
+                        disabled={!isActive}
+                        className={cn(
+                          "flex items-center gap-1.5 h-7 px-3 rounded-sm text-[10px] font-semibold transition-all",
+                          isActive
+                            ? "bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white"
+                            : "bg-white/5 text-white/20 cursor-not-allowed"
+                        )}>
+                        <Eye className="w-3 h-3" />
+                        Abrir producción
+                        {isActive && <ArrowRight className="w-2.5 h-2.5" />}
                       </button>
-                    ) : (
-                      <div className="w-full flex items-center justify-center h-8 bg-gray-100 text-gray-400 text-xs font-medium rounded-sm cursor-not-allowed gap-1.5">
-                        <Lock className="w-3 h-3" />
-                        En preparación
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Estructura de la colección */}
-        <div className="mt-8 bg-white border border-gray-200 rounded-sm p-5">
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Estructura de la colección</p>
-          <div className="flex items-start gap-0 overflow-x-auto pb-2">
-            {FORMATS.map((fmt, i) => {
-              const Icon = fmt.icon;
-              const isActive = fmt.status === "active";
-              return (
-                <div key={fmt.id} className="flex items-stretch shrink-0">
-                  <div className={cn(
-                    "flex flex-col items-center gap-1.5 px-3 py-3 border rounded-sm min-w-[100px] text-center",
-                    isActive ? `${fmt.bgActive} ${fmt.borderActive}` : "bg-gray-50 border-gray-200"
-                  )}>
-                    <Icon className={cn("w-4 h-4 mb-0.5", isActive ? fmt.color : "text-gray-300")} />
-                    <p className={cn("text-[9px] font-bold leading-tight", isActive ? "text-gray-800" : "text-gray-400")}>
-                      {fmt.name}
-                    </p>
-                    <p className={cn("text-[8px] leading-tight", isActive ? fmt.color : "text-gray-300")}>
-                      {fmt.tagline}
-                    </p>
-                    {isActive && (
-                      <span className="mt-1 text-[7px] bg-emerald-100 text-emerald-600 font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wide">
-                        Activo
-                      </span>
-                    )}
-                  </div>
-                  {i < FORMATS.length - 1 && (
-                    <div className="flex items-center px-0.5 shrink-0">
-                      <ChevronRight className="w-3 h-3 text-gray-200" />
+                      <button
+                        onClick={() => isActive && setLocation("/contenido/1")}
+                        disabled={!isActive}
+                        className={cn(
+                          "flex items-center gap-1.5 h-7 px-3 rounded-sm text-[10px] font-medium border transition-all",
+                          isActive
+                            ? "border-white/15 hover:border-white/30 text-white/60 hover:text-white/90"
+                            : "border-white/5 text-white/15 cursor-not-allowed"
+                        )}>
+                        <Activity className="w-3 h-3" />
+                        Ver contenido
+                      </button>
+                      <button
+                        onClick={() => isActive && setLocation("/qa/1")}
+                        disabled={!isActive}
+                        className={cn(
+                          "flex items-center gap-1.5 h-7 px-3 rounded-sm text-[10px] font-medium border transition-all",
+                          isActive
+                            ? "border-white/15 hover:border-white/30 text-white/60 hover:text-white/90"
+                            : "border-white/5 text-white/15 cursor-not-allowed"
+                        )}>
+                        <Shield className="w-3 h-3" />
+                        Ejecutar QA
+                      </button>
+                      <button
+                        onClick={() => isActive && setLocation("/exportacion")}
+                        disabled={!isActive}
+                        className={cn(
+                          "flex items-center gap-1.5 h-7 px-3 rounded-sm text-[10px] font-medium border transition-all",
+                          isActive
+                            ? "border-white/15 hover:border-white/30 text-white/60 hover:text-white/90"
+                            : "border-white/5 text-white/15 cursor-not-allowed"
+                        )}>
+                        <Download className="w-3 h-3" />
+                        Exportar
+                      </button>
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          <p className="text-[9px] text-gray-400 mt-3 border-t border-gray-100 pt-2.5 leading-relaxed">
-            La ruta de estudio progresa desde la comprensión profunda (Master Book) hasta el repaso final pre-examen (Rapid Review Pack). 
-            El Visual Atlas es el punto de entrada visual acelerada — diseñado para ser el formato más eficiente por hora de estudio.
-          </p>
-        </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
+          {/* ── Pipeline secuencial ─────────────────────────────────────── */}
+          <div className="mt-6 bg-[#0d1629] border border-white/[0.05] rounded-sm p-4">
+            <p className="text-[9px] font-bold text-white/25 uppercase tracking-widest mb-3">Pipeline de producción · secuencia editorial</p>
+            <div className="flex items-center gap-0 overflow-x-auto pb-1">
+              {MODULES.map((mod, i) => {
+                const Icon = mod.icon;
+                const isActive = mod.status === "active";
+                return (
+                  <div key={mod.id} className="flex items-center shrink-0">
+                    <div className={cn(
+                      "flex flex-col items-center gap-1 px-3 py-2 rounded-sm border text-center min-w-[90px]",
+                      isActive ? "bg-blue-500/10 border-blue-500/30" : "bg-white/[0.02] border-white/[0.05]"
+                    )}>
+                      <span style={{ color: isActive ? mod.color : "rgba(255,255,255,0.15)" }}>
+                        <Icon className="w-3.5 h-3.5 mb-0.5" />
+                      </span>
+                      <p className={cn("text-[8px] font-bold leading-tight", isActive ? "text-white" : "text-white/25")}>{mod.name}</p>
+                      <p className="text-[7px] leading-tight" style={{ color: isActive ? `${mod.color}cc` : "rgba(255,255,255,0.15)" }}>{mod.tagline}</p>
+                      {isActive && <span className="mt-0.5 text-[6px] bg-emerald-500/20 text-emerald-400 font-bold px-1 py-px rounded-sm uppercase tracking-wide">Activo</span>}
+                    </div>
+                    {i < MODULES.length - 1 && (
+                      <ChevronRight className="w-3 h-3 text-white/10 shrink-0 mx-0.5" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
-    </CatalogLayout>
+    </Layout>
   );
 }

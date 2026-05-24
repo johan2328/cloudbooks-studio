@@ -30,7 +30,7 @@ export default function Login() {
       {
         onSuccess: (result) => {
           login(result.user, result.token);
-          setLocation("/biblioteca");
+          setLocation("/studio");
         },
         onError: () => setError("PIN incorrecto. Intenta de nuevo."),
       }

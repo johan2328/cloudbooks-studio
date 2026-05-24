@@ -4,6 +4,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { CartProvider, CartPanel } from "@/lib/cart";
+
+/* ── Portal comercial ── */
 import Landing from "@/pages/landing";
 import Books from "@/pages/books";
 import AI200Packs from "@/pages/ai200-packs";
@@ -11,8 +13,13 @@ import Login from "@/pages/login";
 import NuestraLaborPage from "@/pages/nuestra-labor";
 import EmpresasPage from "@/pages/empresas";
 import DemoPage from "@/pages/demo";
+
+/* ── Catálogo jerárquico ── */
 import Catalogo from "@/pages/catalogo";
 import Azure from "@/pages/azure";
+
+/* ── Production Studio ── */
+import StudioDashboard from "@/pages/studio-dashboard";
 import AI200Collection from "@/pages/ai200";
 import Biblioteca from "@/pages/biblioteca";
 import Contenido from "@/pages/contenido";
@@ -20,6 +27,7 @@ import Generacion from "@/pages/generacion";
 import QAPage from "@/pages/qa";
 import Exportacion from "@/pages/exportacion";
 import Contrato from "@/pages/contrato";
+
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -43,7 +51,7 @@ function Router() {
     <Switch>
       <Route path="/login" component={Login} />
 
-      {/* Portal comercial (público) */}
+      {/* ── Portal comercial (público) ──────────────────────────────── */}
       <Route path="/" component={Landing} />
       <Route path="/portal" component={Landing} />
       <Route path="/books" component={Books} />
@@ -52,23 +60,26 @@ function Router() {
       <Route path="/empresas" component={EmpresasPage} />
       <Route path="/demo" component={DemoPage} />
 
-      {/* ── Catálogo jerárquico ───────────────────── */}
-      {/* Nivel 1: Proveedores cloud */}
+      {/* ── Production Studio ──────────────────────────────────────── */}
+      {/* Dashboard principal del Studio */}
+      <Route path="/studio">
+        <PrivateRoute><StudioDashboard /></PrivateRoute>
+      </Route>
+
+      {/* Catálogo jerárquico */}
       <Route path="/catalogo">
         <PrivateRoute><Catalogo /></PrivateRoute>
       </Route>
-
-      {/* Nivel 2: Certificaciones Azure */}
       <Route path="/azure">
         <PrivateRoute><Azure /></PrivateRoute>
       </Route>
 
-      {/* Nivel 3: AI-200 Certification Collection */}
+      {/* AI-200 Collection (vista de módulos de producción) */}
       <Route path="/ai-200">
         <PrivateRoute><AI200Collection /></PrivateRoute>
       </Route>
 
-      {/* ── Estudio Visual Atlas (AI-200) ───────────────── */}
+      {/* Visual Atlas — herramientas de producción */}
       <Route path="/biblioteca">
         <PrivateRoute><Biblioteca /></PrivateRoute>
       </Route>
@@ -76,7 +87,6 @@ function Router() {
       <Route path="/contenido/:id">
         {() => <PrivateRoute><Contenido /></PrivateRoute>}
       </Route>
-
       <Route path="/contenido">
         <Redirect to="/contenido/1" />
       </Route>
@@ -88,7 +98,6 @@ function Router() {
       <Route path="/qa/:id">
         {() => <PrivateRoute><QAPage /></PrivateRoute>}
       </Route>
-
       <Route path="/qa">
         <Redirect to="/qa/1" />
       </Route>
@@ -99,6 +108,11 @@ function Router() {
 
       <Route path="/contrato">
         <PrivateRoute><Contrato /></PrivateRoute>
+      </Route>
+
+      {/* Ejecuciones / Costos — próximamente */}
+      <Route path="/ejecuciones">
+        <PrivateRoute><StudioDashboard /></PrivateRoute>
       </Route>
 
       <Route component={NotFound} />

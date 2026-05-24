@@ -3,25 +3,38 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import {
-  Home,
-  FileText,
-  Cpu,
-  CheckSquare,
-  Download,
-  Palette,
-  LogOut,
-  ChevronRight,
-  LayoutGrid,
-  Layers,
-  BookOpen,
+  LayoutDashboard, FileText, CheckSquare, Download, Palette,
+  LogOut, ChevronRight, Layers, BookOpen, Activity,
+  DollarSign, Shield, Map, HelpCircle, Table2, Zap,
 } from "lucide-react";
 
-const TOOLS_NAV = [
-  { href: "/contenido/1", label: "Contenido",       icon: FileText    },
-  { href: "/generacion",  label: "Generación",       icon: Cpu         },
-  { href: "/qa/1",        label: "QA y Aprobación",  icon: CheckSquare },
-  { href: "/exportacion", label: "Exportación",      icon: Download    },
-  { href: "/contrato",    label: "Contrato Visual",  icon: Palette     },
+/* ── Estructura de navegación del Studio ─────────────────────────────────── */
+
+const NAV_PRODUCTION = [
+  { href: "/contenido/1", label: "Contenido y Grounding", icon: Activity     },
+  { href: "/generacion",  label: "Producción / Gen.",    icon: FileText      },
+  { href: "/qa/1",        label: "QA y Aprobación",      icon: Shield        },
+  { href: "/contrato",    label: "Contratos editoriales",icon: Palette       },
+  { href: "/exportacion", label: "Exportación",           icon: Download      },
+  { href: "/ejecuciones", label: "Costos y Ejecuciones", icon: DollarSign    },
+];
+
+const AI200_FORMATS = [
+  { href: "/biblioteca", label: "Visual Atlas",       icon: Map,        badge: "01–10", active: true  },
+  { href: null,          label: "Master Book",        icon: BookOpen,   badge: null,    active: false },
+  { href: null,          label: "Exam Traps Guide",   icon: Shield,     badge: null,    active: false },
+  { href: null,          label: "Question Bank",      icon: HelpCircle, badge: null,    active: false },
+  { href: null,          label: "Cheat Sheets",       icon: Table2,     badge: null,    active: false },
+  { href: null,          label: "Rapid Review Pack",  icon: Zap,        badge: null,    active: false },
+];
+
+const AZURE_CERTS = [
+  { label: "AI-200", href: "/ai-200", active: true  },
+  { label: "AZ-900", href: null,      active: false },
+  { label: "AI-900", href: null,      active: false },
+  { label: "DP-900", href: null,      active: false },
+  { label: "AZ-104", href: null,      active: false },
+  { label: "AZ-305", href: null,      active: false },
 ];
 
 interface LayoutProps {
@@ -38,144 +51,158 @@ export default function Layout({ children, title }: LayoutProps) {
     setLocation("/login");
   }
 
-  return (
-    <div className="flex h-screen bg-[#f0f2f5] overflow-hidden">
-      {/* ── Sidebar ─────────────────────────────────────────────────────── */}
-      <aside className="w-52 bg-[#0d1629] flex flex-col shrink-0">
+  /* Helpers para determinar si sección de biblioteca está abierta */
+  const inBiblioteca = location.startsWith("/catalogo") || location.startsWith("/azure") ||
+    location.startsWith("/ai-200") || location.startsWith("/biblioteca");
+  const inAI200 = location.startsWith("/ai-200") || location.startsWith("/biblioteca");
 
-        {/* Logo */}
-        <div className="flex items-center justify-center px-4 pt-5 pb-4 border-b border-white/[0.06]">
-          <Link href="/">
-            <img
-              src="/cloudbooks-logo-nobg.png"
-              alt="CloudBooks"
-              className="w-34 opacity-95 hover:opacity-100 transition-opacity"
-              draggable={false}
-            />
+  return (
+    <div className="flex h-screen bg-[#0a1220] overflow-hidden">
+
+      {/* ── Sidebar ─────────────────────────────────────────────────────── */}
+      <aside className="w-56 bg-[#0d1629] flex flex-col shrink-0 border-r border-white/[0.05]">
+
+        {/* Logo + contexto Studio */}
+        <div className="px-4 pt-4 pb-3 border-b border-white/[0.06]">
+          <Link href="/studio">
+            <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks"
+              className="w-32 opacity-90 hover:opacity-100 transition-opacity" draggable={false} />
           </Link>
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <span className="text-[7px] font-bold text-teal-400/60 uppercase tracking-[0.2em]">Studio</span>
+            <span className="text-white/10">·</span>
+            <span className="text-[7px] text-white/20">Producción editorial</span>
+          </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-2">
+        <nav className="flex-1 overflow-y-auto py-2 scrollbar-thin">
 
-          {/* ── Inicio ──────────────────────────────────────────────────── */}
+          {/* ── Dashboard ──────────────────────────────────────────────── */}
           <div className="px-2 mb-1">
-            <Link
-              href="/"
-              className={cn(
-                "flex items-center gap-2.5 px-3 py-2 rounded-sm text-xs font-medium transition-all",
-                location === "/" || location === "/portal"
-                  ? "bg-gradient-to-r from-blue-600/20 to-violet-600/10 text-white border-l-2 border-blue-400 pl-[10px]"
-                  : "text-white/40 hover:text-white/75 hover:bg-white/5"
-              )}
-            >
-              <Home className={cn("w-3.5 h-3.5 shrink-0", (location === "/" || location === "/portal") ? "text-blue-400" : "text-white/30")} />
-              <span>Inicio</span>
+            <Link href="/studio" className={cn(
+              "flex items-center gap-2 px-3 py-2 rounded-sm text-xs font-semibold transition-all",
+              location === "/studio" || location === "/"
+                ? "bg-gradient-to-r from-blue-600/20 to-violet-600/10 text-white border-l-2 border-blue-400 pl-[10px]"
+                : "text-white/40 hover:text-white/75 hover:bg-white/5"
+            )}>
+              <LayoutDashboard className={cn("w-3.5 h-3.5 shrink-0",
+                (location === "/studio" || location === "/") ? "text-blue-400" : "text-white/25")} />
+              <span>Dashboard Studio</span>
             </Link>
           </div>
 
-          <div className="mx-3 h-px bg-white/[0.05] my-1.5" />
+          <div className="mx-3 h-px bg-white/[0.05] my-1" />
 
-          {/* ── Biblioteca ──────────────────────────────────────────────── */}
-          <div className="px-2 mb-1">
-            <div className="px-3 py-1.5 flex items-center gap-2">
-              <LayoutGrid className="w-3 h-3 text-white/20 shrink-0" />
-              <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">Biblioteca</span>
+          {/* ── Biblioteca editorial ────────────────────────────────────── */}
+          <div className="px-2 mb-0.5">
+            <div className="px-3 py-1 flex items-center gap-2">
+              <Layers className="w-2.5 h-2.5 text-white/15 shrink-0" />
+              <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Biblioteca editorial</span>
             </div>
 
-            {/* Árbol: Biblioteca → Azure → AI-200 → Visual Atlas */}
-            <Link
-              href="/catalogo"
-              className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-sm text-[10px] font-medium transition-colors",
-                location.startsWith("/catalogo")
-                  ? "text-white/80 bg-white/[0.05]"
-                  : "text-white/35 hover:text-white/60"
-              )}
-            >
-              <Layers className="w-3 h-3 shrink-0 text-white/20" />
-              <span>Clouds y certificaciones</span>
-            </Link>
-
-            {/* Azure branch */}
-            <div className="pl-4 mt-0.5">
-              <Link
-                href="/azure"
-                className={cn(
-                  "flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-medium transition-colors",
-                  location.startsWith("/azure")
-                    ? "text-[#0078d4]/90 bg-[#0078d4]/10"
-                    : "text-[#0078d4]/45 hover:text-[#0078d4]/80"
-                )}
-              >
-                <ChevronRight className="w-2.5 h-2.5 shrink-0 text-white/15" />
+            {/* Azure */}
+            <div className="pl-3 mt-0.5">
+              <div className={cn(
+                "flex items-center gap-1.5 px-2 py-1 rounded-sm text-[9px] font-bold transition-colors",
+                inBiblioteca ? "text-[#0078d4]/80" : "text-[#0078d4]/35"
+              )}>
+                <ChevronRight className="w-2.5 h-2.5 shrink-0 text-white/10" />
                 <span>Azure</span>
-              </Link>
+              </div>
 
-              {/* AI-200 branch */}
-              <div className="pl-4 mt-0.5">
-                <Link
-                  href="/ai-200"
-                  className={cn(
-                    "flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-medium transition-colors",
-                    location.startsWith("/ai-200")
-                      ? "text-white/80 bg-white/[0.05]"
-                      : "text-white/30 hover:text-white/60"
-                  )}
-                >
-                  <ChevronRight className="w-2.5 h-2.5 shrink-0 text-white/15" />
-                  <span>AI-200 Collection</span>
-                </Link>
-
-                {/* Visual Atlas (active format) */}
-                <div className="pl-4 mt-0.5">
-                  <Link
-                    href="/biblioteca"
-                    className={cn(
-                      "flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-semibold transition-colors",
-                      location.startsWith("/biblioteca")
-                        ? "text-blue-400 bg-blue-500/10"
-                        : "text-white/30 hover:text-blue-300"
+              {/* Certificaciones Azure */}
+              <div className="pl-3 mt-0.5 space-y-px">
+                {AZURE_CERTS.map(cert => (
+                  <div key={cert.label}>
+                    {cert.active ? (
+                      <Link href={cert.href!}
+                        className={cn(
+                          "flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[9px] font-semibold transition-colors",
+                          inAI200 ? "text-white/80 bg-white/[0.05]" : "text-white/30 hover:text-white/60"
+                        )}>
+                        <ChevronRight className="w-2 h-2 shrink-0 text-white/10" />
+                        <span>{cert.label}</span>
+                        <span className="ml-auto text-[6px] bg-emerald-500/20 text-emerald-400 px-1 py-px rounded-sm font-bold tracking-wide border border-emerald-500/20">Activo</span>
+                      </Link>
+                    ) : (
+                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[9px] text-white/15 cursor-not-allowed">
+                        <ChevronRight className="w-2 h-2 shrink-0 text-white/8" />
+                        <span>{cert.label}</span>
+                        <span className="ml-auto text-[6px] text-white/15">plan.</span>
+                      </div>
                     )}
-                  >
-                    <ChevronRight className="w-2.5 h-2.5 shrink-0 text-white/15" />
-                    <BookOpen className="w-2.5 h-2.5 shrink-0" />
-                    <span>Visual Atlas</span>
-                    <span className="ml-auto text-[7px] bg-blue-500/20 text-blue-300 px-1 py-px rounded-sm font-bold tracking-wide border border-blue-500/20">01–10</span>
-                  </Link>
-                </div>
+
+                    {/* AI-200 → formatos expandidos */}
+                    {cert.label === "AI-200" && inAI200 && (
+                      <div className="pl-3 mt-0.5 space-y-px">
+                        {AI200_FORMATS.map(fmt => {
+                          const Icon = fmt.icon;
+                          const isActiveFmt = fmt.href && location.startsWith(fmt.href);
+                          return (
+                            <div key={fmt.label}>
+                              {fmt.active && fmt.href ? (
+                                <Link href={fmt.href}
+                                  className={cn(
+                                    "flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[8px] font-medium transition-colors",
+                                    isActiveFmt ? "text-blue-400 bg-blue-500/10" : "text-white/30 hover:text-blue-300/70"
+                                  )}>
+                                  <Icon className="w-2.5 h-2.5 shrink-0" />
+                                  <span className="truncate">{fmt.label}</span>
+                                  {fmt.badge && (
+                                    <span className="ml-auto text-[6px] bg-blue-500/20 text-blue-300 px-1 py-px rounded-sm font-bold tracking-wide border border-blue-500/20 shrink-0">{fmt.badge}</span>
+                                  )}
+                                </Link>
+                              ) : (
+                                <div className="flex items-center gap-1.5 px-2 py-0.5 text-[8px] text-white/12 cursor-not-allowed">
+                                  <Icon className="w-2.5 h-2.5 shrink-0 text-white/8" />
+                                  <span className="truncate">{fmt.label}</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
 
-          <div className="mx-3 h-px bg-white/[0.05] my-1.5" />
+          <div className="mx-3 h-px bg-white/[0.05] my-1" />
 
-          {/* ── Herramientas — formato activo ───────────────────────────── */}
+          {/* ── Producción ─────────────────────────────────────────────── */}
           <div className="px-2">
-            <div className="px-3 py-1.5 flex items-center gap-2">
-              <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">Herramientas</span>
-              <span className="text-[7px] text-blue-400/50 font-medium">Visual Atlas</span>
+            <div className="px-3 py-1 flex items-center gap-2">
+              <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Producción</span>
+              <span className="text-[6px] text-blue-400/40 font-bold">AI-200</span>
             </div>
-            <div className="space-y-0.5">
-              {TOOLS_NAV.map(({ href, label, icon: Icon }) => {
+            <div className="space-y-px">
+              {NAV_PRODUCTION.map(({ href, label, icon: Icon }) => {
                 const segment = href.split("/")[1];
-                const active = segment
-                  ? location.startsWith(`/${segment}`)
-                  : location === href;
+                const active = segment ? location.startsWith(`/${segment}`) : location === href;
+                const isDisabled = href === "/ejecuciones";
                 return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={cn(
-                      "flex items-center gap-2.5 px-3 py-2 rounded-sm text-xs font-medium transition-all",
-                      active
-                        ? "bg-gradient-to-r from-blue-600/20 to-violet-600/10 text-white border-l-2 border-blue-400 pl-[10px]"
-                        : "text-white/40 hover:text-white/75 hover:bg-white/5"
+                  <div key={href}>
+                    {isDisabled ? (
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-sm text-[10px] text-white/20 cursor-not-allowed">
+                        <Icon className="w-3 h-3 shrink-0 text-white/10" />
+                        <span className="truncate">{label}</span>
+                        <span className="ml-auto text-[6px] text-white/15">pronto</span>
+                      </div>
+                    ) : (
+                      <Link href={href}
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-1.5 rounded-sm text-[10px] font-medium transition-all",
+                          active
+                            ? "bg-gradient-to-r from-blue-600/20 to-violet-600/10 text-white border-l-2 border-blue-400 pl-[10px]"
+                            : "text-white/35 hover:text-white/70 hover:bg-white/5"
+                        )}>
+                        <Icon className={cn("w-3 h-3 shrink-0", active ? "text-blue-400" : "text-white/20")} />
+                        <span className="truncate">{label}</span>
+                      </Link>
                     )}
-                    data-testid={`nav-${segment || href.replace("/", "")}`}
-                  >
-                    <Icon className={cn("w-3.5 h-3.5 shrink-0", active ? "text-blue-400" : "text-white/30")} />
-                    <span className="truncate">{label}</span>
-                  </Link>
+                  </div>
                 );
               })}
             </div>
@@ -188,19 +215,15 @@ export default function Layout({ children, title }: LayoutProps) {
         {/* User */}
         <div className="px-3 py-3">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-sm flex items-center justify-center text-[9px] font-bold text-white shrink-0 bg-gradient-to-br from-blue-600 to-violet-600">
+            <div className="w-6 h-6 rounded-sm flex items-center justify-center text-[9px] font-black text-white shrink-0 bg-gradient-to-br from-blue-600 to-violet-600">
               {user?.displayName?.slice(0, 2).toUpperCase() ?? "??"}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white/75 text-[10px] font-semibold truncate leading-none">{user?.displayName}</p>
               <p className="text-white/25 text-[8px] capitalize leading-none mt-0.5">{user?.role}</p>
             </div>
-            <button
-              onClick={handleLogout}
-              className="text-white/20 hover:text-red-400 transition-colors"
-              title="Cerrar sesión"
-              data-testid="button-logout"
-            >
+            <button onClick={handleLogout}
+              className="text-white/20 hover:text-red-400 transition-colors" title="Cerrar sesión">
               <LogOut className="w-3 h-3" />
             </button>
           </div>
@@ -210,16 +233,16 @@ export default function Layout({ children, title }: LayoutProps) {
       {/* ── Main ─────────────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {title && (
-          <header className="bg-white border-b border-gray-200 px-6 py-2.5 shrink-0 flex items-center gap-1.5">
-            <Link href="/catalogo" className="text-[10px] text-gray-300 hover:text-blue-500 transition-colors font-medium">Biblioteca</Link>
-            <ChevronRight className="w-3 h-3 text-gray-200" />
-            <Link href="/azure" className="text-[10px] text-[#0078d4]/50 hover:text-[#0078d4] transition-colors font-medium">Azure</Link>
-            <ChevronRight className="w-3 h-3 text-gray-200" />
-            <Link href="/ai-200" className="text-[10px] text-gray-400 hover:text-gray-600 transition-colors font-medium">AI-200</Link>
-            <ChevronRight className="w-3 h-3 text-gray-200" />
-            <span className="text-[10px] text-gray-400 font-medium">Visual Atlas</span>
-            <ChevronRight className="w-3 h-3 text-gray-200" />
-            <span className="text-[10px] font-semibold text-gray-800">{title}</span>
+          <header className="bg-[#0d1629] border-b border-white/[0.06] px-5 py-2 shrink-0 flex items-center gap-1.5">
+            <Link href="/studio" className="text-[9px] text-white/20 hover:text-white/50 transition-colors font-medium">Studio</Link>
+            <ChevronRight className="w-2.5 h-2.5 text-white/10" />
+            <Link href="/catalogo" className="text-[9px] text-white/20 hover:text-white/50 transition-colors font-medium">Biblioteca</Link>
+            <ChevronRight className="w-2.5 h-2.5 text-white/10" />
+            <Link href="/azure" className="text-[9px] text-[#0078d4]/40 hover:text-[#0078d4]/80 transition-colors font-medium">Azure</Link>
+            <ChevronRight className="w-2.5 h-2.5 text-white/10" />
+            <Link href="/ai-200" className="text-[9px] text-white/30 hover:text-white/60 transition-colors font-medium">AI-200</Link>
+            <ChevronRight className="w-2.5 h-2.5 text-white/10" />
+            <span className="text-[9px] font-semibold text-white/60">{title}</span>
           </header>
         )}
         <main className="flex-1 overflow-hidden">
