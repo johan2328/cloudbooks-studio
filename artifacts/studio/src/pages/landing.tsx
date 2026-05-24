@@ -157,6 +157,25 @@ export default function Landing() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
 
+  /* Intersection Observer para animaciones progresivas */
+  const [formatsInView, setFormatsInView] = useState(false);
+  const formatsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = formatsRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setFormatsInView(true);
+          obs.disconnect();
+        }
+      },
+      { threshold: 0.25 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   return (
     <div className="min-h-screen bg-white font-sans">
       <CommercialNav active="Inicio" />
@@ -279,11 +298,11 @@ export default function Landing() {
             <p className="text-base text-white/55 mt-4 leading-relaxed">Cada colección CloudBooks se produce en seis formatos complementarios, diseñados para cubrir todo el ciclo de preparación: comprensión profunda, estudio visual, práctica de examen y repaso final.</p>
           </div>
 
-          {/* Timeline pipeline — cronológico con animación GIF-style */}
-          <div className="relative flex flex-col md:flex-row items-stretch gap-8 md:gap-10">
+          {/* Timeline pipeline — cronológico con animación progresiva al scroll */}
+          <div ref={formatsRef} className="relative flex flex-col md:flex-row items-stretch gap-8 md:gap-10">
             {/* Desktop: línea punteada animada (marching ants) */}
             <div className="hidden md:block absolute top-[28px] left-8 right-8 h-0 border-t border-dashed border-white/[0.12] pointer-events-none z-0 overflow-hidden"
-              style={{background: "linear-gradient(90deg, transparent 50%, rgba(255,255,255,0.08) 50%)", backgroundSize: "16px 100%", animation: "march 1s linear infinite"}} />
+              style={{background: "linear-gradient(90deg, transparent 50%, rgba(255,255,255,0.08) 50%)", backgroundSize: "16px 100%", animation: formatsInView ? "march 1s linear infinite" : "none", opacity: formatsInView ? 1 : 0, transition: "opacity 0.6s ease-out"}} />
 
             {[
               { num: "01", label: "Master Book", tag: "Aprendizaje profundo", color: "#2563eb",
@@ -302,22 +321,23 @@ export default function Landing() {
               const delay = i * 120;
               return (
                 <div key={f.num} className="relative flex-1 z-10 group"
-                  style={{animation: `fadeSlideUp 0.6s ease-out ${delay}ms both`}}>
+                  style={{opacity: formatsInView ? 1 : 0, transform: formatsInView ? "translateY(0)" : "translateY(18px)", transition: `opacity 0.5s ease-out ${delay}ms, transform 0.5s ease-out ${delay}ms`}}>
                   {/* Mobile conector vertical */}
                   {i > 0 && <div className="md:hidden absolute top-0 left-[23px] -translate-y-7 w-px h-7 bg-white/10" />}
 
                   <div className="flex md:flex-col items-start md:items-center gap-4 md:gap-0">
                     {/* Círculo grande con glow continuo */}
                     <div className="w-14 h-14 rounded-full border-[3px] flex items-center justify-center font-mono text-base font-black tracking-wider shrink-0 z-10 relative transition-all duration-300 group-hover:scale-110"
-                      style={{borderColor: `${f.color}40`, color: f.color, backgroundColor: `#0d1629`, boxShadow: `0 0 0 0 ${f.color}00`}}>
+                      style={{borderColor: `${f.color}40`, color: f.color, backgroundColor: `#0d1629`}}>
                       {/* Anillo pulsante */}
-                      <span className="absolute inset-0 rounded-full border border-transparent"
-                        style={{animation: `pulseRing 2s ease-out ${delay}ms infinite`, borderColor: `${f.color}30`}} />
+                      <span className="absolute inset-0 rounded-full border border-transparent transition-opacity duration-500"
+                        style={{opacity: formatsInView ? 1 : 0, transitionDelay: `${delay}ms`, animation: formatsInView ? `pulseRing 2s ease-out ${delay}ms infinite` : "none", borderColor: `${f.color}30`}} />
                       {f.num}
                     </div>
 
                     {/* Texto con stagger */}
-                    <div className="md:mt-6 md:text-center flex-1" style={{animation: `fadeSlideUp 0.5s ease-out ${delay + 150}ms both`}}>
+                    <div className="md:mt-6 md:text-center flex-1"
+                      style={{opacity: formatsInView ? 1 : 0, transform: formatsInView ? "translateY(0)" : "translateY(12px)", transition: `opacity 0.45s ease-out ${delay + 150}ms, transform 0.45s ease-out ${delay + 150}ms`}}>
                       <p className="text-[11px] font-bold uppercase tracking-widest mb-1.5"
                         style={{color: f.color}}>{f.tag}</p>
                       <h3 className="text-xl font-black text-white mb-1.5">{f.label}</h3>
