@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
@@ -279,10 +279,11 @@ export default function Landing() {
             <p className="text-base text-white/55 mt-4 leading-relaxed">Cada colección CloudBooks se produce en seis formatos complementarios, diseñados para cubrir todo el ciclo de preparación: comprensión profunda, estudio visual, práctica de examen y repaso final.</p>
           </div>
 
-          {/* Timeline pipeline — cronológico */}
+          {/* Timeline pipeline — cronológico con animación GIF-style */}
           <div className="relative flex flex-col md:flex-row items-stretch gap-8 md:gap-10">
-            {/* Desktop: línea punteada pasa por el centro de los círculos (detrás) */}
-            <div className="hidden md:block absolute top-[28px] left-8 right-8 h-0 border-t border-dashed border-white/[0.12] pointer-events-none z-0" />
+            {/* Desktop: línea punteada animada (marching ants) */}
+            <div className="hidden md:block absolute top-[28px] left-8 right-8 h-0 border-t border-dashed border-white/[0.12] pointer-events-none z-0 overflow-hidden"
+              style={{background: "linear-gradient(90deg, transparent 50%, rgba(255,255,255,0.08) 50%)", backgroundSize: "16px 100%", animation: "march 1s linear infinite"}} />
 
             {[
               { num: "01", label: "Master Book", tag: "Aprendizaje profundo", color: "#2563eb",
@@ -297,29 +298,36 @@ export default function Landing() {
                 desc: "Tablas de decisión, límites y señales rápidas." },
               { num: "06", label: "Rapid Review", tag: "Cierre", color: "#059669",
                 desc: "Checklist y mapas de memoria pre-examen." },
-            ].map((f, i) => (
-              <div key={f.num} className="relative flex-1 z-10">
-                {/* Mobile conector vertical */}
-                {i > 0 && <div className="md:hidden absolute top-0 left-[23px] -translate-y-7 w-px h-7 bg-white/10" />}
+            ].map((f, i) => {
+              const delay = i * 120;
+              return (
+                <div key={f.num} className="relative flex-1 z-10 group"
+                  style={{animation: `fadeSlideUp 0.6s ease-out ${delay}ms both`}}>
+                  {/* Mobile conector vertical */}
+                  {i > 0 && <div className="md:hidden absolute top-0 left-[23px] -translate-y-7 w-px h-7 bg-white/10" />}
 
-                <div className="flex md:flex-col items-start md:items-center gap-4 md:gap-0">
-                  {/* Círculo grande con bg sólido */}
-                  <div className="w-14 h-14 rounded-full border-[3px] flex items-center justify-center font-mono text-base font-black tracking-wider shrink-0 z-10"
-                    style={{borderColor: `${f.color}40`, color: f.color, backgroundColor: `#0d1629`}}>
-                    {f.num}
-                  </div>
+                  <div className="flex md:flex-col items-start md:items-center gap-4 md:gap-0">
+                    {/* Círculo grande con glow continuo */}
+                    <div className="w-14 h-14 rounded-full border-[3px] flex items-center justify-center font-mono text-base font-black tracking-wider shrink-0 z-10 relative transition-all duration-300 group-hover:scale-110"
+                      style={{borderColor: `${f.color}40`, color: f.color, backgroundColor: `#0d1629`, boxShadow: `0 0 0 0 ${f.color}00`}}>
+                      {/* Anillo pulsante */}
+                      <span className="absolute inset-0 rounded-full border border-transparent"
+                        style={{animation: `pulseRing 2s ease-out ${delay}ms infinite`, borderColor: `${f.color}30`}} />
+                      {f.num}
+                    </div>
 
-                  {/* Texto */}
-                  <div className="md:mt-6 md:text-center flex-1">
-                    <p className="text-[11px] font-bold uppercase tracking-widest mb-1.5"
-                      style={{color: f.color}}>{f.tag}</p>
-                    <h3 className="text-xl font-black text-white mb-1.5">{f.label}</h3>
-                    <p className="text-xs text-white/50 leading-relaxed hidden md:block max-w-[180px] mx-auto">{f.desc}</p>
-                    <p className="text-sm text-white/55 leading-relaxed md:hidden">{f.desc}</p>
+                    {/* Texto con stagger */}
+                    <div className="md:mt-6 md:text-center flex-1" style={{animation: `fadeSlideUp 0.5s ease-out ${delay + 150}ms both`}}>
+                      <p className="text-[11px] font-bold uppercase tracking-widest mb-1.5"
+                        style={{color: f.color}}>{f.tag}</p>
+                      <h3 className="text-xl font-black text-white mb-1.5">{f.label}</h3>
+                      <p className="text-xs text-white/50 leading-relaxed hidden md:block max-w-[180px] mx-auto">{f.desc}</p>
+                      <p className="text-sm text-white/55 leading-relaxed md:hidden">{f.desc}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Fases agrupadas (mobile) */}
