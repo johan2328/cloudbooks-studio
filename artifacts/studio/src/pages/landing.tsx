@@ -522,7 +522,7 @@ export default function Landing() {
         <div className="relative max-w-6xl mx-auto px-6">
           {/* Header con animación progresiva */}
           <div className="text-center mb-14"
-            style={{opacity: methodInView ? 1 : 0, transform: methodInView ? "translateY(0)" : "translateY(18px)", transition: "opacity 0.6s ease-out, transform 0.6s ease-out"}}>
+            style={{opacity: methodInView ? 1 : 0, transform: methodInView ? "translateY(0) scale(1)" : "translateY(22px) scale(0.97)", transition: "opacity 0.8s cubic-bezier(0.22,1,0.36,1), transform 0.8s cubic-bezier(0.22,1,0.36,1)"}}>
             <p className="text-[11px] font-bold text-teal-400/60 uppercase tracking-[0.25em] mb-3">Metodología editorial</p>
             <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">Un estudio editorial humano-agentes.</h2>
             <p className="text-sm text-white/55 mt-4 leading-relaxed max-w-2xl mx-auto">
@@ -574,10 +574,11 @@ export default function Landing() {
                     {domains.map((d, di) => {
                       const c = palette[d.color];
                       return (
-                        <div key={d.label}>
+                        <div key={d.label}
+                          style={{opacity: methodInView ? 1 : 0, transform: methodInView ? "translateY(0)" : "translateY(20px)", transition: `opacity 0.7s cubic-bezier(0.22,1,0.36,1) ${200 + di * 140}ms, transform 0.7s cubic-bezier(0.22,1,0.36,1) ${200 + di * 140}ms`}}>
                         {di > 0 && (
                           <div className="hidden md:flex justify-center my-1" aria-hidden>
-                            <div className={`w-px h-6 bg-gradient-to-b ${connectorBetween[di-1]}`} />
+                            <div className={`w-[2px] h-6 bg-gradient-to-b ${connectorBetween[di-1]}`} />
                           </div>
                         )}
                         <div className="grid md:grid-cols-[1fr_auto_1fr] gap-3 md:gap-0 items-center">
@@ -587,7 +588,7 @@ export default function Landing() {
                             return (
                               <div key={a.name} className={`group relative ${isLeft ? "md:pr-5" : "md:pl-5"}`}>
                                 {/* Trace stub al chip de dominio (desktop) */}
-                                <div className={`hidden md:block absolute top-1/2 ${isLeft ? "right-0" : "left-0"} w-5 h-px ${c.line}`} />
+                                <div className={`hidden md:block absolute top-1/2 ${isLeft ? "right-0" : "left-0"} w-5 h-[2px] ${c.line}`} />
                                 <div className={`relative rounded-sm ring-1 ${c.ring} ${c.bg} bg-gradient-to-br ${c.tint} via-transparent to-transparent p-3.5 transition-all duration-300 hover:ring-2 hover:shadow-[0_0_24px_-8px_rgba(255,255,255,0.18)]`}>
                                   {/* Barra acento */}
                                   <div className={`absolute top-2 bottom-2 ${isLeft ? "right-0" : "left-0"} w-[2px] ${c.bar} opacity-60 group-hover:opacity-100 transition-opacity`} />
@@ -596,9 +597,9 @@ export default function Landing() {
                                       <Icon className={`w-4 h-4 ${c.text}`} />
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                      <h3 className="text-sm font-black text-white tracking-tight leading-tight">{a.name}</h3>
-                                      <p className={`text-[9px] font-mono uppercase tracking-[0.18em] ${c.text} opacity-80 mt-0.5`}>{a.role}</p>
-                                      <p className="text-[11px] text-white/55 leading-relaxed mt-1.5">{a.desc}</p>
+                                      <h3 className="text-[15px] font-black text-white tracking-tight leading-tight">{a.name}</h3>
+                                      <p className={`text-[10px] font-mono uppercase tracking-[0.18em] ${c.text} opacity-80 mt-0.5`}>{a.role}</p>
+                                      <p className="text-xs text-white/55 leading-relaxed mt-1.5">{a.desc}</p>
                                     </div>
                                   </div>
                                 </div>
@@ -608,8 +609,8 @@ export default function Landing() {
                           {/* Chip de dominio = junction central */}
                           <div className="hidden md:flex order-3 col-start-2 row-start-1 items-center justify-center" style={{ gridColumn: 2, gridRow: 1 }}>
                             <div className={`relative z-10 rounded-sm ring-1 ${c.chip} bg-[#0a1220] px-2.5 py-1.5 shadow-[0_0_20px_-8px_currentColor] ${c.text}`}>
-                              <span className={`text-[8px] font-mono uppercase tracking-[0.25em] ${c.text} whitespace-nowrap block`}>Dominio</span>
-                              <span className="text-[10px] font-black text-white uppercase tracking-wide whitespace-nowrap block leading-tight">{d.label}</span>
+                              <span className={`text-[9px] font-mono uppercase tracking-[0.25em] ${c.text} whitespace-nowrap block`}>Dominio</span>
+                              <span className="text-[11px] font-black text-white uppercase tracking-wide whitespace-nowrap block leading-tight">{d.label}</span>
                             </div>
                           </div>
                           {/* Mobile: chip de dominio arriba */}
@@ -625,7 +626,7 @@ export default function Landing() {
 
                     {/* Convergencia → sello */}
                     <div className="relative flex flex-col items-center pt-4">
-                      <div className="absolute left-1/2 -translate-x-1/2 -top-1 h-10 w-px bg-gradient-to-b from-teal-500/50 to-amber-500/70" />
+                      <div className="absolute left-1/2 -translate-x-1/2 -top-1 h-10 w-[2px] bg-gradient-to-b from-teal-500/50 to-amber-500/70" />
                       <div className="relative mt-8">
                         <div className="absolute inset-0 rounded-full bg-amber-400 blur-2xl opacity-25 scale-110" />
                         <div className="relative w-28 h-28 md:w-32 md:h-32">
@@ -650,7 +651,7 @@ export default function Landing() {
                           </div>
                         </div>
                       </div>
-                      <p className="text-[9px] font-mono uppercase tracking-[0.3em] text-amber-300/60 mt-3">Auditoría humana · Cierre editorial</p>
+                      <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-amber-300/60 mt-3">Auditoría humana · Cierre editorial</p>
                     </div>
                   </div>
                 </div>
