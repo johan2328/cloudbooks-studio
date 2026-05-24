@@ -56,7 +56,7 @@ export function CommercialNav({ active }: { active?: string }) {
   return (
     <>
       <header className="fixed top-0 inset-x-0 z-50 bg-[#0d1629]/95 backdrop-blur-sm border-b border-white/[0.06]">
-        <div className="max-w-6xl mx-auto px-6 h-20 flex items-center gap-6">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center gap-6">
           <button onClick={() => setLocation("/")} className="shrink-0">
             <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-16 w-auto" draggable={false} />
           </button>
