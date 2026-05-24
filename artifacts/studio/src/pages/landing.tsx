@@ -194,80 +194,10 @@ export default function Landing() {
       <section className="py-20 bg-[#0d1629] relative">
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/30 to-transparent" />
         <div className="max-w-6xl mx-auto px-6">
-          <div className="mb-10 grid md:grid-cols-2 gap-10 items-center">
-            <div>
-              <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em] mb-3">Sistema editorial</p>
-              <h2 className="text-2xl font-black text-white">Seis formatos. Una ruta completa de estudio.</h2>
-              <p className="text-sm text-white/55 mt-3 leading-relaxed">Cada colección CloudBooks se produce en seis formatos complementarios, diseñados para cubrir todo el ciclo de preparación: comprensión profunda, estudio visual, práctica de examen y repaso final.</p>
-            </div>
-            <div className="hidden md:flex items-center justify-center relative">
-              <svg viewBox="0 0 420 320" className="w-full max-w-md" fill="none" aria-hidden>
-                <defs>
-                  <radialGradient id="fmt-halo" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.18" />
-                    <stop offset="100%" stopColor="#0d1629" stopOpacity="0" />
-                  </radialGradient>
-                </defs>
-                <circle cx="210" cy="160" r="150" fill="url(#fmt-halo)" />
-                {/* Backdrop grid */}
-                <g stroke="#ffffff" strokeOpacity="0.04" strokeWidth="0.5">
-                  {Array.from({ length: 7 }).map((_, i) => (
-                    <line key={`gh${i}`} x1="0" y1={i * 48} x2="420" y2={i * 48} />
-                  ))}
-                  {Array.from({ length: 9 }).map((_, i) => (
-                    <line key={`gv${i}`} x1={i * 48} y1="0" x2={i * 48} y2="320" />
-                  ))}
-                </g>
-                {/* Corner ticks */}
-                {[[20,20],[400,20],[20,300],[400,300]].map(([x,y],i)=>(
-                  <g key={i} stroke="#ffffff" strokeOpacity="0.15" strokeWidth="0.75">
-                    <line x1={x-5} y1={y} x2={x+5} y2={y} /><line x1={x} y1={y-5} x2={x} y2={y+5} />
-                  </g>
-                ))}
-
-                {/* 6 stacked iso sheets, ordered back→front */}
-                {[
-                  { color:"#059669", label:"Rapid Review",  code:"06" },
-                  { color:"#d97706", label:"Cheat Sheets",  code:"05" },
-                  { color:"#0d9488", label:"Question Bank", code:"04" },
-                  { color:"#dc2626", label:"Exam Traps",    code:"03" },
-                  { color:"#7c3aed", label:"Visual Atlas",  code:"02" },
-                  { color:"#2563eb", label:"Master Book",   code:"01" },
-                ].map((s, i) => {
-                  const cx = 210;
-                  const cy = 70 + i * 28;
-                  const w = 130, h = 18;
-                  const pts = `${cx},${cy-h} ${cx+w},${cy} ${cx},${cy+h} ${cx-w},${cy}`;
-                  const isVisual = s.label === "Visual Atlas";
-                  return (
-                    <g key={s.label}>
-                      {/* shadow */}
-                      <polygon
-                        points={`${cx},${cy-h+4} ${cx+w},${cy+4} ${cx},${cy+h+4} ${cx-w},${cy+4}`}
-                        fill="#000" fillOpacity="0.18"
-                      />
-                      <polygon points={pts} fill={s.color} fillOpacity={isVisual ? 0.12 : 0.05} stroke={s.color} strokeOpacity={isVisual ? 0.7 : 0.45} strokeWidth={isVisual ? 1.25 : 0.9} />
-                      <line x1={cx-w} y1={cy} x2={cx+w} y2={cy} stroke={s.color} strokeOpacity="0.2" strokeWidth="0.4" />
-                      <circle cx={cx} cy={cy} r="2" fill={s.color} fillOpacity={isVisual ? 1 : 0.6} />
-                      {/* Callout */}
-                      <line x1={cx+w} y1={cy} x2={cx+w+18} y2={cy} stroke={s.color} strokeOpacity="0.5" strokeWidth="0.6" />
-                      <text x={cx+w+22} y={cy-2} fill="#ffffff" fillOpacity={isVisual ? 0.95 : 0.7} fontSize="8" fontWeight={isVisual ? 800 : 600} fontFamily="ui-sans-serif" letterSpacing="0.2">{s.label}</text>
-                      <text x={cx+w+22} y={cy+8} fill={s.color} fillOpacity="0.7" fontSize="6" fontFamily="ui-monospace" letterSpacing="1.2">FMT · {s.code}</text>
-                      {/* Left index */}
-                      <text x={cx-w-8} y={cy+2} textAnchor="end" fill={s.color} fillOpacity="0.55" fontSize="6" fontFamily="ui-monospace" letterSpacing="1.2">{s.code}</text>
-                    </g>
-                  );
-                })}
-
-                {/* Spec chrome */}
-                <g fill="#ffffff" fillOpacity="0.22" fontSize="6" fontFamily="ui-monospace" letterSpacing="1">
-                  <text x="30" y="32">SPEC · 002</text>
-                  <text x="390" y="32" textAnchor="end">COLLECTION · 6 FMT</text>
-                  <text x="30" y="296">SCALE · 1:1</text>
-                  <text x="390" y="296" textAnchor="end">SHEET · B</text>
-                </g>
-              </svg>
-            </div>
+          <div className="mb-10 max-w-2xl">
+            <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em] mb-3">Sistema editorial</p>
+            <h2 className="text-2xl font-black text-white">Seis formatos. Una ruta completa de estudio.</h2>
+            <p className="text-sm text-white/55 mt-3 leading-relaxed">Cada colección CloudBooks se produce en seis formatos complementarios, diseñados para cubrir todo el ciclo de preparación: comprensión profunda, estudio visual, práctica de examen y repaso final.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-3">
             {[
