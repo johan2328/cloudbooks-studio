@@ -270,19 +270,19 @@ export default function Landing() {
       </section>
 
       {/* ── Seis formatos ────────────────────────────────────────────────── */}
-      <section className="py-24 bg-[#0d1629] relative overflow-hidden">
+      <section className="py-28 bg-[#0d1629] relative overflow-hidden">
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/30 to-transparent" />
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="mb-14 max-w-2xl">
-            <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em] mb-3">Sistema editorial</p>
-            <h2 className="text-3xl font-black text-white">Seis formatos. Una ruta completa de estudio.</h2>
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="mb-16 max-w-2xl">
+            <p className="text-[11px] font-bold text-white/40 uppercase tracking-[0.2em] mb-3">Sistema editorial</p>
+            <h2 className="text-3xl md:text-4xl font-black text-white">Seis formatos. Una ruta completa de estudio.</h2>
             <p className="text-base text-white/55 mt-4 leading-relaxed">Cada colección CloudBooks se produce en seis formatos complementarios, diseñados para cubrir todo el ciclo de preparación: comprensión profunda, estudio visual, práctica de examen y repaso final.</p>
           </div>
 
           {/* Timeline pipeline — cronológico */}
-          <div className="relative flex flex-col md:flex-row items-stretch gap-6 md:gap-8">
+          <div className="relative flex flex-col md:flex-row items-stretch gap-8 md:gap-10">
             {/* Desktop: línea punteada pasa por el centro de los círculos (detrás) */}
-            <div className="hidden md:block absolute top-[20px] left-5 right-5 h-0 border-t border-dashed border-white/[0.12] pointer-events-none z-0" />
+            <div className="hidden md:block absolute top-[24px] left-7 right-7 h-0 border-t border-dashed border-white/[0.12] pointer-events-none z-0" />
 
             {[
               { num: "01", label: "Master Book", tag: "Aprendizaje profundo", color: "#2563eb",
@@ -300,22 +300,22 @@ export default function Landing() {
             ].map((f, i) => (
               <div key={f.num} className="relative flex-1 z-10">
                 {/* Mobile conector vertical */}
-                {i > 0 && <div className="md:hidden absolute top-0 left-[19px] -translate-y-6 w-px h-6 bg-white/10" />}
+                {i > 0 && <div className="md:hidden absolute top-0 left-[23px] -translate-y-7 w-px h-7 bg-white/10" />}
 
                 <div className="flex md:flex-col items-start md:items-center gap-4 md:gap-0">
-                  {/* Círculo con bg sólido para cubrir la línea */}
-                  <div className="w-10 h-10 rounded-full border-2 flex items-center justify-center font-mono text-xs font-black tracking-wider shrink-0 z-10"
-                    style={{borderColor: `${f.color}50`, color: f.color, backgroundColor: `#0d1629`}}>
+                  {/* Círculo grande con bg sólido */}
+                  <div className="w-12 h-12 rounded-full border-[2.5px] flex items-center justify-center font-mono text-sm font-black tracking-wider shrink-0 z-10"
+                    style={{borderColor: `${f.color}40`, color: f.color, backgroundColor: `#0d1629`}}>
                     {f.num}
                   </div>
 
                   {/* Texto */}
-                  <div className="md:mt-5 md:text-center flex-1">
-                    <p className="text-[9px] font-bold uppercase tracking-widest mb-1"
+                  <div className="md:mt-6 md:text-center flex-1">
+                    <p className="text-[11px] font-bold uppercase tracking-widest mb-1.5"
                       style={{color: f.color}}>{f.tag}</p>
-                    <h3 className="text-base font-black text-white mb-1">{f.label}</h3>
-                    <p className="text-[9px] text-white/45 leading-relaxed hidden md:block max-w-[140px] mx-auto">{f.desc}</p>
-                    <p className="text-[11px] text-white/50 leading-relaxed md:hidden">{f.desc}</p>
+                    <h3 className="text-xl font-black text-white mb-1.5">{f.label}</h3>
+                    <p className="text-xs text-white/50 leading-relaxed hidden md:block max-w-[180px] mx-auto">{f.desc}</p>
+                    <p className="text-sm text-white/55 leading-relaxed md:hidden">{f.desc}</p>
                   </div>
                 </div>
               </div>
@@ -323,16 +323,16 @@ export default function Landing() {
           </div>
 
           {/* Fases agrupadas (mobile) */}
-          <div className="md:hidden mt-6 grid grid-cols-2 gap-2">
+          <div className="md:hidden mt-8 grid grid-cols-2 gap-3">
             {[
               { label: "Comprensión", steps: "01 — 02", color: "#2563eb" },
               { label: "Criterio",    steps: "03 — 04", color: "#0d9488" },
               { label: "Memorización", steps: "05",       color: "#d97706" },
               { label: "Cierre",      steps: "06",       color: "#059669" },
             ].map(g => (
-              <div key={g.label} className="bg-white/[0.03] border border-white/[0.06] rounded-sm p-3 text-center">
-                <span className="text-[9px] font-mono text-white/30 block mb-1">{g.steps}</span>
-                <span className="text-[11px] font-bold" style={{color: g.color}}>{g.label}</span>
+              <div key={g.label} className="bg-white/[0.03] border border-white/[0.06] rounded-sm p-3.5 text-center">
+                <span className="text-[10px] font-mono text-white/30 block mb-1">{g.steps}</span>
+                <span className="text-xs font-bold" style={{color: g.color}}>{g.label}</span>
               </div>
             ))}
           </div>
