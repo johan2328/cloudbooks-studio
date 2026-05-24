@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import Login from "@/pages/login";
+import Catalogo from "@/pages/catalogo";
 import Biblioteca from "@/pages/biblioteca";
 import Contenido from "@/pages/contenido";
 import Generacion from "@/pages/generacion";
@@ -33,10 +34,17 @@ function Router() {
     <Switch>
       <Route path="/login" component={Login} />
 
+      {/* Root → catálogo de certificaciones */}
       <Route path="/">
-        <Redirect to="/biblioteca" />
+        <Redirect to="/catalogo" />
       </Route>
 
+      {/* Biblioteca CloudBooks — catálogo de libros por proveedor */}
+      <Route path="/catalogo">
+        <PrivateRoute><Catalogo /></PrivateRoute>
+      </Route>
+
+      {/* Estudio AI-200 */}
       <Route path="/biblioteca">
         <PrivateRoute><Biblioteca /></PrivateRoute>
       </Route>
