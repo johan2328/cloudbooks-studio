@@ -225,7 +225,7 @@ export default function Landing() {
             </div>
 
             {/* ── Derecha: imagen hero ── */}
-            <div className="relative hidden lg:flex items-center justify-center">
+            <div className="relative hidden lg:flex items-center justify-center lg:-mt-24">
               <img
                 src="/hero-devices.png"
                 alt="CloudBooks — Biblioteca multi-formato en todos los dispositivos"
