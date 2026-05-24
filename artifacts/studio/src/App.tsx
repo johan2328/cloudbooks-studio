@@ -10,6 +10,7 @@ import AI200Packs from "@/pages/ai200-packs";
 import Login from "@/pages/login";
 import NuestraLaborPage from "@/pages/nuestra-labor";
 import EmpresasPage from "@/pages/empresas";
+import DemoPage from "@/pages/demo";
 import Catalogo from "@/pages/catalogo";
 import Azure from "@/pages/azure";
 import AI200Collection from "@/pages/ai200";
@@ -49,6 +50,7 @@ function Router() {
       <Route path="/ai-200-packs" component={AI200Packs} />
       <Route path="/nuestra-labor" component={NuestraLaborPage} />
       <Route path="/empresas" component={EmpresasPage} />
+      <Route path="/demo" component={DemoPage} />
 
       {/* ── Catálogo jerárquico ───────────────────── */}
       {/* Nivel 1: Proveedores cloud */}

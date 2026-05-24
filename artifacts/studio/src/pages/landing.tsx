@@ -64,7 +64,7 @@ export function CommercialNav({ active }: { active?: string }) {
               { label: "Inicio",         href: "/" },
               { label: "Nuestra Labor",  href: "/nuestra-labor" },
               { label: "Empresas",       href: "/empresas" },
-              { label: "Metodología",    href: "/#metodologia" },
+              { label: "Demo",            href: "/demo" },
             ].map(({ label, href }) => (
               <a key={label} href={href}
                 className={cn(
@@ -87,7 +87,7 @@ export function CommercialNav({ active }: { active?: string }) {
               <Globe className="w-3.5 h-3.5" />
               <span className="font-mono tracking-wider">EN</span>
             </a>
-            <button onClick={() => setLocation(user ? "/catalogo" : "/login")}
+            <button onClick={() => setLocation("/demo")}
               className="flex items-center gap-1.5 border border-white/15 hover:border-white/30 text-white/60 hover:text-white/90 text-xs font-medium px-3 h-7 rounded-sm transition-all">
               {user ? "Abrir Studio" : "Studio"}
             </button>
@@ -184,12 +184,12 @@ export default function Landing() {
           <div className="flex items-center gap-3 flex-wrap">
             <button onClick={() => setLocation("/books")}
               className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white font-semibold px-5 h-10 rounded-sm transition-all text-sm">
-              Ver colecciones disponibles
+              Colecciones disponibles
               <ArrowRight className="w-4 h-4" />
             </button>
-            <button onClick={() => { document.getElementById("metodologia")?.scrollIntoView({behavior:"smooth"}); }}
+            <button onClick={() => setLocation("/demo")}
               className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white/70 transition-colors font-medium">
-              Conocer metodología <ChevronRight className="w-4 h-4" />
+              Ver demo <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -624,11 +624,11 @@ export default function Landing() {
           <div className="flex flex-col gap-3 shrink-0">
             <button onClick={() => setLocation("/books")}
               className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-600 hover:to-blue-700 text-white font-semibold px-6 h-11 rounded-sm transition-all text-sm">
-              Ver colecciones disponibles <ArrowRight className="w-4 h-4" />
+              Colecciones disponibles <ArrowRight className="w-4 h-4" />
             </button>
-            <button onClick={() => setLocation(user ? "/catalogo" : "/login")}
+            <button onClick={() => setLocation("/demo")}
               className="flex items-center gap-2 border border-white/10 hover:border-white/20 text-white/40 hover:text-white/70 font-medium px-5 h-9 rounded-sm transition-all text-xs justify-center">
-              Conocer metodología
+              Ver demo
             </button>
           </div>
         </div>
