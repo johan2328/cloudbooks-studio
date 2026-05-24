@@ -65,19 +65,19 @@ export default function Landing() {
         <div className="absolute top-16 right-1/3 w-56 h-56 rounded-full blur-3xl opacity-8 bg-violet-600 pointer-events-none" />
 
         <div className="relative max-w-6xl mx-auto px-6 pt-20 pb-16">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="grid md:grid-cols-[3fr_2fr] gap-10 items-center">
             <div>
-              <div className="flex items-center gap-2 mb-6">
+              <div className="flex items-center gap-2 mb-5">
                 <span className="text-[9px] font-bold text-teal-400 uppercase tracking-[0.2em] bg-teal-400/10 border border-teal-400/20 px-2 py-1 rounded-sm">Editorial inteligente · Certificaciones cloud</span>
               </div>
-              <h1 className="text-4xl md:text-5xl font-black text-white leading-[1.1] tracking-tight mb-5">
-                Una biblioteca inteligente<br />
+              <h1 className="text-3xl md:text-[2.6rem] font-black text-white leading-[1.15] tracking-tight mb-4">
+                Una biblioteca inteligente para{" "}
                 <span className="bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">
-                  para aprobar certificaciones cloud.
+                  aprobar certificaciones cloud.
                 </span>
               </h1>
-              <p className="text-base text-white/50 leading-relaxed mb-8">
-                CloudBooks produce colecciones de estudio completas por certificación. Cada colección incluye seis formatos complementarios diseñados para cubrir todo el ciclo de preparación.
+              <p className="text-sm text-white/50 leading-relaxed mb-7 max-w-lg">
+                Colecciones de estudio completas por certificación. Seis formatos complementarios para cada ciclo: comprensión, visualización, práctica y repaso.
               </p>
               <div className="flex items-center gap-3 flex-wrap">
                 <button onClick={() => setLocation("/books")}
@@ -86,14 +86,16 @@ export default function Landing() {
                   <ArrowRight className="w-4 h-4" />
                 </button>
                 <button onClick={() => { document.getElementById("metodologia")?.scrollIntoView({behavior:"smooth"}); }}
-                  className="flex items-center gap-1.5 text-sm text-white/35 hover:text-white/60 transition-colors font-medium">
+                  className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white/70 transition-colors font-medium">
                   Conocer metodología <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
-            <div className="hidden md:flex items-center justify-center">
-              <img src="/hero-editorial.png" alt="CloudBooks Editorial"
-                className="w-full max-w-sm rounded-sm opacity-85 shadow-2xl shadow-black/40 ring-1 ring-white/10" />
+            <div className="hidden md:block">
+              <div className="rounded-sm overflow-hidden ring-1 ring-white/10 shadow-2xl shadow-black/50 aspect-[4/3]">
+                <img src="/hero-editorial.png" alt="CloudBooks Editorial"
+                  className="w-full h-full object-cover opacity-90" />
+              </div>
             </div>
           </div>
         </div>
@@ -396,14 +398,14 @@ export default function Landing() {
             ].map(d => {
               const Icon = d.icon;
               return (
-                <div key={d.label} className="bg-white/[0.04] border border-white/[0.07] rounded-sm p-4 hover:border-white/[0.12] transition-colors">
+                <div key={d.label} className="bg-white/[0.06] border border-white/[0.10] rounded-sm p-4 hover:border-white/[0.18] transition-colors">
                   <div className="flex items-center gap-2.5 mb-2">
-                    <div className="w-7 h-7 rounded-sm bg-blue-500/20 border border-blue-500/25 flex items-center justify-center shrink-0">
+                    <div className="w-7 h-7 rounded-sm bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0">
                       <Icon className="w-3.5 h-3.5 text-blue-400" />
                     </div>
-                    <h3 className="text-xs font-bold text-white/80">{d.label}</h3>
+                    <h3 className="text-xs font-bold text-white/90">{d.label}</h3>
                   </div>
-                  <p className="text-[10px] text-white/35 leading-relaxed">{d.desc}</p>
+                  <p className="text-[10px] text-white/55 leading-relaxed">{d.desc}</p>
                 </div>
               );
             })}
