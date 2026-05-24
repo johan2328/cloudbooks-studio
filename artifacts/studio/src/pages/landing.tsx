@@ -7,6 +7,7 @@ import {
   BookOpen, Map, Package, ArrowRight, ChevronRight,
   CheckCircle2, Check, Clock, Database, Layers, Edit3, Eye, Shield, Package as Pkg,
   Globe, Search, ShoppingCart, X, Minus, Plus, Users, Briefcase, GraduationCap,
+  FileText, Wand2, Beaker, ClipboardCheck, Sparkles,
 } from "lucide-react";
 
 export function translateHref() {
@@ -167,33 +168,127 @@ export default function Landing() {
         <div className="absolute top-24 left-1/4 w-72 h-72 rounded-full blur-3xl opacity-10 bg-blue-600 pointer-events-none" />
         <div className="absolute top-16 right-1/3 w-56 h-56 rounded-full blur-3xl opacity-8 bg-violet-600 pointer-events-none" />
 
-        <div className="relative max-w-4xl mx-auto px-6 pt-28 pb-20">
-          <div className="flex items-center gap-2 mb-6">
-            <span className="text-[9px] font-bold text-teal-400 uppercase tracking-[0.2em] bg-teal-400/10 border border-teal-400/20 px-2 py-1 rounded-sm">Editorial inteligente · Certificaciones cloud</span>
-          </div>
-          <h1 className="text-4xl md:text-[3.4rem] font-black text-white leading-[1.08] tracking-tight mb-6 max-w-3xl">
-            Una biblioteca inteligente<br />
-            <span className="bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">
-              para aprobar certificaciones cloud
-              <Check className="inline-block w-[0.5em] h-[0.5em] text-blue-400 ml-0.5 align-baseline" strokeWidth={4} />
-            </span>
-          </h1>
-          <p className="text-base text-white/55 leading-relaxed mb-8 max-w-xl">
-            CloudBooks produce colecciones de estudio completas por certificación. Cada colección incluye seis formatos complementarios diseñados para cubrir todo el ciclo de preparación.
-          </p>
-          <div className="flex items-center gap-3 flex-wrap">
-            <button onClick={() => setLocation("/books")}
-              className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white font-semibold px-5 h-10 rounded-sm transition-all text-sm">
-              Colecciones disponibles
-              <ArrowRight className="w-4 h-4" />
-            </button>
-            <button onClick={() => setLocation("/demo")}
-              className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white/70 transition-colors font-medium">
-              Ver demo <ChevronRight className="w-4 h-4" />
-            </button>
+        <div className="relative max-w-7xl mx-auto px-6 pt-20 pb-10 flex-1 flex flex-col justify-center">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* ── Izquierda: texto ── */}
+            <div>
+              <div className="flex items-center gap-2 mb-6">
+                <span className="text-[9px] font-bold text-teal-400 uppercase tracking-[0.2em] bg-teal-400/10 border border-teal-400/20 px-2 py-1 rounded-sm">Editorial inteligente · Certificaciones cloud</span>
+              </div>
+              <h1 className="text-4xl md:text-[3.2rem] font-black text-white leading-[1.08] tracking-tight mb-6 max-w-2xl">
+                Una biblioteca inteligente<br />
+                <span className="bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">
+                  para aprobar certificaciones cloud.
+                </span>
+              </h1>
+              <p className="text-base text-white/55 leading-relaxed mb-8 max-w-lg">
+                CloudBooks produce colecciones de estudio completas por certificación. Cada colección incluye seis formatos complementarios diseñados para cubrir todo el ciclo de preparación.
+              </p>
+              <div className="flex items-center gap-3 flex-wrap">
+                <button onClick={() => setLocation("/books")}
+                  className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white font-semibold px-5 h-10 rounded-sm transition-all text-sm">
+                  Colecciones disponibles
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button onClick={() => setLocation("/demo")}
+                  className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white/70 transition-colors font-medium">
+                  Ver demo <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* ── Derecha: mock visual ── */}
+            <div className="relative hidden lg:block h-[520px]">
+              {/* Líneas conectoras decorativas */}
+              <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-20" aria-hidden>
+                <line x1="20%" y1="15%" x2="45%" y2="25%" stroke="#2563eb" strokeWidth="0.5" strokeDasharray="4 4" />
+                <line x1="80%" y1="12%" x2="55%" y2="22%" stroke="#7c3aed" strokeWidth="0.5" strokeDasharray="4 4" />
+                <line x1="15%" y1="65%" x2="40%" y2="72%" stroke="#0d9488" strokeWidth="0.5" strokeDasharray="4 4" />
+                <line x1="85%" y1="60%" x2="60%" y2="68%" stroke="#ec4899" strokeWidth="0.5" strokeDasharray="4 4" />
+                <line x1="18%" y1="85%" x2="42%" y2="88%" stroke="#f59e0b" strokeWidth="0.5" strokeDasharray="4 4" />
+                <line x1="82%" y1="88%" x2="58%" y2="90%" stroke="#06b6d4" strokeWidth="0.5" strokeDasharray="4 4" />
+              </svg>
+
+              {/* Tarjeta central — Libro AI-200 */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-56">
+                <div className="relative">
+                  {/* Glow */}
+                  <div className="absolute -inset-4 rounded-lg bg-gradient-to-br from-violet-500/20 to-blue-500/20 blur-xl" />
+                  {/* Portada */}
+                  <div className="relative bg-gradient-to-br from-[#1a1f3a] to-[#0d1228] border border-white/[0.08] rounded-sm p-5 shadow-2xl overflow-hidden">
+                    <div className="absolute inset-0 opacity-[0.03]"
+                      style={{backgroundImage:"linear-gradient(#ffffff 1px,transparent 1px),linear-gradient(90deg,#ffffff 1px,transparent 1px)",backgroundSize:"12px 12px"}} />
+                    <div className="relative">
+                      <p className="text-[8px] font-bold text-white/30 uppercase tracking-[0.2em] mb-2">CLOUD &amp; AI PLATFORMS</p>
+                      <h3 className="text-3xl font-black text-white mb-1">AI-200</h3>
+                      <div className="w-8 h-0.5 bg-gradient-to-r from-violet-400 to-blue-400 mb-3" />
+                      <p className="text-[11px] text-white/60 leading-snug">
+                        Diseño e Implementación de<br />
+                        <span className="text-violet-300 font-semibold">Soluciones de IA</span>
+                      </p>
+                      {/* Mini grid de servicios */}
+                      <div className="mt-4 grid grid-cols-3 gap-1.5">
+                        {["Azure OpenAI","Vision","Language","Speech","Bot","Search"].map(s => (
+                          <div key={s} className="text-[7px] text-white/40 bg-white/[0.04] border border-white/[0.06] rounded-sm px-1.5 py-1 text-center truncate">
+                            {s}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tarjetas flotantes */}
+              {[
+                { label: "VISUAL ATLAS", sub: "INFOGRAFÍAS",    icon: Eye,      x: "4%",  y: "8%",  color: "#7c3aed" },
+                { label: "MASTER BOOK",  sub: "APRENDIZAJE PROFUNDO", icon: BookOpen, x: "2%",  y: "38%", color: "#2563eb" },
+                { label: "CHEATSHEETS",  sub: "REFERENCIA RÁPIDA",  icon: FileText, x: "0%",  y: "70%", color: "#0d9488" },
+                { label: "FLASHCARDS",   sub: "ESTUDIO ACTIVO",     icon: Layers,   x: "78%", y: "6%",  color: "#06b6d4" },
+                { label: "PRACTICE EXAMS",sub: "SIMULACROS",        icon: Beaker,   x: "80%", y: "35%", color: "#ec4899", gauge: "85%" },
+                { label: "LABS & TALLERES",sub: "PRÁCTICA REAL",     icon: Wand2,    x: "76%", y: "68%", color: "#f59e0b" },
+              ].map(card => {
+                const Icon = card.icon;
+                return (
+                  <div key={card.label}
+                    className="absolute bg-white/[0.04] border border-white/[0.08] backdrop-blur-sm rounded-sm p-2.5 hover:border-white/[0.15] transition-colors shadow-lg shadow-black/30"
+                    style={{ left: card.x, top: card.y, minWidth: "140px" }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-6 h-6 rounded-sm flex items-center justify-center" style={{backgroundColor:`${card.color}15`}}>
+                        <Icon className="w-3 h-3" style={{color:card.color}} />
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold text-white/80 leading-tight">{card.label}</p>
+                        <p className="text-[7px] text-white/30 uppercase tracking-wider">{card.sub}</p>
+                      </div>
+                    </div>
+                    {card.gauge && (
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <div className="relative w-8 h-8">
+                          <svg viewBox="0 0 36 36" className="w-8 h-8 -rotate-90">
+                            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
+                            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={card.color} strokeWidth="3" strokeDasharray="85, 100" />
+                          </svg>
+                          <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white/80">{card.gauge}</span>
+                        </div>
+                        <span className="text-[7px] text-white/30">Ver resultados →</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Sello inferior */}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/[0.03] border border-white/[0.08] rounded-sm px-3 py-2">
+                <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+                <div>
+                  <p className="text-[9px] font-bold text-white/60 uppercase tracking-[0.15em]">6 FORMATOS SINCRONIZADOS POR IA</p>
+                  <p className="text-[7px] text-white/30">Contenido conectado. Aprendizaje más inteligente.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
       </section>
 
       {/* ── Problema ─────────────────────────────────────────────────────── */}
