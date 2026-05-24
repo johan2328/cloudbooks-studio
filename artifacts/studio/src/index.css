@@ -216,3 +216,13 @@
   22%  { background-position: 200% 0; }
   100% { background-position: 200% 0; }
 }
+
+@keyframes timelineDraw {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@keyframes stepGlow {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50%      { box-shadow: 0 0 20px 4px var(--glow-color, rgba(37,99,235,0.25)); }
+}

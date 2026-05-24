@@ -198,6 +198,16 @@ export default function Landing() {
     return () => obs.disconnect();
   }, []);
 
+  /* Narrativa progresiva del timeline (pasos 0–5) */
+  const [activeStep, setActiveStep] = useState(0);
+  useEffect(() => {
+    if (!formatsInView) return;
+    const id = setInterval(() => {
+      setActiveStep(prev => (prev + 1) % 6);
+    }, 4000);
+    return () => clearInterval(id);
+  }, [formatsInView]);
+
   return (
     <div className="min-h-screen bg-white font-sans">
       <CommercialNav active="Inicio" />
@@ -355,22 +365,30 @@ export default function Landing() {
                   {i > 0 && <div className="md:hidden absolute top-0 left-[23px] -translate-y-7 w-px h-7 bg-white/10" />}
 
                   <div className="flex md:flex-col items-start md:items-center gap-4 md:gap-0">
-                    {/* Círculo grande con glow continuo */}
-                    <div className="w-14 h-14 rounded-full border-[3px] flex items-center justify-center font-mono text-base font-black tracking-wider shrink-0 z-10 relative transition-all duration-300 group-hover:scale-110"
-                      style={{borderColor: `${f.color}40`, color: f.color, backgroundColor: `#0d1629`}}>
+                    {/* Círculo grande con glow activo */}
+                    <div className="w-14 h-14 rounded-full border-[3px] flex items-center justify-center font-mono text-base font-black tracking-wider shrink-0 z-10 relative transition-all duration-500"
+                      style={{
+                        borderColor: activeStep === i ? f.color : `${f.color}40`,
+                        color: activeStep === i ? '#fff' : f.color,
+                        backgroundColor: activeStep === i ? f.color : `#0d1629`,
+                        boxShadow: activeStep === i ? `0 0 28px 6px ${f.color}40` : 'none',
+                        transform: activeStep === i ? 'scale(1.12)' : 'scale(1)',
+                      }}>
                       {/* Anillo pulsante */}
                       <span className="absolute inset-0 rounded-full border border-transparent transition-opacity duration-500"
                         style={{opacity: formatsInView ? 1 : 0, transitionDelay: `${delay}ms`, animation: formatsInView ? `pulseRing 2s ease-out ${delay}ms infinite` : "none", borderColor: `${f.color}30`}} />
                       {f.num}
                     </div>
 
-                    {/* Texto con stagger */}
-                    <div className="md:mt-6 md:text-center flex-1"
+                    {/* Texto con stagger + highlight activo */}
+                    <div className="md:mt-6 md:text-center flex-1 transition-opacity duration-500"
                       style={{opacity: formatsInView ? 1 : 0, transform: formatsInView ? "translateY(0)" : "translateY(12px)", transition: `opacity 0.45s ease-out ${delay + 150}ms, transform 0.45s ease-out ${delay + 150}ms`}}>
-                      <p className="text-[11px] font-bold uppercase tracking-widest mb-1.5"
-                        style={{color: f.color}}>{f.tag}</p>
-                      <h3 className="text-xl font-black text-white mb-1.5">{f.label}</h3>
-                      <p className="text-xs text-white/50 leading-relaxed hidden md:block max-w-[180px] mx-auto">{f.desc}</p>
+                      <p className="text-[11px] font-bold uppercase tracking-widest mb-1.5 transition-colors duration-500"
+                        style={{color: activeStep === i ? f.color : `${f.color}90`}}>{f.tag}</p>
+                      <h3 className="text-xl font-black text-white mb-1.5 transition-colors duration-500"
+                        style={{color: activeStep === i ? '#fff' : 'rgba(255,255,255,0.85)'}}>{f.label}</h3>
+                      <p className="text-xs text-white/50 leading-relaxed hidden md:block max-w-[180px] mx-auto transition-all duration-500"
+                        style={{opacity: activeStep === i ? 1 : 0.5, transform: activeStep === i ? 'translateY(0)' : 'translateY(4px)'}}>{f.desc}</p>
                       <p className="text-sm text-white/55 leading-relaxed md:hidden">{f.desc}</p>
                     </div>
                   </div>
