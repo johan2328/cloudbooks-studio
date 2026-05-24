@@ -389,9 +389,9 @@ export default function Landing() {
           {/* Header */}
           <div className="text-center mb-14">
             <p className="text-[9px] font-bold text-teal-400/60 uppercase tracking-[0.25em] mb-3">Metodología editorial</p>
-            <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight">Un estudio editorial multiagente.</h2>
+            <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight">Un estudio editorial humano-agentes.</h2>
             <p className="text-sm text-white/55 mt-4 leading-relaxed max-w-2xl mx-auto">
-              Seis agentes especializados distribuidos en tres dominios producen cada formato.
+              Una batería de agentes especializados distribuidos por dominios produce cada formato.
               Un auditor humano valida la entrega final antes de publicación.
             </p>
           </div>
