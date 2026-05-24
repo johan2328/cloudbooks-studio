@@ -375,121 +375,167 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Metodología ──────────────────────────────────────────────────── */}
-      <section id="metodologia" className="py-20 bg-[#0a1220] relative">
+      {/* ── Metodología — Estudio multiagente unificado ──────────────────── */}
+      <section id="metodologia" className="py-24 bg-[#0a1220] relative overflow-hidden">
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/30 to-transparent" />
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="mb-10 text-center">
-            <p className="text-[9px] font-bold text-teal-400/60 uppercase tracking-[0.2em] mb-3">Metodología editorial</p>
-            <h2 className="text-3xl font-black text-white">Un estudio editorial multiagente.</h2>
-            <p className="text-sm text-white/55 mt-3 leading-relaxed max-w-2xl mx-auto">Seis agentes especializados producen cada formato. Un auditor humano final valida cada entrega antes de publicación.</p>
+        {/* PCB grid background sutil */}
+        <div className="absolute inset-0 opacity-[0.025] pointer-events-none"
+          style={{backgroundImage:"linear-gradient(#ffffff 1px,transparent 1px),linear-gradient(90deg,#ffffff 1px,transparent 1px)",backgroundSize:"48px 48px"}} />
+        {/* Glows ambientales */}
+        <div className="absolute -left-32 top-1/3 w-96 h-96 rounded-full blur-3xl opacity-[0.07] bg-blue-600 pointer-events-none" />
+        <div className="absolute -right-32 bottom-1/4 w-96 h-96 rounded-full blur-3xl opacity-[0.07] bg-amber-500 pointer-events-none" />
+
+        <div className="relative max-w-6xl mx-auto px-6">
+          {/* Header */}
+          <div className="text-center mb-14">
+            <p className="text-[9px] font-bold text-teal-400/60 uppercase tracking-[0.25em] mb-3">Metodología editorial</p>
+            <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight">Un estudio editorial multiagente.</h2>
+            <p className="text-sm text-white/55 mt-4 leading-relaxed max-w-2xl mx-auto">
+              Seis agentes especializados distribuidos en tres dominios producen cada formato.
+              Un auditor humano valida la entrega final antes de publicación.
+            </p>
           </div>
 
-          {/* Diagrama multiagente */}
-          <div className="mb-12 relative max-w-4xl mx-auto">
-            <svg viewBox="0 0 800 360" className="w-full h-auto" preserveAspectRatio="xMidYMid meet" aria-hidden>
-              <defs>
-                <linearGradient id="trace" x1="0" x2="1">
-                  <stop offset="0" stopColor="#2563eb" stopOpacity="0.5" />
-                  <stop offset="0.5" stopColor="#7c3aed" stopOpacity="0.7" />
-                  <stop offset="1" stopColor="#0d9488" stopOpacity="0.5" />
-                </linearGradient>
-                <filter id="glow"><feGaussianBlur stdDeviation="2" /></filter>
-              </defs>
-              {/* central bus */}
-              <line x1="400" y1="40" x2="400" y2="320" stroke="url(#trace)" strokeWidth="1.5" />
-              <circle cx="400" cy="40" r="3" fill="#2563eb" />
-              <circle cx="400" cy="320" r="3" fill="#0d9488" />
-              {/* horizontal traces to nodes (left side) */}
-              {[60, 180, 300].map(y => (
-                <g key={`l${y}`}>
-                  <path d={`M 400 ${y} L 280 ${y} L 240 ${y}`} stroke="url(#trace)" strokeWidth="1.2" fill="none" />
-                  <circle cx="400" cy={y} r="2.5" fill="#7c3aed" />
-                  <circle cx="240" cy={y} r="2.5" fill="#2563eb" />
-                </g>
-              ))}
-              {/* horizontal traces to nodes (right side) */}
-              {[60, 180, 300].map(y => (
-                <g key={`r${y}`}>
-                  <path d={`M 400 ${y} L 520 ${y} L 560 ${y}`} stroke="url(#trace)" strokeWidth="1.2" fill="none" />
-                  <circle cx="400" cy={y} r="2.5" fill="#7c3aed" />
-                  <circle cx="560" cy={y} r="2.5" fill="#0d9488" />
-                </g>
-              ))}
-              {/* decorative branches */}
-              <path d="M 240 60 L 200 60 L 200 100" stroke="#2563eb" strokeOpacity="0.25" strokeWidth="0.8" fill="none" />
-              <path d="M 240 180 L 180 180 L 180 220" stroke="#7c3aed" strokeOpacity="0.25" strokeWidth="0.8" fill="none" />
-              <path d="M 240 300 L 200 300 L 200 340" stroke="#0d9488" strokeOpacity="0.25" strokeWidth="0.8" fill="none" />
-              <path d="M 560 60 L 620 60 L 620 100" stroke="#2563eb" strokeOpacity="0.25" strokeWidth="0.8" fill="none" />
-              <path d="M 560 180 L 640 180 L 640 220" stroke="#7c3aed" strokeOpacity="0.25" strokeWidth="0.8" fill="none" />
-              <path d="M 560 300 L 620 300 L 620 340" stroke="#0d9488" strokeOpacity="0.25" strokeWidth="0.8" fill="none" />
-            </svg>
+          {/* Bateria de agentes */}
+          <div className="relative max-w-5xl mx-auto">
+            {/* Bus vertical PCB de fondo */}
+            <div className="hidden md:block absolute left-1/2 -translate-x-1/2 top-8 bottom-32 w-px bg-gradient-to-b from-blue-500/40 via-violet-500/40 to-teal-500/40" />
 
-            {/* Nodes absolutamente posicionados */}
-            <div className="absolute inset-0 grid grid-cols-2 grid-rows-3 gap-x-[44%] gap-y-0 px-0 py-[3%]">
-              {[
-                { dom:"Domain", label:"Grounding",       color:"blue"   },
-                { dom:"Domain", label:"Pedagogy",        color:"blue"   },
-                { dom:"Domain", label:"Editorial",       color:"violet" },
-                { dom:"Domain", label:"Visual",          color:"violet" },
-                { dom:"Domain", label:"QA / Red Team",   color:"teal"   },
-                { dom:"Domain", label:"Production",      color:"teal"   },
-              ].map((n, i) => {
-                const ring = n.color === "blue" ? "ring-blue-500/40 bg-blue-500/10" :
-                             n.color === "violet" ? "ring-violet-500/40 bg-violet-500/10" :
-                                                    "ring-teal-500/40 bg-teal-500/10";
-                const dot  = n.color === "blue" ? "text-blue-300/70" :
-                             n.color === "violet" ? "text-violet-300/70" :
-                                                    "text-teal-300/70";
-                return (
-                  <div key={i} className={`flex flex-col items-center justify-center ${i%2===0?"items-end pr-2":"items-start pl-2"}`}>
-                    <div className={`text-[8px] font-mono uppercase tracking-[0.2em] mb-1 ${dot}`}>{n.dom}</div>
-                    <div className={`px-4 py-2 rounded-sm ring-1 ${ring} backdrop-blur-sm`}>
-                      <span className="text-xs font-bold text-white whitespace-nowrap">{n.label}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            {(() => {
+              const domains = [
+                {
+                  label: "Dominio · Conocimiento",
+                  color: "blue",
+                  agents: [
+                    { icon: Database, name: "Grounding",  role: "Trazabilidad técnica",      desc: "Documentación oficial Microsoft, validación de fuentes y verificación de contenido base por servicio." },
+                    { icon: Layers,   name: "Pedagogy",   role: "Arquitectura de aprendizaje", desc: "Diseño de objetivos, secuencia de contenido y rutas de estudio progresivas por certificación." },
+                  ],
+                },
+                {
+                  label: "Dominio · Creación",
+                  color: "violet",
+                  agents: [
+                    { icon: Edit3, name: "Editorial", role: "Voz y narrativa",     desc: "Coherencia editorial, estructura narrativa y formato específico por tipo de colección y de estudio." },
+                    { icon: Eye,   name: "Visual",    role: "Dirección de arte",   desc: "Layout, paleta, tipografía, iconografía y aplicación rigurosa del contrato visual de marca." },
+                  ],
+                },
+                {
+                  label: "Dominio · Calidad",
+                  color: "teal",
+                  agents: [
+                    { icon: Shield, name: "QA / Red Team", role: "Validación adversarial", desc: "Auditoría técnica, detección de errores, ambigüedades y scoring multidimensional con umbral ≥ 9.5." },
+                    { icon: Pkg,    name: "Production",    role: "Build y exportación",    desc: "Generación final, exportación por formato, control de versiones y trazabilidad completa." },
+                  ],
+                },
+              ] as const;
 
-            {/* Final Human Audit seal */}
-            <div className="absolute -right-2 md:right-4 bottom-0 md:bottom-2 translate-y-1/3 md:translate-y-0">
-              <div className="relative w-24 h-24 md:w-28 md:h-28">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 shadow-[0_0_30px_rgba(245,158,11,0.4)]" />
-                <div className="absolute inset-1 rounded-full border-2 border-amber-200/60 flex flex-col items-center justify-center text-center px-2">
-                  <span className="text-[8px] font-bold text-amber-950 uppercase tracking-wider leading-tight">Final</span>
-                  <span className="text-[10px] font-black text-amber-950 uppercase tracking-tight leading-tight">Human</span>
-                  <span className="text-[10px] font-black text-amber-950 uppercase tracking-tight leading-tight">Audit</span>
-                </div>
-              </div>
-            </div>
-          </div>
+              const palette: Record<string, {
+                ring: string; bg: string; tint: string; text: string; dot: string; line: string; bar: string;
+              }> = {
+                blue:   { ring:"ring-blue-500/25",   bg:"bg-blue-500/[0.04]",   tint:"from-blue-500/[0.08]",   text:"text-blue-300",   dot:"bg-blue-400",   line:"bg-blue-500/40",   bar:"bg-blue-500" },
+                violet: { ring:"ring-violet-500/25", bg:"bg-violet-500/[0.04]", tint:"from-violet-500/[0.08]", text:"text-violet-300", dot:"bg-violet-400", line:"bg-violet-500/40", bar:"bg-violet-500" },
+                teal:   { ring:"ring-teal-500/25",   bg:"bg-teal-500/[0.04]",   tint:"from-teal-500/[0.08]",   text:"text-teal-300",   dot:"bg-teal-400",   line:"bg-teal-500/40",   bar:"bg-teal-500" },
+              };
 
-          <div className="text-center mb-6">
-            <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em]">Las seis fases en detalle</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-3">
-            {[
-              { icon: Database, label:"Grounding técnico",        desc:"Documentación oficial Microsoft, trazabilidad de fuentes, validación de contenido base." },
-              { icon: Layers,   label:"Arquitectura pedagógica",  desc:"Diseño de objetivos, secuencia de contenido y rutas de estudio por certificación." },
-              { icon: Edit3,    label:"Dirección editorial",      desc:"Coherencia de voz, estructura narrativa y formato específico por tipo de colección." },
-              { icon: Eye,      label:"Dirección visual",         desc:"Layout, paleta, tipografía, iconografía y contrato visual por marca." },
-              { icon: Shield,   label:"QA / Red team",            desc:"Validación de precisión, detección de errores y scoring multidimensional ≥ 9.5." },
-              { icon: Pkg,      label:"Producción y exportación", desc:"Generación final, exportación por formato, control de versiones y trazabilidad." },
-            ].map(d => {
-              const Icon = d.icon;
               return (
-                <div key={d.label} className="bg-white/[0.06] border border-white/[0.10] rounded-sm p-4 hover:border-white/[0.18] transition-colors">
-                  <div className="flex items-center gap-2.5 mb-2">
-                    <div className="w-7 h-7 rounded-sm bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0">
-                      <Icon className="w-3.5 h-3.5 text-blue-400" />
+                <div className="space-y-10">
+                  {domains.map((d, di) => {
+                    const c = palette[d.color];
+                    return (
+                      <div key={d.label} className="relative">
+                        {/* Etiqueta de dominio centrada */}
+                        <div className="flex items-center justify-center gap-3 mb-5">
+                          <div className={`h-px w-10 md:w-16 ${c.line}`} />
+                          <div className={`px-3 py-1 rounded-sm bg-[#0a1220] ring-1 ${c.ring}`}>
+                            <span className={`text-[9px] font-mono uppercase tracking-[0.3em] ${c.text}`}>{d.label}</span>
+                          </div>
+                          <div className={`h-px w-10 md:w-16 ${c.line}`} />
+                        </div>
+
+                        {/* Par de agentes con junction central */}
+                        <div className="grid md:grid-cols-[1fr_auto_1fr] gap-4 md:gap-0 items-stretch">
+                          {d.agents.map((a, ai) => {
+                            const Icon = a.icon;
+                            const isLeft = ai === 0;
+                            return (
+                              <div key={a.name} className={`group relative ${isLeft ? "md:pr-6 md:text-right md:items-end" : "md:pl-6"}`}>
+                                {/* Trace stub al junction (solo desktop) */}
+                                <div className={`hidden md:block absolute top-1/2 ${isLeft ? "right-0" : "left-0"} w-6 h-px ${c.line}`} />
+
+                                <div className={`relative rounded-sm ring-1 ${c.ring} ${c.bg} bg-gradient-to-br ${c.tint} via-transparent to-transparent p-5 transition-all duration-300 hover:ring-2 hover:scale-[1.01] hover:shadow-[0_0_30px_-10px_rgba(255,255,255,0.15)] h-full`}>
+                                  {/* Side accent bar */}
+                                  <div className={`absolute top-3 bottom-3 ${isLeft ? "md:right-0 left-0 md:left-auto" : "left-0"} w-[2px] ${c.bar} opacity-50 group-hover:opacity-100 transition-opacity`} />
+
+                                  <div className={`flex items-start gap-3 ${isLeft ? "md:flex-row-reverse md:text-right" : ""}`}>
+                                    <div className={`w-10 h-10 rounded-sm ring-1 ${c.ring} ${c.bg} flex items-center justify-center shrink-0`}>
+                                      <Icon className={`w-4 h-4 ${c.text}`} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <h3 className="text-base font-black text-white tracking-tight">{a.name}</h3>
+                                      <p className={`text-[10px] font-mono uppercase tracking-[0.18em] ${c.text} opacity-80 mt-0.5`}>{a.role}</p>
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-white/60 leading-relaxed mt-3">{a.desc}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {/* Junction central (orden visual: aparece en col 2 con order, pero en JSX está al final del grid) */}
+                          {/* Insertamos un placeholder con grid-area para mantener orden DOM razonable: */}
+                        </div>
+
+                        {/* Junction nodo central absoluto (solo desktop) */}
+                        <div className="hidden md:flex absolute top-[calc(50%+1.25rem)] left-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center pointer-events-none">
+                          <div className={`relative w-3 h-3 rounded-full ${c.dot} shadow-[0_0_16px_currentColor] ${c.text}`}>
+                            <div className={`absolute inset-0 rounded-full ${c.dot} animate-ping opacity-30`} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Convergencia → seal */}
+                  <div className="relative pt-4">
+                    {/* Bus vertical que baja desde el último dominio al seal */}
+                    <div className="hidden md:block absolute left-1/2 -translate-x-1/2 -top-2 h-12 w-px bg-gradient-to-b from-teal-500/40 to-amber-500/60" />
+                    {/* Mobile connector */}
+                    <div className="md:hidden absolute left-1/2 -translate-x-1/2 -top-4 h-8 w-px bg-gradient-to-b from-teal-500/40 to-amber-500/60" />
+
+                    <div className="flex flex-col items-center pt-10">
+                      {/* Sello Final Human Audit */}
+                      <div className="relative">
+                        <div className="absolute inset-0 rounded-full bg-amber-400 blur-2xl opacity-30 scale-110" />
+                        <div className="relative w-36 h-36 md:w-40 md:h-40">
+                          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-300 via-amber-500 to-amber-700 shadow-[0_0_50px_rgba(245,158,11,0.5),inset_0_2px_8px_rgba(255,255,255,0.4),inset_0_-4px_12px_rgba(0,0,0,0.3)]" />
+                          <div className="absolute inset-[6px] rounded-full border-2 border-amber-200/70" />
+                          <div className="absolute inset-[10px] rounded-full border border-amber-900/40" />
+                          {/* Rayos sutiles */}
+                          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" aria-hidden>
+                            {Array.from({length:24}).map((_,i)=>{
+                              const a = (i*15)*Math.PI/180;
+                              const r1 = 38, r2 = 41;
+                              return (<line key={i}
+                                x1={50+Math.cos(a)*r1} y1={50+Math.sin(a)*r1}
+                                x2={50+Math.cos(a)*r2} y2={50+Math.sin(a)*r2}
+                                stroke="#78350f" strokeOpacity="0.5" strokeWidth="0.8" />);
+                            })}
+                          </svg>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-3">
+                            <span className="text-[8px] font-bold text-amber-950 uppercase tracking-[0.2em] mb-0.5">Final</span>
+                            <span className="text-base font-black text-amber-950 uppercase tracking-tight leading-none">Human</span>
+                            <span className="text-base font-black text-amber-950 uppercase tracking-tight leading-none mt-0.5">Audit</span>
+                            <div className="w-8 h-px bg-amber-900/40 my-1.5" />
+                            <span className="text-[7px] font-mono uppercase tracking-[0.2em] text-amber-950/70">QA ≥ 9.5</span>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-amber-300/60 mt-4">Auditoría humana · Cierre editorial</p>
                     </div>
-                    <h3 className="text-xs font-bold text-white/90">{d.label}</h3>
                   </div>
-                  <p className="text-[10px] text-white/55 leading-relaxed">{d.desc}</p>
                 </div>
               );
-            })}
+            })()}
           </div>
         </div>
       </section>
