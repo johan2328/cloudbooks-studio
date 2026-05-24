@@ -1,7 +1,8 @@
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { useCart } from "@/lib/cart";
 import { CommercialNav, LegalRow } from "./landing";
-import { ChevronRight, Clock, Package, BookOpen, Map, ArrowRight } from "lucide-react";
+import { ChevronRight, Clock, Package, BookOpen, Map, ArrowRight, Plus } from "lucide-react";
 
 const AZURE_CERTS = [
   {
@@ -74,6 +75,7 @@ const AZURE_CERTS = [
 
 export default function Books() {
   const [, setLocation] = useLocation();
+  const { add } = useCart();
 
   return (
     <div className="min-h-screen bg-white font-sans">
@@ -120,11 +122,9 @@ export default function Books() {
                     ].map(p => {
                       const Icon = p.icon;
                       return (
-                        <button key={p.label}
-                          onClick={() => setLocation("/ai-200-packs")}
-                          className={cn(
-                            "text-left border rounded-sm px-3 py-3 hover:shadow-sm transition-all group",
-                            p.best ? "border-teal-200 bg-teal-50/50 hover:bg-teal-50" : "border-gray-200 hover:border-gray-300"
+                        <div key={p.label} className={cn(
+                            "border rounded-sm px-3 py-3 transition-all",
+                            p.best ? "border-teal-200 bg-teal-50/50" : "border-gray-200"
                           )}>
                           <div className="flex items-center gap-2 mb-1.5">
                             <Icon className="w-3.5 h-3.5" style={{color:p.color}} />
@@ -132,10 +132,17 @@ export default function Books() {
                             {p.best && <span className="text-[7px] font-bold bg-teal-600 text-white px-1 py-px rounded-sm ml-auto">BEST VALUE</span>}
                           </div>
                           <p className="text-[9px] text-gray-400">{p.tag}</p>
-                          <div className="flex items-center gap-1 mt-2 text-[9px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity" style={{color:p.color}}>
-                            Ver detalles <ChevronRight className="w-2.5 h-2.5" />
+                          <div className="flex items-center gap-1 mt-2">
+                            <button onClick={() => add({ id:`ai-200-${p.label.toLowerCase().replace(/\s+/g,'-')}`, name:p.label, cert:'AI-200', format:p.label, price: p.best?99:49 })}
+                              className="flex items-center gap-1 text-[9px] font-semibold text-white bg-gray-900 hover:bg-gray-800 px-2 h-5 rounded-sm transition-colors">
+                              <Plus className="w-3 h-3" /> Anadir
+                            </button>
+                            <button onClick={() => setLocation("/ai-200-packs")}
+                              className="text-[9px] font-semibold opacity-60 hover:opacity-100 transition-opacity" style={{color:p.color}}>
+                              Ver detalles
+                            </button>
                           </div>
-                        </button>
+                        </div>
                       );
                     })}
                   </div>

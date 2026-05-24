@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useCart } from "@/lib/cart";
 import { CommercialNav, LegalRow } from "./landing";
 import { cn } from "@/lib/utils";
 import {
   BookOpen, Map, Package, CheckCircle2, ChevronRight,
-  AlertTriangle, HelpCircle, FileText, Zap, ArrowRight, Info,
+  AlertTriangle, HelpCircle, FileText, Zap, ArrowRight, Info, Plus,
 } from "lucide-react";
 
 const FORMATS_DETAIL = [
@@ -27,9 +28,11 @@ const STUDY_PATH = [
 
 export default function AI200Packs() {
   const [, setLocation] = useLocation();
+  const { add } = useCart();
   const [showDemoMsg, setShowDemoMsg] = useState<string | null>(null);
 
   function handleAction(pack: string) {
+    add({ id: `ai-200-${pack.toLowerCase().replace(/\s+/g,'-')}`, name: pack, cert: 'AI-200', format: pack, price: pack === 'Collection Pack' ? 99 : 49 });
     setShowDemoMsg(pack);
     setTimeout(() => setShowDemoMsg(null), 3000);
   }
