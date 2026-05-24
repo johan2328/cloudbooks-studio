@@ -1,6 +1,7 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { SiteFooter } from "@/components/SiteFooter";
 import {
   BookOpen, Map, Package, ArrowRight, ChevronRight,
   CheckCircle2, Clock, Database, Layers, Edit3, Eye, Shield, Package as Pkg,
@@ -551,15 +552,9 @@ export default function Landing() {
       </section>
 
       {/* ── Footer ───────────────────────────────────────────────────────── */}
-      <footer className="bg-[#0d1629] border-t border-white/[0.06] py-6">
-        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-12 w-auto opacity-70" draggable={false} />
-            <span className="text-[9px] text-white/15">Editorial inteligente de certificaciones cloud</span>
-          </div>
-          <div className="text-[9px] text-white/15 font-mono">© 2026 CloudBooks</div>
-        </div>
-      </footer>
+      <SiteFooter
+        right={<span className="text-[10px] text-white/35 font-mono tracking-wider">© 2026 CloudBooks</span>}
+      />
     </div>
   );
 }
