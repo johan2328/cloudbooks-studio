@@ -4,7 +4,13 @@ import { cn } from "@/lib/utils";
 import {
   BookOpen, Map, Package, ArrowRight, ChevronRight,
   CheckCircle2, Clock, Database, Layers, Edit3, Eye, Shield, Package as Pkg,
+  Globe,
 } from "lucide-react";
+
+function translateHref() {
+  if (typeof window === "undefined") return "#";
+  return `https://translate.google.com/translate?sl=es&tl=en&u=${encodeURIComponent(window.location.href)}`;
+}
 
 /* ─── Nav comercial compartida ──────────────────────────────────────────── */
 export function CommercialNav({ active }: { active?: string }) {
@@ -33,6 +39,16 @@ export function CommercialNav({ active }: { active?: string }) {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-2">
+          <a
+            href={translateHref()}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Traducir esta página al inglés (Google Translate)"
+            className="hidden sm:flex items-center gap-1.5 text-[11px] font-medium text-white/40 hover:text-white/80 transition-colors mr-1"
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span className="font-mono tracking-wider">EN</span>
+          </a>
           {user && <span className="text-[10px] text-white/30 mr-1 hidden md:block">{user.displayName}</span>}
           <button onClick={() => setLocation(user ? "/catalogo" : "/login")}
             className="flex items-center gap-1.5 border border-white/15 hover:border-white/30 text-white/60 hover:text-white/90 text-xs font-medium px-3 h-7 rounded-sm transition-all">
