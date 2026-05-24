@@ -208,6 +208,16 @@ export default function Landing() {
     return () => clearInterval(id);
   }, [formatsInView]);
 
+  /* Narrativa progresiva de dominios + Human Audit */
+  const [activeDomain, setActiveDomain] = useState(0);
+  useEffect(() => {
+    if (!methodInView) return;
+    const id = setInterval(() => {
+      setActiveDomain(prev => (prev + 1) % 4); // 0–2 = dominios, 3 = Human Audit
+    }, 3500);
+    return () => clearInterval(id);
+  }, [methodInView]);
+
   return (
     <div className="min-h-screen bg-white font-sans">
       <CommercialNav active="Inicio" />
@@ -647,7 +657,14 @@ export default function Landing() {
                           })}
                           {/* Chip de dominio = junction central */}
                           <div className="hidden md:flex order-3 col-start-2 row-start-1 items-center justify-center" style={{ gridColumn: 2, gridRow: 1 }}>
-                            <div className={`relative z-10 rounded-sm ring-1 ${c.chip} bg-[#0a1220] px-2.5 py-1.5 shadow-[0_0_20px_-8px_currentColor] ${c.text}`}>
+                            <div
+                              className={`relative z-10 rounded-sm ring-1 ${c.chip} bg-[#0a1220] px-2.5 py-1.5 shadow-[0_0_20px_-8px_currentColor] ${c.text} transition-all duration-500`}
+                              style={{
+                                animation: activeDomain === di ? `domainPulse 2s ease-in-out infinite` : 'none',
+                                transform: activeDomain === di ? 'scale(1.08)' : 'scale(1)',
+                                boxShadow: activeDomain === di ? `0 0 40px 8px ${d.color === 'blue' ? 'rgba(59,130,246,0.35)' : d.color === 'violet' ? 'rgba(139,92,246,0.35)' : 'rgba(20,184,166,0.35)'}` : undefined,
+                              }}
+                            >
                               <span className={`text-[9px] font-mono uppercase tracking-[0.25em] ${c.text} whitespace-nowrap block`}>Dominio</span>
                               <span className="text-[11px] font-black text-white uppercase tracking-wide whitespace-nowrap block leading-tight">{d.label}</span>
                             </div>
@@ -667,8 +684,17 @@ export default function Landing() {
                     <div className="relative flex flex-col items-center pt-4">
                       <div className="absolute left-1/2 -translate-x-1/2 -top-1 h-10 w-[2px] bg-gradient-to-b from-teal-500/50 to-amber-500/70" />
                       <div className="relative mt-8">
-                        <div className="absolute inset-0 rounded-full bg-amber-400 blur-2xl opacity-25 scale-110" />
-                        <div className="relative w-28 h-28 md:w-32 md:h-32">
+                        <div
+                          className="absolute inset-0 rounded-full bg-amber-400 blur-2xl transition-opacity duration-700 scale-110"
+                          style={{ opacity: activeDomain === 3 ? 0.55 : 0.25 }}
+                        />
+                        <div
+                          className="relative w-28 h-28 md:w-32 md:h-32 transition-all duration-700"
+                          style={{
+                            transform: activeDomain === 3 ? 'scale(1.12)' : 'scale(1)',
+                            filter: activeDomain === 3 ? 'drop-shadow(0 0 28px rgba(245,158,11,0.6))' : 'none',
+                          }}
+                        >
                           <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-300 via-amber-500 to-amber-700 shadow-[0_0_40px_rgba(245,158,11,0.45),inset_0_2px_6px_rgba(255,255,255,0.4),inset_0_-3px_10px_rgba(0,0,0,0.3)]" />
                           <div className="absolute inset-[5px] rounded-full border-2 border-amber-200/70" />
                           <div className="absolute inset-[8px] rounded-full border border-amber-900/40" />
