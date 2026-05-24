@@ -93,7 +93,7 @@ export default function Landing() {
             </div>
             <div className="hidden md:flex items-center justify-center">
               <img src="/hero-editorial.png" alt="CloudBooks Editorial"
-                className="w-full max-w-md drop-shadow-[0_0_80px_rgba(37,99,235,0.4)]" />
+                className="w-full max-w-md opacity-35 mix-blend-screen" />
             </div>
           </div>
         </div>
@@ -195,7 +195,7 @@ export default function Landing() {
             </div>
             <div className="hidden md:flex items-center justify-center">
               <img src="/formats-collection.png" alt="Colección editorial CloudBooks"
-                className="w-full max-w-md drop-shadow-[0_0_80px_rgba(124,58,237,0.4)]" />
+                className="w-full max-w-md opacity-30 mix-blend-screen" />
             </div>
           </div>
           <div className="grid md:grid-cols-3 gap-3">
@@ -387,7 +387,7 @@ export default function Landing() {
             </div>
             <div className="hidden md:flex items-center justify-center">
               <img src="/methodology-pipeline.png" alt="Pipeline editorial CloudBooks"
-                className="w-full max-w-md drop-shadow-[0_0_80px_rgba(13,148,136,0.4)]" />
+                className="w-full max-w-md opacity-30 mix-blend-screen" />
             </div>
           </div>
           <div className="grid md:grid-cols-3 gap-3">
