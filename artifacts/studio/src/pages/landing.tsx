@@ -282,7 +282,7 @@ export default function Landing() {
           {/* Timeline pipeline — cronológico */}
           <div className="relative flex flex-col md:flex-row items-stretch gap-8 md:gap-10">
             {/* Desktop: línea punteada pasa por el centro de los círculos (detrás) */}
-            <div className="hidden md:block absolute top-[24px] left-7 right-7 h-0 border-t border-dashed border-white/[0.12] pointer-events-none z-0" />
+            <div className="hidden md:block absolute top-[28px] left-8 right-8 h-0 border-t border-dashed border-white/[0.12] pointer-events-none z-0" />
 
             {[
               { num: "01", label: "Master Book", tag: "Aprendizaje profundo", color: "#2563eb",
@@ -304,7 +304,7 @@ export default function Landing() {
 
                 <div className="flex md:flex-col items-start md:items-center gap-4 md:gap-0">
                   {/* Círculo grande con bg sólido */}
-                  <div className="w-12 h-12 rounded-full border-[2.5px] flex items-center justify-center font-mono text-sm font-black tracking-wider shrink-0 z-10"
+                  <div className="w-14 h-14 rounded-full border-[3px] flex items-center justify-center font-mono text-base font-black tracking-wider shrink-0 z-10"
                     style={{borderColor: `${f.color}40`, color: f.color, backgroundColor: `#0d1629`}}>
                     {f.num}
                   </div>
