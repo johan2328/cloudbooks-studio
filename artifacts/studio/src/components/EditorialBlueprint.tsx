@@ -4,113 +4,37 @@ interface EditorialBlueprintProps {
 
 export function EditorialBlueprint({ className = "" }: EditorialBlueprintProps) {
   return (
-    <svg viewBox="0 0 460 520" className={className} fill="none" aria-hidden>
-      <defs>
-        <radialGradient id="cb-halo" cx="50%" cy="50%" r="55%">
-          <stop offset="0%"  stopColor="#7c3aed" stopOpacity="0.22" />
-          <stop offset="55%" stopColor="#2563eb" stopOpacity="0.08" />
-          <stop offset="100%" stopColor="#0d1629" stopOpacity="0" />
-        </radialGradient>
-        <linearGradient id="cb-cover" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="#101a32" />
-          <stop offset="100%" stopColor="#0a1220" />
-        </linearGradient>
-        <linearGradient id="cb-spine" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="#a78bfa" stopOpacity="0.9" />
-          <stop offset="100%" stopColor="#5b21b6" stopOpacity="0.6" />
-        </linearGradient>
-        <linearGradient id="cb-ghost" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="#0e1830" />
-          <stop offset="100%" stopColor="#0a1220" />
-        </linearGradient>
-      </defs>
+    <div className={`relative aspect-square w-full ${className}`}>
+      <div className="absolute -inset-6 rounded-full bg-violet-500/10 blur-3xl pointer-events-none" aria-hidden />
+      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-500/5 via-transparent to-violet-500/5 pointer-events-none" aria-hidden />
 
-      {/* Halo */}
-      <circle cx="230" cy="260" r="220" fill="url(#cb-halo)" />
+      <div className="absolute inset-2 rounded-full overflow-hidden ring-1 ring-white/10 shadow-[0_30px_80px_-20px_rgba(124,58,237,0.35)]">
+        <img
+          src="/hero-volume-still.png"
+          alt="Volumen editorial CloudBooks"
+          className="w-full h-full object-cover scale-105"
+          draggable={false}
+        />
+        <div className="absolute inset-0 ring-1 ring-inset ring-white/[0.04] rounded-full pointer-events-none" />
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle at 30% 35%, transparent 55%, rgba(13,22,41,0.55) 100%)",
+          }}
+        />
+      </div>
 
-      {/* Soft floor shadow under stack */}
-      <ellipse cx="230" cy="470" rx="160" ry="14" fill="#000" opacity="0.35" />
+      <div className="absolute top-[6%] right-[8%] w-10 h-10 rounded-full bg-white/[0.04] ring-1 ring-white/15 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+        <div className="w-1 h-1 rounded-full bg-amber-300/80" />
+      </div>
+      <div className="absolute bottom-[10%] left-[4%] w-5 h-5 rounded-full bg-white/[0.03] ring-1 ring-white/10 pointer-events-none" />
 
-      {/* Ghost volume 2 (deepest back) */}
-      <g transform="translate(190 60) rotate(-3 0 200)" opacity="0.55">
-        <rect x="0" y="0" width="170" height="380" rx="2" fill="url(#cb-ghost)" stroke="#ffffff" strokeOpacity="0.08" />
-        <rect x="0" y="0" width="6" height="380" fill="#0d9488" fillOpacity="0.55" />
-        <text x="85" y="200" textAnchor="middle" fill="#ffffff" fillOpacity="0.35" fontSize="22" fontWeight="900" fontFamily="ui-sans-serif" letterSpacing="2">AZ-104</text>
-      </g>
-
-      {/* Ghost volume 1 (closer back) */}
-      <g transform="translate(120 50) rotate(-1.5 0 200)" opacity="0.78">
-        <rect x="0" y="0" width="180" height="395" rx="2" fill="url(#cb-ghost)" stroke="#ffffff" strokeOpacity="0.1" />
-        <rect x="0" y="0" width="6" height="395" fill="#2563eb" fillOpacity="0.7" />
-        <text x="93" y="210" textAnchor="middle" fill="#ffffff" fillOpacity="0.5" fontSize="26" fontWeight="900" fontFamily="ui-sans-serif" letterSpacing="2">AZ-900</text>
-      </g>
-
-      {/* Front volume: AI-200 Visual Atlas */}
-      <g transform="translate(70 40)">
-        {/* Drop shadow */}
-        <rect x="3" y="6" width="230" height="420" rx="3" fill="#000" opacity="0.45" />
-        {/* Cover */}
-        <rect x="0" y="0" width="230" height="420" rx="3" fill="url(#cb-cover)" stroke="#ffffff" strokeOpacity="0.14" />
-        {/* Spine accent (violet for Visual Atlas) */}
-        <rect x="0" y="0" width="9" height="420" fill="url(#cb-spine)" />
-        <rect x="9" y="0" width="1" height="420" fill="#ffffff" fillOpacity="0.08" />
-
-        {/* Inner editorial border (double line) */}
-        <rect x="22" y="22" width="186" height="376" fill="none" stroke="#ffffff" strokeOpacity="0.1" />
-        <rect x="26" y="26" width="178" height="368" fill="none" stroke="#ffffff" strokeOpacity="0.05" />
-
-        {/* Top brand block */}
-        <text x="115" y="56" textAnchor="middle" fill="#ffffff" fillOpacity="0.55" fontSize="9" fontWeight="700" fontFamily="ui-sans-serif" letterSpacing="4">CLOUDBOOKS</text>
-        <line x1="80" y1="68" x2="150" y2="68" stroke="#ffffff" strokeOpacity="0.2" strokeWidth="0.75" />
-        <text x="115" y="82" textAnchor="middle" fill="#a78bfa" fillOpacity="0.7" fontSize="6.5" fontFamily="ui-monospace" letterSpacing="2.5">EDITORIAL · AZURE</text>
-
-        {/* Cert code — the focal element */}
-        <text x="115" y="206" textAnchor="middle" fill="#ffffff" fontSize="58" fontWeight="900" fontFamily="ui-sans-serif" letterSpacing="-1">AI-200</text>
-
-        {/* Subtitle stack */}
-        <line x1="65" y1="232" x2="165" y2="232" stroke="#a78bfa" strokeOpacity="0.6" strokeWidth="1" />
-        <text x="115" y="252" textAnchor="middle" fill="#ffffff" fillOpacity="0.92" fontSize="11" fontWeight="800" fontFamily="ui-sans-serif" letterSpacing="2.5">AZURE AI FUNDAMENTALS</text>
-        <text x="115" y="268" textAnchor="middle" fill="#ffffff" fillOpacity="0.5" fontSize="8" fontFamily="ui-sans-serif" letterSpacing="0.5">Designing &amp; implementing AI solutions</text>
-
-        {/* Decorative editorial mark */}
-        <g transform="translate(115 308)">
-          <circle cx="0" cy="0" r="10" fill="none" stroke="#a78bfa" strokeOpacity="0.45" strokeWidth="0.75" />
-          <circle cx="0" cy="0" r="5"  fill="none" stroke="#a78bfa" strokeOpacity="0.55" strokeWidth="0.75" />
-          <circle cx="0" cy="0" r="1.6" fill="#a78bfa" />
-          <line x1="-22" y1="0" x2="-12" y2="0" stroke="#ffffff" strokeOpacity="0.15" strokeWidth="0.75" />
-          <line x1="12"  y1="0" x2="22"  y2="0" stroke="#ffffff" strokeOpacity="0.15" strokeWidth="0.75" />
-        </g>
-
-        {/* Format strip */}
-        <g transform="translate(38 340)">
-          <text x="0" y="0" fill="#ffffff" fillOpacity="0.4" fontSize="7" fontWeight="700" fontFamily="ui-monospace" letterSpacing="2">FORMATO</text>
-          <text x="153" y="0" textAnchor="end" fill="#a78bfa" fillOpacity="0.9" fontSize="7" fontWeight="700" fontFamily="ui-monospace" letterSpacing="2">02 / 06</text>
-          {/* 6 ticks, with 02 highlighted */}
-          {[0,1,2,3,4,5].map(i => {
-            const active = i === 1;
-            return (
-              <g key={i}>
-                <rect x={i*26} y="8" width="22" height="3" rx="1"
-                  fill={active ? "#a78bfa" : "#ffffff"}
-                  fillOpacity={active ? 0.95 : 0.18} />
-              </g>
-            );
-          })}
-          <text x="0" y="28" fill="#ffffff" fillOpacity="0.85" fontSize="9" fontWeight="800" fontFamily="ui-sans-serif" letterSpacing="2.5">VISUAL ATLAS</text>
-          <text x="153" y="28" textAnchor="end" fill="#ffffff" fillOpacity="0.35" fontSize="7" fontFamily="ui-monospace" letterSpacing="1.2">61 INFOGRAFÍAS</text>
-        </g>
-
-        {/* Bottom imprint */}
-        <line x1="22" y1="384" x2="208" y2="384" stroke="#ffffff" strokeOpacity="0.08" />
-        <text x="32" y="408" fill="#ffffff" fillOpacity="0.5" fontSize="7" fontFamily="ui-monospace" letterSpacing="1.5">VOL · 02</text>
-        <text x="198" y="408" textAnchor="end" fill="#ffffff" fillOpacity="0.5" fontSize="7" fontFamily="ui-monospace" letterSpacing="1.5">EDITORIAL · 2026</text>
-      </g>
-
-      {/* Series caption below stack */}
-      <g>
-        <line x1="160" y1="492" x2="300" y2="492" stroke="#ffffff" strokeOpacity="0.12" />
-        <text x="230" y="506" textAnchor="middle" fill="#ffffff" fillOpacity="0.4" fontSize="8" fontFamily="ui-monospace" letterSpacing="2.5">CLOUDBOOKS · AZURE SERIES</text>
-      </g>
-    </svg>
+      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#0d1629] rounded-sm ring-1 ring-white/[0.08] pointer-events-none">
+        <span className="text-[8px] font-mono uppercase tracking-[0.3em] text-white/45 whitespace-nowrap">
+          Editorial · Azure series
+        </span>
+      </div>
+    </div>
   );
 }
