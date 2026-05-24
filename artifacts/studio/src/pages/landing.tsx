@@ -21,7 +21,6 @@ export function CommercialNav({ active }: { active?: string }) {
           {[
             { label: "Inicio",      href: "/" },
             { label: "Books",       href: "/books" },
-            { label: "Azure",       href: "/books" },
             { label: "Metodología", href: "/#metodologia" },
           ].map(({ label, href }) => (
             <a key={label} href={href}
@@ -37,11 +36,11 @@ export function CommercialNav({ active }: { active?: string }) {
           {user && <span className="text-[10px] text-white/30 mr-1 hidden md:block">{user.displayName}</span>}
           <button onClick={() => setLocation(user ? "/catalogo" : "/login")}
             className="flex items-center gap-1.5 border border-white/15 hover:border-white/30 text-white/60 hover:text-white/90 text-xs font-medium px-3 h-7 rounded-sm transition-all">
-            {user ? "Abrir Studio" : "Acceso Studio"}
+            {user ? "Abrir Studio" : "Studio"}
           </button>
           <button onClick={() => setLocation("/books")}
             className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white text-xs font-semibold px-3 h-7 rounded-sm transition-all">
-            Explorar Books <ArrowRight className="w-3 h-3" />
+            Ver Books <ArrowRight className="w-3 h-3" />
           </button>
         </div>
       </div>
@@ -69,7 +68,6 @@ export default function Landing() {
           <div className="max-w-3xl">
             <div className="flex items-center gap-2 mb-6">
               <span className="text-[9px] font-bold text-teal-400 uppercase tracking-[0.2em] bg-teal-400/10 border border-teal-400/20 px-2 py-1 rounded-sm">Editorial inteligente · Certificaciones cloud</span>
-              <span className="text-[9px] font-bold text-blue-400/70 uppercase tracking-[0.2em] bg-blue-400/10 border border-blue-400/20 px-2 py-1 rounded-sm">Azure AI-200 disponible</span>
             </div>
             <h1 className="text-4xl md:text-5xl font-black text-white leading-[1.1] tracking-tight mb-5">
               Una biblioteca inteligente<br />
@@ -83,12 +81,8 @@ export default function Landing() {
             <div className="flex items-center gap-3 flex-wrap">
               <button onClick={() => setLocation("/books")}
                 className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white font-semibold px-5 h-10 rounded-sm transition-all text-sm">
-                Explorar Azure Books
+                Ver colecciones disponibles
                 <ArrowRight className="w-4 h-4" />
-              </button>
-              <button onClick={() => setLocation("/ai-200-packs")}
-                className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white/70 transition-colors font-medium">
-                Ver paquetes AI-200 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
