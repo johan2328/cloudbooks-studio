@@ -177,12 +177,8 @@ export default function Books() {
       {/* Footer */}
       <footer className="bg-[#0d1629] border-t border-white/[0.06] py-6 mt-10">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-12 w-auto opacity-70" draggable={false} />
-              <span className="text-[9px] text-white/15">Editorial inteligente de certificaciones cloud</span>
-            </div>
-            <div className="text-[9px] text-white/15 font-mono">Azure AI-200 · Visual Atlas en producción</div>
+          <div className="flex items-center justify-center">
+            <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-12 w-auto opacity-70" draggable={false} />
           </div>
           <LegalRow />
         </div>
