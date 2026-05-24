@@ -379,16 +379,94 @@ export default function Landing() {
       <section id="metodologia" className="py-20 bg-[#0a1220] relative">
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/30 to-transparent" />
         <div className="max-w-6xl mx-auto px-6">
-          <div className="mb-8 grid md:grid-cols-2 gap-10 items-center">
-            <div>
-              <p className="text-[9px] font-bold text-teal-400/60 uppercase tracking-[0.2em] mb-3">Metodología editorial</p>
-              <h2 className="text-2xl font-black text-white">Producción sistemática con estándar QA ≥ 9.5.</h2>
-              <p className="text-sm text-white/55 mt-3 leading-relaxed max-w-md">Cada formato se produce a través de un proceso editorial estructurado de seis fases, validado con scoring multidimensional antes de publicación.</p>
+          <div className="mb-10 text-center">
+            <p className="text-[9px] font-bold text-teal-400/60 uppercase tracking-[0.2em] mb-3">Metodología editorial</p>
+            <h2 className="text-3xl font-black text-white">Un estudio editorial multiagente.</h2>
+            <p className="text-sm text-white/55 mt-3 leading-relaxed max-w-2xl mx-auto">Seis agentes especializados producen cada formato. Un auditor humano final valida cada entrega antes de publicación.</p>
+          </div>
+
+          {/* Diagrama multiagente */}
+          <div className="mb-12 relative max-w-4xl mx-auto">
+            <svg viewBox="0 0 800 360" className="w-full h-auto" preserveAspectRatio="xMidYMid meet" aria-hidden>
+              <defs>
+                <linearGradient id="trace" x1="0" x2="1">
+                  <stop offset="0" stopColor="#2563eb" stopOpacity="0.5" />
+                  <stop offset="0.5" stopColor="#7c3aed" stopOpacity="0.7" />
+                  <stop offset="1" stopColor="#0d9488" stopOpacity="0.5" />
+                </linearGradient>
+                <filter id="glow"><feGaussianBlur stdDeviation="2" /></filter>
+              </defs>
+              {/* central bus */}
+              <line x1="400" y1="40" x2="400" y2="320" stroke="url(#trace)" strokeWidth="1.5" />
+              <circle cx="400" cy="40" r="3" fill="#2563eb" />
+              <circle cx="400" cy="320" r="3" fill="#0d9488" />
+              {/* horizontal traces to nodes (left side) */}
+              {[60, 180, 300].map(y => (
+                <g key={`l${y}`}>
+                  <path d={`M 400 ${y} L 280 ${y} L 240 ${y}`} stroke="url(#trace)" strokeWidth="1.2" fill="none" />
+                  <circle cx="400" cy={y} r="2.5" fill="#7c3aed" />
+                  <circle cx="240" cy={y} r="2.5" fill="#2563eb" />
+                </g>
+              ))}
+              {/* horizontal traces to nodes (right side) */}
+              {[60, 180, 300].map(y => (
+                <g key={`r${y}`}>
+                  <path d={`M 400 ${y} L 520 ${y} L 560 ${y}`} stroke="url(#trace)" strokeWidth="1.2" fill="none" />
+                  <circle cx="400" cy={y} r="2.5" fill="#7c3aed" />
+                  <circle cx="560" cy={y} r="2.5" fill="#0d9488" />
+                </g>
+              ))}
+              {/* decorative branches */}
+              <path d="M 240 60 L 200 60 L 200 100" stroke="#2563eb" strokeOpacity="0.25" strokeWidth="0.8" fill="none" />
+              <path d="M 240 180 L 180 180 L 180 220" stroke="#7c3aed" strokeOpacity="0.25" strokeWidth="0.8" fill="none" />
+              <path d="M 240 300 L 200 300 L 200 340" stroke="#0d9488" strokeOpacity="0.25" strokeWidth="0.8" fill="none" />
+              <path d="M 560 60 L 620 60 L 620 100" stroke="#2563eb" strokeOpacity="0.25" strokeWidth="0.8" fill="none" />
+              <path d="M 560 180 L 640 180 L 640 220" stroke="#7c3aed" strokeOpacity="0.25" strokeWidth="0.8" fill="none" />
+              <path d="M 560 300 L 620 300 L 620 340" stroke="#0d9488" strokeOpacity="0.25" strokeWidth="0.8" fill="none" />
+            </svg>
+
+            {/* Nodes absolutamente posicionados */}
+            <div className="absolute inset-0 grid grid-cols-2 grid-rows-3 gap-x-[44%] gap-y-0 px-0 py-[3%]">
+              {[
+                { dom:"Domain", label:"Grounding",       color:"blue"   },
+                { dom:"Domain", label:"Pedagogy",        color:"blue"   },
+                { dom:"Domain", label:"Editorial",       color:"violet" },
+                { dom:"Domain", label:"Visual",          color:"violet" },
+                { dom:"Domain", label:"QA / Red Team",   color:"teal"   },
+                { dom:"Domain", label:"Production",      color:"teal"   },
+              ].map((n, i) => {
+                const ring = n.color === "blue" ? "ring-blue-500/40 bg-blue-500/10" :
+                             n.color === "violet" ? "ring-violet-500/40 bg-violet-500/10" :
+                                                    "ring-teal-500/40 bg-teal-500/10";
+                const dot  = n.color === "blue" ? "text-blue-300/70" :
+                             n.color === "violet" ? "text-violet-300/70" :
+                                                    "text-teal-300/70";
+                return (
+                  <div key={i} className={`flex flex-col items-center justify-center ${i%2===0?"items-end pr-2":"items-start pl-2"}`}>
+                    <div className={`text-[8px] font-mono uppercase tracking-[0.2em] mb-1 ${dot}`}>{n.dom}</div>
+                    <div className={`px-4 py-2 rounded-sm ring-1 ${ring} backdrop-blur-sm`}>
+                      <span className="text-xs font-bold text-white whitespace-nowrap">{n.label}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div className="hidden md:flex items-center justify-center">
-              <img src="/methodology-pipeline.png" alt="Pipeline editorial CloudBooks"
-                className="w-full max-w-md opacity-30 mix-blend-screen" />
+
+            {/* Final Human Audit seal */}
+            <div className="absolute -right-2 md:right-4 bottom-0 md:bottom-2 translate-y-1/3 md:translate-y-0">
+              <div className="relative w-24 h-24 md:w-28 md:h-28">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 shadow-[0_0_30px_rgba(245,158,11,0.4)]" />
+                <div className="absolute inset-1 rounded-full border-2 border-amber-200/60 flex flex-col items-center justify-center text-center px-2">
+                  <span className="text-[8px] font-bold text-amber-950 uppercase tracking-wider leading-tight">Final</span>
+                  <span className="text-[10px] font-black text-amber-950 uppercase tracking-tight leading-tight">Human</span>
+                  <span className="text-[10px] font-black text-amber-950 uppercase tracking-tight leading-tight">Audit</span>
+                </div>
+              </div>
             </div>
+          </div>
+
+          <div className="text-center mb-6">
+            <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em]">Las seis fases en detalle</p>
           </div>
           <div className="grid md:grid-cols-3 gap-3">
             {[
