@@ -90,38 +90,6 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* Hero bottom: 3 productos */}
-        <div className="relative border-t border-white/[0.06] bg-white/[0.015]">
-          <div className="max-w-6xl mx-auto px-6 py-5 grid grid-cols-3 gap-0 divide-x divide-white/[0.06]">
-            {[
-              { icon: BookOpen, label: "Master Book",     tag: "Aprendizaje profundo",  color:"#2563eb", desc:"El libro completo por certificación." },
-              { icon: Map,      label: "Visual Atlas",    tag: "Estudio visual",         color:"#7c3aed", desc:"Atlas infográfico de conceptos clave.", active: true },
-              { icon: Package,  label: "Collection Pack", tag: "Preparación completa",   color:"#0d9488", desc:"Todos los formatos. Mejor valor.", best: true },
-            ].map(p => {
-              const Icon = p.icon;
-              return (
-                <div key={p.label} className={cn(
-                  "px-6 py-4 flex items-start gap-3",
-                  p.best && "bg-teal-500/5"
-                )}>
-                  <div className="w-8 h-8 rounded-sm flex items-center justify-center shrink-0 mt-0.5"
-                    style={{backgroundColor:`${p.color}20`,border:`1px solid ${p.color}30`}}>
-                    <Icon className="w-4 h-4" style={{color:p.color}} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <p className="text-sm font-bold text-white/80">{p.label}</p>
-                      {p.best && <span className="text-[7px] font-bold bg-teal-400/20 text-teal-300 border border-teal-400/25 px-1.5 py-0.5 rounded-sm">BEST VALUE</span>}
-                      {p.active && !p.best && <span className="text-[7px] font-bold bg-violet-400/20 text-violet-300 border border-violet-400/25 px-1.5 py-0.5 rounded-sm">DISPONIBLE</span>}
-                    </div>
-                    <p className="text-[9px] text-white/35 uppercase tracking-wide font-medium">{p.tag}</p>
-                    <p className="text-[10px] text-white/30 mt-1">{p.desc}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
       </section>
 
       {/* ── Problema ─────────────────────────────────────────────────────── */}
