@@ -61,8 +61,10 @@ export function CommercialNav({ active }: { active?: string }) {
           </button>
           <nav className="hidden md:flex items-center gap-5 ml-4">
             {[
-              { label: "Inicio",      href: "/" },
-              { label: "Metodología", href: "/#metodologia" },
+              { label: "Inicio",         href: "/" },
+              { label: "Nuestra Labor",  href: "/nuestra-labor" },
+              { label: "Empresas",       href: "/#empresas" },
+              { label: "Metodología",    href: "/#metodologia" },
             ].map(({ label, href }) => (
               <a key={label} href={href}
                 className={cn(
@@ -286,7 +288,7 @@ export default function Landing() {
       </section>
 
       {/* ── Para Empresas ──────────────────────────────────────────────────── */}
-      <section className="py-24 bg-[#0a1220] relative overflow-hidden">
+      <section id="empresas" className="py-24 bg-[#0a1220] relative overflow-hidden">
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-16 items-center">
