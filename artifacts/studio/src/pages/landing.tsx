@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import {
   BookOpen, Map, Package, ArrowRight, ChevronRight,
-  CheckCircle2, Clock, Database, Layers, Edit3, Eye, Shield, Package as Pkg,
+  CheckCircle2, Check, Clock, Database, Layers, Edit3, Eye, Shield, Package as Pkg,
   Globe,
 } from "lucide-react";
 
@@ -118,7 +118,8 @@ export default function Landing() {
           <h1 className="text-4xl md:text-[3.4rem] font-black text-white leading-[1.08] tracking-tight mb-6 max-w-3xl">
             Una biblioteca inteligente<br />
             <span className="bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">
-              para aprobar certificaciones cloud.
+              para aprobar certificaciones cloud
+              <Check className="inline-block w-[0.5em] h-[0.5em] text-blue-400 ml-0.5 align-baseline" strokeWidth={4} />
             </span>
           </h1>
           <p className="text-base text-white/55 leading-relaxed mb-8 max-w-xl">
