@@ -28,7 +28,7 @@ export default function CatalogLayout({ crumbs, children }: CatalogLayoutProps) 
       <header className="bg-[#0d1629] border-b border-white/[0.06] px-8 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
           <Link href="/catalogo">
-            <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-12 opacity-95 hover:opacity-100 transition-opacity" draggable={false} />
+            <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks" className="h-16 opacity-95 hover:opacity-100 transition-opacity" draggable={false} />
           </Link>
           <div className="h-4 w-px bg-white/10" />
           <p className="text-white/40 text-[10px] uppercase tracking-[2.5px] font-medium">
