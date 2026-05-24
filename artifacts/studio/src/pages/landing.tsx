@@ -396,141 +396,121 @@ export default function Landing() {
             </p>
           </div>
 
-          {/* Bateria de agentes */}
+          {/* Bateria de agentes — layout compacto */}
           <div className="relative max-w-5xl mx-auto">
-            {/* Bus vertical PCB de fondo */}
-            <div className="hidden md:block absolute left-1/2 -translate-x-1/2 top-8 bottom-32 w-px bg-gradient-to-b from-blue-500/40 via-violet-500/40 to-teal-500/40" />
-
             {(() => {
               const domains = [
                 {
-                  label: "Dominio · Conocimiento",
+                  label: "Conocimiento",
                   color: "blue",
                   agents: [
-                    { icon: Database, name: "Grounding",  role: "Trazabilidad técnica",      desc: "Documentación oficial Microsoft, validación de fuentes y verificación de contenido base por servicio." },
-                    { icon: Layers,   name: "Pedagogy",   role: "Arquitectura de aprendizaje", desc: "Diseño de objetivos, secuencia de contenido y rutas de estudio progresivas por certificación." },
+                    { icon: Database, name: "Grounding",  role: "Trazabilidad técnica",        desc: "Documentación oficial Microsoft, validación de fuentes y verificación de contenido base." },
+                    { icon: Layers,   name: "Pedagogy",   role: "Arquitectura de aprendizaje", desc: "Diseño de objetivos, secuencia de contenido y rutas de estudio progresivas." },
                   ],
                 },
                 {
-                  label: "Dominio · Creación",
+                  label: "Creación",
                   color: "violet",
                   agents: [
-                    { icon: Edit3, name: "Editorial", role: "Voz y narrativa",     desc: "Coherencia editorial, estructura narrativa y formato específico por tipo de colección y de estudio." },
-                    { icon: Eye,   name: "Visual",    role: "Dirección de arte",   desc: "Layout, paleta, tipografía, iconografía y aplicación rigurosa del contrato visual de marca." },
+                    { icon: Edit3, name: "Editorial", role: "Voz y narrativa",   desc: "Coherencia editorial, estructura narrativa y formato específico por colección." },
+                    { icon: Eye,   name: "Visual",    role: "Dirección de arte", desc: "Layout, paleta, tipografía e iconografía. Aplicación rigurosa del contrato visual." },
                   ],
                 },
                 {
-                  label: "Dominio · Calidad",
+                  label: "Calidad",
                   color: "teal",
                   agents: [
-                    { icon: Shield, name: "QA / Red Team", role: "Validación adversarial", desc: "Auditoría técnica, detección de errores, ambigüedades y scoring multidimensional con umbral ≥ 9.5." },
-                    { icon: Pkg,    name: "Production",    role: "Build y exportación",    desc: "Generación final, exportación por formato, control de versiones y trazabilidad completa." },
+                    { icon: Shield, name: "QA / Red Team", role: "Validación adversarial", desc: "Auditoría técnica, detección de errores y scoring multidimensional ≥ 9.5." },
+                    { icon: Pkg,    name: "Production",    role: "Build y exportación",    desc: "Generación final, exportación por formato y trazabilidad completa." },
                   ],
                 },
               ] as const;
 
-              const palette: Record<string, {
-                ring: string; bg: string; tint: string; text: string; dot: string; line: string; bar: string;
-              }> = {
-                blue:   { ring:"ring-blue-500/25",   bg:"bg-blue-500/[0.04]",   tint:"from-blue-500/[0.08]",   text:"text-blue-300",   dot:"bg-blue-400",   line:"bg-blue-500/40",   bar:"bg-blue-500" },
-                violet: { ring:"ring-violet-500/25", bg:"bg-violet-500/[0.04]", tint:"from-violet-500/[0.08]", text:"text-violet-300", dot:"bg-violet-400", line:"bg-violet-500/40", bar:"bg-violet-500" },
-                teal:   { ring:"ring-teal-500/25",   bg:"bg-teal-500/[0.04]",   tint:"from-teal-500/[0.08]",   text:"text-teal-300",   dot:"bg-teal-400",   line:"bg-teal-500/40",   bar:"bg-teal-500" },
+              const palette: Record<string, { ring:string; bg:string; tint:string; text:string; line:string; bar:string; chip:string; }> = {
+                blue:   { ring:"ring-blue-500/20",   bg:"bg-blue-500/[0.04]",   tint:"from-blue-500/[0.08]",   text:"text-blue-300",   line:"bg-blue-500/50",   bar:"bg-blue-500",   chip:"bg-blue-500/15 ring-blue-500/40" },
+                violet: { ring:"ring-violet-500/20", bg:"bg-violet-500/[0.04]", tint:"from-violet-500/[0.08]", text:"text-violet-300", line:"bg-violet-500/50", bar:"bg-violet-500", chip:"bg-violet-500/15 ring-violet-500/40" },
+                teal:   { ring:"ring-teal-500/20",   bg:"bg-teal-500/[0.04]",   tint:"from-teal-500/[0.08]",   text:"text-teal-300",   line:"bg-teal-500/50",   bar:"bg-teal-500",   chip:"bg-teal-500/15 ring-teal-500/40" },
               };
 
               return (
-                <div className="space-y-10">
-                  {domains.map((d, di) => {
-                    const c = palette[d.color];
-                    return (
-                      <div key={d.label} className="relative">
-                        {/* Etiqueta de dominio centrada */}
-                        <div className="flex items-center justify-center gap-3 mb-5">
-                          <div className={`h-px w-10 md:w-16 ${c.line}`} />
-                          <div className={`px-3 py-1 rounded-sm bg-[#0a1220] ring-1 ${c.ring}`}>
-                            <span className={`text-[9px] font-mono uppercase tracking-[0.3em] ${c.text}`}>{d.label}</span>
-                          </div>
-                          <div className={`h-px w-10 md:w-16 ${c.line}`} />
-                        </div>
+                <div className="relative">
+                  {/* Bus vertical PCB conectando los 3 chips de dominio (solo desktop) */}
+                  <div className="hidden md:block absolute left-1/2 -translate-x-1/2 top-12 bottom-12 w-px bg-gradient-to-b from-blue-500/40 via-violet-500/40 to-teal-500/40 pointer-events-none" />
 
-                        {/* Par de agentes con junction central */}
-                        <div className="grid md:grid-cols-[1fr_auto_1fr] gap-4 md:gap-0 items-stretch">
+                  <div className="flex flex-col gap-3">
+                    {domains.map((d) => {
+                      const c = palette[d.color];
+                      return (
+                        <div key={d.label} className="grid md:grid-cols-[1fr_auto_1fr] gap-3 md:gap-0 items-center">
                           {d.agents.map((a, ai) => {
                             const Icon = a.icon;
                             const isLeft = ai === 0;
                             return (
-                              <div key={a.name} className={`group relative ${isLeft ? "md:pr-6 md:text-right md:items-end" : "md:pl-6"}`}>
-                                {/* Trace stub al junction (solo desktop) */}
-                                <div className={`hidden md:block absolute top-1/2 ${isLeft ? "right-0" : "left-0"} w-6 h-px ${c.line}`} />
-
-                                <div className={`relative rounded-sm ring-1 ${c.ring} ${c.bg} bg-gradient-to-br ${c.tint} via-transparent to-transparent p-5 transition-all duration-300 hover:ring-2 hover:scale-[1.01] hover:shadow-[0_0_30px_-10px_rgba(255,255,255,0.15)] h-full`}>
-                                  {/* Side accent bar */}
-                                  <div className={`absolute top-3 bottom-3 ${isLeft ? "md:right-0 left-0 md:left-auto" : "left-0"} w-[2px] ${c.bar} opacity-50 group-hover:opacity-100 transition-opacity`} />
-
+                              <div key={a.name} className={`group relative ${isLeft ? "md:pr-5" : "md:pl-5"}`}>
+                                {/* Trace stub al chip de dominio (desktop) */}
+                                <div className={`hidden md:block absolute top-1/2 ${isLeft ? "right-0" : "left-0"} w-5 h-px ${c.line}`} />
+                                <div className={`relative rounded-sm ring-1 ${c.ring} ${c.bg} bg-gradient-to-br ${c.tint} via-transparent to-transparent p-3.5 transition-all duration-300 hover:ring-2 hover:shadow-[0_0_24px_-8px_rgba(255,255,255,0.18)]`}>
+                                  {/* Barra acento */}
+                                  <div className={`absolute top-2 bottom-2 ${isLeft ? "right-0" : "left-0"} w-[2px] ${c.bar} opacity-60 group-hover:opacity-100 transition-opacity`} />
                                   <div className={`flex items-start gap-3 ${isLeft ? "md:flex-row-reverse md:text-right" : ""}`}>
-                                    <div className={`w-10 h-10 rounded-sm ring-1 ${c.ring} ${c.bg} flex items-center justify-center shrink-0`}>
+                                    <div className={`w-9 h-9 rounded-sm ring-1 ${c.ring} ${c.bg} flex items-center justify-center shrink-0`}>
                                       <Icon className={`w-4 h-4 ${c.text}`} />
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                      <h3 className="text-base font-black text-white tracking-tight">{a.name}</h3>
-                                      <p className={`text-[10px] font-mono uppercase tracking-[0.18em] ${c.text} opacity-80 mt-0.5`}>{a.role}</p>
+                                      <h3 className="text-sm font-black text-white tracking-tight leading-tight">{a.name}</h3>
+                                      <p className={`text-[9px] font-mono uppercase tracking-[0.18em] ${c.text} opacity-80 mt-0.5`}>{a.role}</p>
+                                      <p className="text-[11px] text-white/55 leading-relaxed mt-1.5">{a.desc}</p>
                                     </div>
                                   </div>
-                                  <p className="text-xs text-white/60 leading-relaxed mt-3">{a.desc}</p>
                                 </div>
                               </div>
                             );
                           })}
-
-                          {/* Junction central (orden visual: aparece en col 2 con order, pero en JSX está al final del grid) */}
-                          {/* Insertamos un placeholder con grid-area para mantener orden DOM razonable: */}
-                        </div>
-
-                        {/* Junction nodo central absoluto (solo desktop) */}
-                        <div className="hidden md:flex absolute top-[calc(50%+1.25rem)] left-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center pointer-events-none">
-                          <div className={`relative w-3 h-3 rounded-full ${c.dot} shadow-[0_0_16px_currentColor] ${c.text}`}>
-                            <div className={`absolute inset-0 rounded-full ${c.dot} animate-ping opacity-30`} />
+                          {/* Chip de dominio = junction central */}
+                          <div className="hidden md:flex order-3 col-start-2 row-start-1 items-center justify-center" style={{ gridColumn: 2, gridRow: 1 }}>
+                            <div className={`relative z-10 rounded-sm ring-1 ${c.chip} bg-[#0a1220] px-2.5 py-1.5 shadow-[0_0_20px_-8px_currentColor] ${c.text}`}>
+                              <span className={`text-[8px] font-mono uppercase tracking-[0.25em] ${c.text} whitespace-nowrap block`}>Dominio</span>
+                              <span className="text-[10px] font-black text-white uppercase tracking-wide whitespace-nowrap block leading-tight">{d.label}</span>
+                            </div>
+                          </div>
+                          {/* Mobile: chip de dominio arriba */}
+                          <div className="md:hidden -order-1 flex justify-center">
+                            <div className={`rounded-sm ring-1 ${c.chip} bg-[#0a1220] px-3 py-1`}>
+                              <span className={`text-[9px] font-mono uppercase tracking-[0.25em] ${c.text}`}>Dominio · {d.label}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
 
-                  {/* Convergencia → seal */}
-                  <div className="relative pt-4">
-                    {/* Bus vertical que baja desde el último dominio al seal */}
-                    <div className="hidden md:block absolute left-1/2 -translate-x-1/2 -top-2 h-12 w-px bg-gradient-to-b from-teal-500/40 to-amber-500/60" />
-                    {/* Mobile connector */}
-                    <div className="md:hidden absolute left-1/2 -translate-x-1/2 -top-4 h-8 w-px bg-gradient-to-b from-teal-500/40 to-amber-500/60" />
-
-                    <div className="flex flex-col items-center pt-10">
-                      {/* Sello Final Human Audit */}
-                      <div className="relative">
-                        <div className="absolute inset-0 rounded-full bg-amber-400 blur-2xl opacity-30 scale-110" />
-                        <div className="relative w-36 h-36 md:w-40 md:h-40">
-                          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-300 via-amber-500 to-amber-700 shadow-[0_0_50px_rgba(245,158,11,0.5),inset_0_2px_8px_rgba(255,255,255,0.4),inset_0_-4px_12px_rgba(0,0,0,0.3)]" />
-                          <div className="absolute inset-[6px] rounded-full border-2 border-amber-200/70" />
-                          <div className="absolute inset-[10px] rounded-full border border-amber-900/40" />
-                          {/* Rayos sutiles */}
+                    {/* Convergencia → sello */}
+                    <div className="relative flex flex-col items-center pt-4">
+                      <div className="absolute left-1/2 -translate-x-1/2 -top-1 h-10 w-px bg-gradient-to-b from-teal-500/50 to-amber-500/70" />
+                      <div className="relative mt-8">
+                        <div className="absolute inset-0 rounded-full bg-amber-400 blur-2xl opacity-25 scale-110" />
+                        <div className="relative w-28 h-28 md:w-32 md:h-32">
+                          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-300 via-amber-500 to-amber-700 shadow-[0_0_40px_rgba(245,158,11,0.45),inset_0_2px_6px_rgba(255,255,255,0.4),inset_0_-3px_10px_rgba(0,0,0,0.3)]" />
+                          <div className="absolute inset-[5px] rounded-full border-2 border-amber-200/70" />
+                          <div className="absolute inset-[8px] rounded-full border border-amber-900/40" />
                           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" aria-hidden>
                             {Array.from({length:24}).map((_,i)=>{
                               const a = (i*15)*Math.PI/180;
-                              const r1 = 38, r2 = 41;
                               return (<line key={i}
-                                x1={50+Math.cos(a)*r1} y1={50+Math.sin(a)*r1}
-                                x2={50+Math.cos(a)*r2} y2={50+Math.sin(a)*r2}
+                                x1={50+Math.cos(a)*38} y1={50+Math.sin(a)*38}
+                                x2={50+Math.cos(a)*41} y2={50+Math.sin(a)*41}
                                 stroke="#78350f" strokeOpacity="0.5" strokeWidth="0.8" />);
                             })}
                           </svg>
-                          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-3">
-                            <span className="text-[8px] font-bold text-amber-950 uppercase tracking-[0.2em] mb-0.5">Final</span>
-                            <span className="text-base font-black text-amber-950 uppercase tracking-tight leading-none">Human</span>
-                            <span className="text-base font-black text-amber-950 uppercase tracking-tight leading-none mt-0.5">Audit</span>
-                            <div className="w-8 h-px bg-amber-900/40 my-1.5" />
+                          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-2">
+                            <span className="text-[7px] font-bold text-amber-950 uppercase tracking-[0.2em]">Final</span>
+                            <span className="text-sm font-black text-amber-950 uppercase tracking-tight leading-none mt-0.5">Human</span>
+                            <span className="text-sm font-black text-amber-950 uppercase tracking-tight leading-none mt-0.5">Audit</span>
+                            <div className="w-6 h-px bg-amber-900/40 my-1" />
                             <span className="text-[7px] font-mono uppercase tracking-[0.2em] text-amber-950/70">QA ≥ 9.5</span>
                           </div>
                         </div>
                       </div>
-                      <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-amber-300/60 mt-4">Auditoría humana · Cierre editorial</p>
+                      <p className="text-[9px] font-mono uppercase tracking-[0.3em] text-amber-300/60 mt-3">Auditoría humana · Cierre editorial</p>
                     </div>
                   </div>
                 </div>
