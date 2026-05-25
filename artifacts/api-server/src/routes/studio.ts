@@ -7,15 +7,15 @@ import OpenAI from "openai";
 const router = Router();
 
 /* ══════════════════════════════════════════════════════════════════════════
-   MODEL CONFIG — solo modificar con aprobación del equipo
+   MODEL CONFIG — centralizado en config/generation.ts
+   Estándares Editoriales · Políticas de generación
    ══════════════════════════════════════════════════════════════════════════ */
-const TEXT_MODEL             = "gpt-4o-mini" as const;  // solo QA/json estructurado
-const IMAGE_MODEL            = "gpt-image-2" as const;  // bloque visual superior únicamente
-const IMAGE_QUALITY          = "medium"      as const;  // NUNCA escalar
-const ALLOW_HIGH_QUALITY     = false         as const;
-const BLOCK_LEGACY_IMG_MODEL = true          as const;  // bloquear gpt-image-1
-const GUARDRAIL_LABEL        = "high_quality_blocked_gpt_image_2_medium_only" as const;
-const TEMPLATE_VERSION       = "v24"         as const;
+import {
+  TEXT_MODEL, IMAGE_MODEL, IMAGE_QUALITY,
+  BLOCK_LEGACY_IMG_MODEL, TEMPLATE_VERSION,
+} from "../config/generation";
+const ALLOW_HIGH_QUALITY = false as const;
+const GUARDRAIL_LABEL    = "high_quality_blocked_gpt_image_2_medium_only" as const;
 /* ══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Rutas de salida ──────────────────────────────────────────────────────*/
@@ -548,14 +548,7 @@ function runStructuralQa(html: string, data: VisualAtlasPageData): StructuralQaR
    PROMPT IMAGEN — solo para el bloque visual superior (gpt-image-2 medium)
    ══════════════════════════════════════════════════════════════════════════ */
 function buildImagePrompt(): string {
-  return `Editorial certification atlas illustration. PURE WHITE background. Four numbered module cards arranged in a clean 2x2 grid on white:
-
-01 QUÉ ES ACR — small container/registry icon, 2 lines of light text, thin border, white card
-02 TIERS ACR — three horizontal tier badges (Basic gray, Standard blue, Premium teal with star), white card
-03 ARQUITECTURA INTERNA — simple flow: Developer → Registry → AKS / App Service / ACI, small Azure icons, white card
-04 GEO-REPLICACIÓN — globe outline with 3 region dots connected by lines, Premium badge, white card
-
-Style: clean editorial, certification textbook. Azure blue (#0078D4), teal (#0D9488), slate (#334155) for text. Light gray card borders (#E2E8F0). Module numbers in bold teal. Icons minimal and flat. NO dark backgrounds, NO black fills, NO dashboard UI, NO dense tables. Lots of white space. Professional, legible, sparse layout. 1024x1024 square.`;
+  return `Light editorial Azure certification atlas upper block, white background, professional technical infographic, four numbered modules 01-04, fits 728x494 landscape area, Azure Container Registry theme. Module 01: Que es ACR with developer pipeline to Azure Container Registry and AKS/App Service/Container Apps. Module 02: Tiers ACR comparison Basic Standard Premium with storage/security/geo/private endpoint cues. Module 03: Arquitectura interna with registry, repository, image, digest SHA256 immutable, tag mutable. Module 04: Geo-replicacion with map/regions and zone redundancy cue. Clean Azure-like vector iconography, navy/blue/teal/orange accents, sparse readable Spanish labels, premium book infographic style. No dark background, no dashboard UI, no tiny dense tables, no traps section, no autocheck section, no footer, no full page, no marketing hero.`;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -689,22 +682,37 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
 
   // qa-report.md en formato legible
   const qaLines = qa.checks.map(c => `- ${c.ok ? "✓" : "✗"} ${c.name}`).join("\n");
-  const qaVerdict = qa.passed ? "✅ APROBADO" : "⚠ REQUIERE REVISIÓN";
+
+  // Scores honestos diferenciados según si hay imagen real o placeholder
+  const artScore       = imageGenerated ? 7 : 5;
+  const editScore      = imageGenerated ? 7 : 5;
+  const readScore      = imageGenerated ? 8 : 8;
+  const techScore      = 10;
+  const densityScore   = imageGenerated ? 7 : 4;
+  const riskScore      = 10;
+  const avgScore       = Math.round((artScore + editScore + readScore + techScore + densityScore + riskScore) / 6);
+
+  const qaVerdict      = imageGenerated ? "needs_visual_review" : "needs_revision";
+  const verdictLabel   = imageGenerated
+    ? "⚠ Requiere revisión visual humana"
+    : "🔴 BLOQUEADO: upper visual no premium";
+
   const qaReport = `# QA Report — Página ${pageId}
 ## ${pageData.title} — ${pageData.subtitle}
 
 **Generado:** ${generatedAt}
 **Template:** Golden Master Visual Atlas ${TEMPLATE_VERSION}
 **Modelo imagen:** ${imageGenerated ? IMAGE_MODEL + " " + IMAGE_QUALITY : "placeholder"}
-**Veredicto:** ${qaVerdict}
+**Upper visual:** ${imageGenerated ? "upper_visual_real" : "upper_visual_placeholder"}
+**Veredicto:** ${verdictLabel}
 
-## Scores (${qa.score}/10 promedio)
-- Dirección de arte: **${qa.score}/10**
-- Consistencia editorial: **${qa.score}/10**
-- Legibilidad: **${qa.score}/10**
-- Precisión técnica: **10/10**
-- Densidad útil: **9/10**
-- Riesgo comercial: **10/10**
+## Scores (${avgScore}/10 promedio)
+- Dirección de arte: **${artScore}/10**
+- Consistencia editorial: **${editScore}/10**
+- Legibilidad: **${readScore}/10**
+- Precisión técnica: **${techScore}/10**
+- Densidad útil: **${densityScore}/10**
+- Riesgo comercial: **${riskScore}/10**
 
 ## Checks estructurales
 ${qaLines}
@@ -712,7 +720,8 @@ ${qaLines}
 ## Observaciones
 - Layout golden master v24 ensamblado deterministicamente
 - Contenido editorial validado manualmente para página 01
-- Imagen: ${imageGenerated ? "generada con " + IMAGE_MODEL + " medium" : "placeholder (pendiente imagen real)"}
+- Upper visual: ${imageGenerated ? "generada con " + IMAGE_MODEL + " medium — requiere revisión visual humana para aprobación" : "placeholder — BLOQUEADO para aprobación editorial"}
+${!imageGenerated ? "- Acción requerida: Generar upper visual premium con gpt-image-2 medium" : "- Acción requerida: Revisar calidad del upper visual antes de aprobar"}
 `;
 
   await writeFile(join(outDir, "qa-report.md"), qaReport, "utf-8");

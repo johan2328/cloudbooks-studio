@@ -1,0 +1,392 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   Estándares Editoriales — Datos canónicos
+   Fuente de verdad para la capa de gobernanza editorial CloudBooks.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+import type {
+  GlobalRule, FormatContract, DomainContract,
+  QAGate, GenerationPolicy, ExportPolicy, EditorialStandards,
+} from "./types";
+
+/* ─── Reglas globales CloudBooks ──────────────────────────────────────────── */
+export const GLOBAL_RULES: GlobalRule[] = [
+  {
+    id: "gr-01",
+    label: "Demo vs real claramente separado",
+    description: "Todo output marcado como demo o placeholder debe mostrarse como tal en UI y nunca pasar por flujo de aprobación real.",
+    status: "active",
+    enforced: true,
+  },
+  {
+    id: "gr-02",
+    label: "QA honesto, no inflado",
+    description: "Los scores de QA deben reflejar el estado real del asset. Prohibido propagar scores estructurales a dimensiones visuales.",
+    status: "active",
+    enforced: true,
+  },
+  {
+    id: "gr-03",
+    label: "Fallbacks no aprobables",
+    description: "Ningún output con upper visual placeholder, SVG fallback o imagen sintética simplificada puede recibir aprobación editorial.",
+    status: "active",
+    enforced: true,
+  },
+  {
+    id: "gr-04",
+    label: "Una acción primaria por contexto",
+    description: "Cada pantalla del Studio expone exactamente una acción primaria. Si hay bloqueo, la acción primaria es desbloquear, no aprobar.",
+    status: "active",
+    enforced: true,
+  },
+  {
+    id: "gr-05",
+    label: "Trazabilidad de fuentes",
+    description: "Toda página debe tener al menos una fuente verificada de Microsoft Learn o documentación oficial antes de generación.",
+    status: "validated",
+    enforced: false,
+  },
+  {
+    id: "gr-06",
+    label: "Portal comercial separado del Studio",
+    description: "Las rutas del portal comercial (/books, /ai-200-packs, etc.) no comparten estado ni layout con el Production Studio.",
+    status: "active",
+    enforced: true,
+  },
+  {
+    id: "gr-07",
+    label: "Outputs aprobables solo si son reales o explícitamente aceptados",
+    description: "Un output es aprobable únicamente si todos sus assets son reales (generados o cargados manualmente con confirmación explícita).",
+    status: "active",
+    enforced: true,
+  },
+];
+
+/* ─── Contratos por formato ───────────────────────────────────────────────── */
+export const FORMAT_CONTRACTS: FormatContract[] = [
+  {
+    id: "fc-visual-atlas",
+    name: "Visual Atlas",
+    slug: "visual-atlas",
+    version: "v24",
+    status: "active",
+    description: "Infografía editorial de una página (768×1152 px). Layout golden master con 5 zonas determinísticas. Upper visual generado con gpt-image-2 medium.",
+    keyConstraints: [
+      "Fondo editorial #edf2f8 — no dark theme",
+      "Grid rows 34/198/48/838/34 px — inmutable",
+      "Upper visual mínimo 728×494 px real",
+      "QA honesto, máx 7/10 art direction sin revisión humana",
+      "Template v24 bloqueado — no libre composición",
+    ],
+    activeCertifications: ["AI-200"],
+  },
+  {
+    id: "fc-master-book",
+    name: "Master Book",
+    slug: "master-book",
+    version: "v1-draft",
+    status: "pending",
+    description: "Libro completo de estudio por certificación. Múltiples capítulos con contenido profundo, ejercicios y referencias cruzadas.",
+    keyConstraints: [
+      "Estructura de capítulos por dominio",
+      "Índice analítico obligatorio",
+      "Referencias a Visual Atlas por página",
+    ],
+    activeCertifications: [],
+  },
+  {
+    id: "fc-exam-traps",
+    name: "Exam Traps Guide",
+    slug: "exam-traps",
+    version: "v1-draft",
+    status: "pending",
+    description: "Guía de trampas de examen con análisis de distractores y patrones de error frecuentes por dominio.",
+    keyConstraints: [
+      "Mínimo 3 trampas por concepto",
+      "Formato distractor / respuesta correcta / por qué falla",
+      "Validado contra banco de preguntas oficial",
+    ],
+    activeCertifications: [],
+  },
+  {
+    id: "fc-question-bank",
+    name: "Question Bank",
+    slug: "question-bank",
+    version: "v1-draft",
+    status: "pending",
+    description: "Banco de preguntas estilo examen Microsoft por dominio y dificultad. Incluye justificación de respuestas.",
+    keyConstraints: [
+      "Formato JSON estructurado por dominio",
+      "4 opciones por pregunta, una correcta",
+      "Justificación obligatoria con fuente",
+    ],
+    activeCertifications: [],
+  },
+  {
+    id: "fc-cheat-sheets",
+    name: "Cheat Sheets",
+    slug: "cheat-sheets",
+    version: "v1-draft",
+    status: "experimental",
+    description: "Hoja de referencia rápida por servicio o concepto. Una sola página densa con comandos, límites y comparaciones clave.",
+    keyConstraints: [
+      "Máx 1 página A4",
+      "Tipografía monospace para comandos",
+      "Sin upper visual — solo texto estructurado",
+    ],
+    activeCertifications: [],
+  },
+  {
+    id: "fc-rapid-review",
+    name: "Rapid Review Pack",
+    slug: "rapid-review",
+    version: "v1-draft",
+    status: "experimental",
+    description: "Pack de revisión rápida pre-examen: flashcards, mini-tests y resúmenes de 3 minutos por dominio.",
+    keyConstraints: [
+      "Formato tarjeta: pregunta / respuesta / contexto",
+      "Exportable como PDF y web",
+      "Sin generación de imágenes — solo texto",
+    ],
+    activeCertifications: [],
+  },
+];
+
+/* ─── Contratos por dominio / colección ──────────────────────────────────── */
+export const DOMAIN_CONTRACTS: DomainContract[] = [
+  {
+    id: "dc-azure",
+    name: "Azure Certification",
+    provider: "Microsoft",
+    status: "active",
+    description: "Colección de certificaciones Microsoft Azure. Cubre desde nivel Fundamental hasta Expert. Nomenclatura oficial Microsoft.",
+    activeFormats: ["Visual Atlas"],
+    totalPages: undefined,
+  },
+  {
+    id: "dc-ai200",
+    name: "AI-200: Azure AI Fundamentals",
+    certCode: "AI-200",
+    provider: "Microsoft",
+    status: "active",
+    description: "61 infografías en 13 batches cubriendo los 5 dominios del examen AI-200. Primer producto producido bajo el contrato Visual Atlas v24.",
+    activeFormats: ["Visual Atlas"],
+    totalPages: 61,
+  },
+  {
+    id: "dc-az900",
+    name: "AZ-900: Azure Fundamentals",
+    certCode: "AZ-900",
+    provider: "Microsoft",
+    status: "pending",
+    description: "Colección planificada para AZ-900. Arquitectura idéntica a AI-200, contratos heredados del Visual Atlas v24.",
+    activeFormats: [],
+    totalPages: undefined,
+  },
+  {
+    id: "dc-noncloud",
+    name: "Dominios no Cloud",
+    provider: "Varios",
+    status: "pending",
+    description: "Expansión futura a certificaciones fuera del ecosistema cloud: Agile, Seguridad, Datos, etc. Los contratos de formato son independientes del proveedor cloud.",
+    activeFormats: [],
+    totalPages: undefined,
+  },
+];
+
+/* ─── Gates de QA ─────────────────────────────────────────────────────────── */
+export const QA_GATES: QAGate[] = [
+  {
+    id: "qag-art",
+    label: "Dirección de arte",
+    description: "Composición, jerarquía visual, grid. No evaluable sin upper visual real. Máx 7/10 sin revisión humana.",
+    blocksApproval: true,
+    maxScoreIfFailed: 60,
+    status: "active",
+  },
+  {
+    id: "qag-editorial",
+    label: "Consistencia editorial",
+    description: "Iconografía, paleta, tipografía alineados al contrato del formato. Requiere upper visual real para evaluación completa.",
+    blocksApproval: true,
+    maxScoreIfFailed: 70,
+    status: "active",
+  },
+  {
+    id: "qag-read",
+    label: "Legibilidad",
+    description: "Tamaño de texto, contraste, claridad de etiquetas. Evaluable sobre HTML sin upper visual.",
+    blocksApproval: false,
+    maxScoreIfFailed: 100,
+    status: "active",
+  },
+  {
+    id: "qag-tech",
+    label: "Precisión técnica",
+    description: "Correctitud de conceptos Microsoft. Validado contra fuentes del grounding. No afectado por calidad visual.",
+    blocksApproval: false,
+    maxScoreIfFailed: 100,
+    status: "active",
+  },
+  {
+    id: "qag-density",
+    label: "Densidad útil",
+    description: "Información relevante por área. Penaliza huecos vacíos o contenido redundante. Requiere upper visual para score completo.",
+    blocksApproval: true,
+    maxScoreIfFailed: 40,
+    status: "active",
+  },
+  {
+    id: "qag-risk",
+    label: "Riesgo comercial",
+    description: "Ausencia de copy de venta, lenguaje de marketing o afirmaciones que generen riesgo legal.",
+    blocksApproval: true,
+    maxScoreIfFailed: 40,
+    status: "active",
+  },
+  {
+    id: "qag-export",
+    label: "Exportabilidad",
+    description: "HTML válido, sin CDN externo, sin dark body, sin referencias a rutas absolutas del servidor. Gate técnico pre-exportación.",
+    blocksApproval: true,
+    maxScoreIfFailed: 0,
+    status: "active",
+  },
+];
+
+/* ─── Políticas de generación ─────────────────────────────────────────────── */
+export const GENERATION_POLICIES: GenerationPolicy[] = [
+  {
+    formatId: "fc-visual-atlas",
+    formatName: "Visual Atlas",
+    textModel: "gpt-4o-mini",
+    imageModel: "gpt-image-2",
+    imageQuality: "medium",
+    fallbackAllowed: true,
+    fallbackApprovable: false,
+    batchGating: false,
+    status: "active",
+  },
+  {
+    formatId: "fc-master-book",
+    formatName: "Master Book",
+    textModel: "gpt-4o",
+    imageModel: null,
+    imageQuality: null,
+    fallbackAllowed: false,
+    fallbackApprovable: false,
+    batchGating: true,
+    status: "pending",
+  },
+  {
+    formatId: "fc-exam-traps",
+    formatName: "Exam Traps Guide",
+    textModel: "gpt-4o-mini",
+    imageModel: null,
+    imageQuality: null,
+    fallbackAllowed: false,
+    fallbackApprovable: false,
+    batchGating: false,
+    status: "pending",
+  },
+  {
+    formatId: "fc-question-bank",
+    formatName: "Question Bank",
+    textModel: "gpt-4o-mini",
+    imageModel: null,
+    imageQuality: null,
+    fallbackAllowed: false,
+    fallbackApprovable: false,
+    batchGating: true,
+    status: "pending",
+  },
+  {
+    formatId: "fc-cheat-sheets",
+    formatName: "Cheat Sheets",
+    textModel: "gpt-4o-mini",
+    imageModel: null,
+    imageQuality: null,
+    fallbackAllowed: false,
+    fallbackApprovable: false,
+    batchGating: false,
+    status: "experimental",
+  },
+  {
+    formatId: "fc-rapid-review",
+    formatName: "Rapid Review Pack",
+    textModel: "gpt-4o-mini",
+    imageModel: null,
+    imageQuality: null,
+    fallbackAllowed: false,
+    fallbackApprovable: false,
+    batchGating: false,
+    status: "experimental",
+  },
+];
+
+/* ─── Políticas de exportación ────────────────────────────────────────────── */
+export const EXPORT_POLICIES: ExportPolicy[] = [
+  {
+    formatId: "fc-visual-atlas",
+    formatName: "Visual Atlas",
+    requiredFiles: ["page.html", "upper-art.png", "metadata.json", "qa-report.md"],
+    blockedByQA: true,
+    metadataRequired: true,
+    allowedFormats: ["HTML", "PNG", "PDF"],
+    status: "active",
+  },
+  {
+    formatId: "fc-master-book",
+    formatName: "Master Book",
+    requiredFiles: ["book.html", "metadata.json"],
+    blockedByQA: true,
+    metadataRequired: true,
+    allowedFormats: ["PDF"],
+    status: "pending",
+  },
+  {
+    formatId: "fc-exam-traps",
+    formatName: "Exam Traps Guide",
+    requiredFiles: ["traps.json", "traps.html"],
+    blockedByQA: false,
+    metadataRequired: true,
+    allowedFormats: ["HTML", "PDF"],
+    status: "pending",
+  },
+  {
+    formatId: "fc-question-bank",
+    formatName: "Question Bank",
+    requiredFiles: ["questions.json"],
+    blockedByQA: false,
+    metadataRequired: true,
+    allowedFormats: ["JSON", "PDF"],
+    status: "pending",
+  },
+  {
+    formatId: "fc-cheat-sheets",
+    formatName: "Cheat Sheets",
+    requiredFiles: ["sheet.html"],
+    blockedByQA: false,
+    metadataRequired: false,
+    allowedFormats: ["HTML", "PDF"],
+    status: "experimental",
+  },
+  {
+    formatId: "fc-rapid-review",
+    formatName: "Rapid Review Pack",
+    requiredFiles: ["pack.html", "cards.json"],
+    blockedByQA: false,
+    metadataRequired: false,
+    allowedFormats: ["HTML", "PDF"],
+    status: "experimental",
+  },
+];
+
+/* ─── Objeto agregado ─────────────────────────────────────────────────────── */
+export const EDITORIAL_STANDARDS: EditorialStandards = {
+  globalRules:        GLOBAL_RULES,
+  formatContracts:    FORMAT_CONTRACTS,
+  domainContracts:    DOMAIN_CONTRACTS,
+  qaGates:            QA_GATES,
+  generationPolicies: GENERATION_POLICIES,
+  exportPolicies:     EXPORT_POLICIES,
+};

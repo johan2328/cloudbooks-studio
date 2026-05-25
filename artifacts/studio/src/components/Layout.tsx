@@ -4,15 +4,20 @@ import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Map, FileText, Shield, Download, LogOut,
-  ChevronRight, Sparkles, Activity,
+  ChevronRight, Sparkles, Activity, BookOpen,
 } from "lucide-react";
 
-const NAV = [
-  { href: "/biblioteca",    label: "Visual Atlas",      icon: Map,           segment: "biblioteca" },
-  { href: "/contenido/1",   label: "Contenido",         icon: Activity,      segment: "contenido" },
-  { href: "/generacion",    label: "Generar",           icon: Sparkles,      segment: "generacion" },
-  { href: "/qa/1",          label: "QA y Aprobación",   icon: Shield,        segment: "qa" },
-  { href: "/exportacion",   label: "Exportación",       icon: Download,      segment: "exportacion" },
+const NAV_PRODUCTION = [
+  { href: "/biblioteca",    label: "Visual Atlas",      icon: Map,       segment: "biblioteca" },
+  { href: "/contenido/1",   label: "Contenido",         icon: Activity,  segment: "contenido" },
+  { href: "/generacion",    label: "Generar",           icon: Sparkles,  segment: "generacion" },
+  { href: "/qa/1",          label: "QA y Aprobación",   icon: Shield,    segment: "qa" },
+  { href: "/exportacion",   label: "Exportación",       icon: Download,  segment: "exportacion" },
+];
+
+const NAV_GOVERNANCE = [
+  { href: "/estandares",    label: "Estándares Editoriales", icon: BookOpen, segment: "estandares" },
+  { href: "/contrato",      label: "Contrato Visual",        icon: FileText, segment: "contrato" },
 ];
 
 interface LayoutProps { children: ReactNode; title?: string }
@@ -58,13 +63,13 @@ export default function Layout({ children, title }: LayoutProps) {
 
           <div className="mx-3 h-px bg-white/[0.05] my-1.5" />
 
-          {/* AI-200 label */}
+          {/* AI-200 · Producción */}
           <div className="px-5 py-1">
             <span className="text-[7px] font-bold text-white/15 uppercase tracking-[0.18em]">AI-200 · Producción</span>
           </div>
 
           <div className="px-2 space-y-px">
-            {NAV.map(({ href, label, icon: Icon, segment }) => {
+            {NAV_PRODUCTION.map(({ href, label, icon: Icon, segment }) => {
               const active = location.startsWith(`/${segment}`);
               return (
                 <Link key={href} href={href}
@@ -75,6 +80,31 @@ export default function Layout({ children, title }: LayoutProps) {
                       : "text-white/35 hover:text-white/70 hover:bg-white/5"
                   )}>
                   <Icon className={cn("w-3 h-3 shrink-0", active ? "text-blue-400" : "text-white/20")} />
+                  <span>{label}</span>
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="mx-3 h-px bg-white/[0.05] my-2" />
+
+          {/* Gobernanza */}
+          <div className="px-5 py-1">
+            <span className="text-[7px] font-bold text-white/15 uppercase tracking-[0.18em]">Gobernanza</span>
+          </div>
+
+          <div className="px-2 space-y-px">
+            {NAV_GOVERNANCE.map(({ href, label, icon: Icon, segment }) => {
+              const active = location.startsWith(`/${segment}`);
+              return (
+                <Link key={href} href={href}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 rounded-sm text-[10px] font-medium transition-all",
+                    active
+                      ? "bg-teal-600/15 text-white border-l-2 border-teal-500 pl-[10px]"
+                      : "text-white/30 hover:text-white/60 hover:bg-white/5"
+                  )}>
+                  <Icon className={cn("w-3 h-3 shrink-0", active ? "text-teal-400" : "text-white/18")} />
                   <span>{label}</span>
                 </Link>
               );

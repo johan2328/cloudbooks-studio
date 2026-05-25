@@ -28,6 +28,7 @@ import Generacion from "@/pages/generacion";
 import QAPage from "@/pages/qa";
 import Exportacion from "@/pages/exportacion";
 import Contrato from "@/pages/contrato";
+import Estandares from "@/pages/estandares";
 import Actividad from "@/pages/actividad";
 import Conectores from "@/pages/conectores";
 import Assets from "@/pages/assets";
@@ -105,6 +106,10 @@ function Router() {
 
       <Route path="/exportacion">
         <PrivateRoute><Exportacion /></PrivateRoute>
+      </Route>
+
+      <Route path="/estandares">
+        <PrivateRoute><Estandares /></PrivateRoute>
       </Route>
 
       <Route path="/contrato">

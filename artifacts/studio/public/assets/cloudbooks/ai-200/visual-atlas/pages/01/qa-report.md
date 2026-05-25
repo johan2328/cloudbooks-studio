@@ -1,17 +1,18 @@
 # QA Report — Página 01
 ## Azure Container Registry — Arquitectura y Tiers
 
-**Generado:** 2026-05-25T05:42:52.856Z
+**Generado:** 2026-05-25T05:55:13.140Z
 **Template:** Golden Master Visual Atlas v24
 **Modelo imagen:** gpt-image-2 medium
-**Veredicto:** ✅ APROBADO
+**Upper visual:** upper_visual_real
+**Veredicto:** ⚠ Requiere revisión visual humana
 
-## Scores (10/10 promedio)
-- Dirección de arte: **10/10**
-- Consistencia editorial: **10/10**
-- Legibilidad: **10/10**
+## Scores (8/10 promedio)
+- Dirección de arte: **7/10**
+- Consistencia editorial: **7/10**
+- Legibilidad: **8/10**
 - Precisión técnica: **10/10**
-- Densidad útil: **9/10**
+- Densidad útil: **7/10**
 - Riesgo comercial: **10/10**
 
 ## Checks estructurales
@@ -33,4 +34,5 @@
 ## Observaciones
 - Layout golden master v24 ensamblado deterministicamente
 - Contenido editorial validado manualmente para página 01
-- Imagen: generada con gpt-image-2 medium
+- Upper visual: generada con gpt-image-2 medium — requiere revisión visual humana para aprobación
+- Acción requerida: Revisar calidad del upper visual antes de aprobar

@@ -15,14 +15,18 @@ interface RealQA {
   observations: string[];
   redTeamLog: string[];
   generatedAt: string | null;
-  generationMode: "openai" | "fallback_html" | "none";
 }
+
+type GenerationMode = "openai_image" | "placeholder_image" | "fallback_html" | "none";
 
 interface OutputStatus {
   hasOutput: boolean;
-  generationMode: "openai" | "fallback_html" | "none";
+  generationMode: GenerationMode;
   generatedAt: string | null;
-  files: { html: boolean; metadata: boolean; qaReport: boolean; previewPng: boolean; previewSvg: boolean };
+  files: {
+    html: boolean; metadata: boolean; qaReport: boolean;
+    upperVisual: boolean; previewPng: boolean; previewSvg: boolean;
+  };
   htmlPath: string | null;
   previewPath: string | null;
 }
@@ -101,6 +105,9 @@ export default function QAPage() {
   }
 
   const hasOutput = outputStatus?.hasOutput === true;
+  const isRealVisual = outputStatus?.generationMode === "openai_image";
+  const isPlaceholder = !isRealVisual && hasOutput;
+  const approvalBlocked = !isRealVisual;
 
   return (
     <Layout title={`QA · Pág. ${pageNum}`}>
@@ -162,6 +169,23 @@ export default function QAPage() {
             ) : (
               /* ── Con output real ── */
               <>
+                {/* Bloque de bloqueo — visible cuando hay fallback */}
+                {isPlaceholder && (
+                  <div className="bg-red-950/30 border border-red-500/30 rounded-sm px-4 py-3 flex items-start gap-3">
+                    <XCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-bold text-red-300">Bloqueado: upper visual no premium</p>
+                      <p className="text-[9px] text-red-400/70 mt-0.5">
+                        El upper visual actual es un placeholder. Aprobación bloqueada hasta generar imagen real con gpt-image-2 medium.
+                      </p>
+                    </div>
+                    <button onClick={() => setLocation("/generacion")}
+                      className="shrink-0 flex items-center gap-1.5 h-7 px-3 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 rounded-sm text-[9px] font-bold text-white transition-all">
+                      <RotateCcw className="w-3 h-3" />Generar upper visual premium
+                    </button>
+                  </div>
+                )}
+
                 {/* Acción principal */}
                 <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
                   <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">Siguiente acción</p>
@@ -170,6 +194,14 @@ export default function QAPage() {
                       <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-sm">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                         <span className="text-[10px] font-bold text-emerald-300">Página aprobada</span>
+                      </div>
+                    ) : approvalBlocked ? (
+                      <div className="flex items-center gap-2">
+                        <button disabled
+                          className="flex items-center gap-1.5 h-8 px-3 bg-white/5 border border-white/10 rounded-sm text-[10px] font-bold text-white/20 cursor-not-allowed">
+                          <CheckCircle2 className="w-3 h-3" />Aprobar página
+                        </button>
+                        <span className="text-[8px] text-red-400/70">— bloqueado: upper visual no premium</span>
                       </div>
                     ) : (
                       <button onClick={handleApprove} disabled={approving}
@@ -184,7 +216,7 @@ export default function QAPage() {
                     </button>
                     <button onClick={() => setLocation("/generacion")}
                       className="flex items-center gap-1.5 h-8 px-2.5 border border-white/10 rounded-sm text-[10px] text-white/40 hover:text-white/70 hover:border-white/20 transition-all ml-auto">
-                      <RotateCcw className="w-3 h-3" />Regenerar
+                      <RotateCcw className="w-3 h-3" />Regenerar completa
                     </button>
                   </div>
 
@@ -210,84 +242,125 @@ export default function QAPage() {
                   )}
                 </div>
 
-                {/* Preview y links */}
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Preview real */}
-                  <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Preview real</p>
-                      <span className={cn(
-                        "text-[7px] px-1.5 py-px rounded-sm border font-bold",
-                        outputStatus.generationMode === "openai"
-                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                          : "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                      )}>
-                        {outputStatus.generationMode === "openai" ? "REAL OUTPUT" : "SVG FALLBACK"}
-                      </span>
-                    </div>
-                    {outputStatus.previewPath ? (
-                      <img src={outputStatus.previewPath} alt="Preview real"
-                        className="w-full h-auto rounded-sm border border-white/[0.06]"
-                        style={{ aspectRatio: "8.5/11", objectFit: "contain" }} />
-                    ) : (
-                      <div className="aspect-video flex items-center justify-center bg-[#0a1220] border border-white/[0.05] rounded-sm">
-                        <p className="text-[9px] text-white/20">Sin preview disponible</p>
-                      </div>
-                    )}
+                {/* Preview página completa */}
+                <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Preview página 768×1152</p>
+                    <span className={cn(
+                      "text-[7px] px-1.5 py-px rounded-sm border font-bold",
+                      isRealVisual
+                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                        : "bg-red-500/10 text-red-400 border-red-500/25"
+                    )}>
+                      {isRealVisual ? "UPPER VISUAL REAL" : "UPPER VISUAL PLACEHOLDER"}
+                    </span>
                     {outputStatus.htmlPath && (
                       <a href={outputStatus.htmlPath} target="_blank" rel="noreferrer"
-                        className="mt-2 flex items-center gap-1.5 text-[8px] text-blue-400/60 hover:text-blue-400 transition-colors">
-                        <ExternalLink className="w-2.5 h-2.5" />Ver HTML completo
+                        className="ml-auto flex items-center gap-1 text-[8px] text-blue-400/60 hover:text-blue-400 transition-colors">
+                        <ExternalLink className="w-2.5 h-2.5" />Abrir tamaño real
                       </a>
                     )}
                   </div>
+                  {outputStatus.htmlPath ? (
+                    <div className="relative w-full overflow-hidden rounded-sm border border-white/[0.06] bg-white"
+                      style={{ paddingBottom: "150%" /* 768:1152 = 2:3 */ }}>
+                      <iframe
+                        src={outputStatus.htmlPath}
+                        className="absolute inset-0 w-full h-full border-0 origin-top-left"
+                        style={{ transform: "scale(1)", transformOrigin: "top left" }}
+                        title="Preview página completa"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center bg-[#0a1220] border border-white/[0.05] rounded-sm py-8">
+                      <p className="text-[9px] text-white/20">Sin preview HTML disponible</p>
+                    </div>
+                  )}
+                </div>
 
-                  {/* QA scores del reporte real */}
-                  <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
-                    <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">Score por dimensión</p>
-                    {realQA ? (
-                      <div className="space-y-2.5">
-                        {QA_DIMS.map(dim => {
-                          const val = (realQA.scores[dim.key] ?? 0) * 10;
-                          return (
-                            <div key={dim.key}>
-                              <div className="flex justify-between mb-0.5">
-                                <span className="text-[9px] text-white/50">{dim.label}</span>
-                                <span className={cn("text-[9px] font-bold", scoreColorDark(val))}>
-                                  {val.toFixed(1)}
-                                </span>
-                              </div>
-                              <div className="h-0.5 bg-white/[0.06] rounded-full overflow-hidden">
-                                <div className={cn("h-full rounded-full",
-                                  val >= 95 ? "bg-emerald-500" : val >= 90 ? "bg-teal-500" : val >= 75 ? "bg-amber-400" : "bg-red-400"
-                                )} style={{ width: `${Math.min(100, val)}%` }} />
-                              </div>
-                            </div>
-                          );
-                        })}
-
-                        {/* Veredicto */}
-                        <div className={cn(
-                          "mt-3 px-3 py-2 rounded-sm border text-[10px] font-semibold",
-                          realQA.verdict === "approved"
-                            ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-300"
-                            : "bg-amber-500/10 border-amber-500/25 text-amber-300"
-                        )}>
-                          {realQA.verdict === "approved"
-                            ? "✓ Lista para aprobación editorial"
-                            : "⚠ Revisar antes de aprobar"}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="py-4 text-center">
-                        <XCircle className="w-5 h-5 text-white/10 mx-auto mb-2" />
-                        <p className="text-[9px] text-white/25">QA report no disponible desde API</p>
-                        <p className="text-[8px] text-white/15 mt-0.5">
-                          El archivo qa-report.md existe en disco pero no hay endpoint de parsing.
-                        </p>
-                      </div>
+                {/* Slot upper visual 728×494 */}
+                <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">
+                      Slot upper visual
+                    </p>
+                    <span className="text-[7px] px-1.5 py-px rounded-sm border border-white/10 text-white/30 font-bold">
+                      728 × 494 px
+                    </span>
+                    {!isRealVisual && (
+                      <span className="text-[7px] px-1.5 py-px rounded-sm border border-red-500/25 bg-red-500/10 text-red-400 font-bold">
+                        PLACEHOLDER
+                      </span>
                     )}
                   </div>
+                  {outputStatus.previewPath ? (
+                    <div className="w-full overflow-hidden rounded-sm border border-white/[0.06] bg-[#f8fafc]">
+                      <img
+                        src={outputStatus.previewPath}
+                        alt="Upper visual 728×494"
+                        className="w-full h-auto block"
+                        style={{ aspectRatio: "728/494", objectFit: "contain" }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center bg-[#0a1220] border border-white/[0.05] rounded-sm"
+                      style={{ aspectRatio: "728/494" }}>
+                      <p className="text-[9px] text-white/20">Sin imagen generada</p>
+                    </div>
+                  )}
+                  {!isRealVisual && (
+                    <p className="mt-2 text-[8px] text-red-400/60">
+                      Dimensiones incorrectas o asset no generado. Regenerar con gpt-image-2 medium para obtener upper visual premium.
+                    </p>
+                  )}
+                </div>
+
+                {/* QA scores del reporte real */}
+                <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                  <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">Score por dimensión</p>
+                  {realQA ? (
+                    <div className="space-y-2.5">
+                      {QA_DIMS.map(dim => {
+                        const val = (realQA.scores[dim.key] ?? 0) * 10;
+                        return (
+                          <div key={dim.key}>
+                            <div className="flex justify-between mb-0.5">
+                              <span className="text-[9px] text-white/50">{dim.label}</span>
+                              <span className={cn("text-[9px] font-bold", scoreColorDark(val))}>
+                                {val.toFixed(0)}/100
+                              </span>
+                            </div>
+                            <div className="h-0.5 bg-white/[0.06] rounded-full overflow-hidden">
+                              <div className={cn("h-full rounded-full",
+                                val >= 90 ? "bg-emerald-500" : val >= 75 ? "bg-teal-500" : val >= 60 ? "bg-amber-400" : "bg-red-400"
+                              )} style={{ width: `${Math.min(100, val)}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Veredicto */}
+                      <div className={cn(
+                        "mt-3 px-3 py-2 rounded-sm border text-[10px] font-semibold",
+                        isPlaceholder
+                          ? "bg-red-500/10 border-red-500/25 text-red-300"
+                          : realQA.verdict === "approved"
+                            ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-300"
+                            : "bg-amber-500/10 border-amber-500/25 text-amber-300"
+                      )}>
+                        {isPlaceholder
+                          ? "🔴 Bloqueado — upper visual no premium"
+                          : realQA.verdict === "approved"
+                            ? "✓ Lista para aprobación editorial"
+                            : "⚠ Requiere revisión visual antes de aprobar"}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-4 text-center">
+                      <XCircle className="w-5 h-5 text-white/10 mx-auto mb-2" />
+                      <p className="text-[9px] text-white/25">QA report no disponible desde API</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Checklist de defectos */}

@@ -390,46 +390,50 @@ export default function Biblioteca() {
                         </div>
                       </div>
 
-                      {/* ── Botones de exportación ── */}
-                      <div className="flex flex-wrap gap-2">
+                      {/* ── Acciones principales ── */}
+                      <div className="flex items-center gap-2 flex-wrap">
                         {htmlPath && (
                           <a href={htmlPath} target="_blank" rel="noreferrer"
-                            className="flex items-center gap-1.5 h-8 px-3 bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/25 text-emerald-300 text-[9px] font-bold rounded-sm transition-all">
-                            <ExternalLink className="w-3 h-3" />Abrir HTML
+                            className="flex items-center gap-2 h-9 px-4 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 text-white text-[10px] font-bold rounded-sm transition-all shadow-sm">
+                            <ExternalLink className="w-3.5 h-3.5" />Abrir tamaño real
                           </a>
                         )}
                         {htmlPath && (
                           <a href={htmlPath} download={`page-${page.num}.html`}
-                            className="flex items-center gap-1.5 h-8 px-3 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white/50 hover:text-white/80 text-[9px] font-bold rounded-sm transition-all">
+                            className="flex items-center gap-1.5 h-9 px-3 bg-white/[0.05] hover:bg-white/[0.10] border border-white/[0.12] text-white/60 hover:text-white/90 text-[9px] font-bold rounded-sm transition-all">
                             <Download className="w-3 h-3" />Descargar HTML
                           </a>
                         )}
-                        {outputStatus!.files.qaReport && (
-                          <a href={`/api/studio/qa-report/${page.num}`}
-                            target="_blank" rel="noreferrer"
-                            className="flex items-center gap-1.5 h-8 px-3 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white/50 hover:text-white/80 text-[9px] font-bold rounded-sm transition-all">
-                            <FileText className="w-3 h-3" />QA Report
-                          </a>
-                        )}
-                        {outputStatus!.files.upperVisual ? (
-                          <a href={`/assets/cloudbooks/ai-200/visual-atlas/pages/${page.num}/upper-art.png`}
-                            target="_blank" rel="noreferrer"
-                            className="flex items-center gap-1.5 h-8 px-3 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white/50 hover:text-white/80 text-[9px] font-bold rounded-sm transition-all">
-                            <Image className="w-3 h-3" />Visual PNG
-                          </a>
-                        ) : (
-                          <span className="flex items-center gap-1.5 h-8 px-3 border border-white/[0.06] text-white/20 text-[9px] rounded-sm">
-                            <Image className="w-3 h-3" />Visual PNG pendiente
-                          </span>
-                        )}
-                        <button onClick={() => setLocation("/qa/1")}
-                          className="flex items-center gap-1.5 h-8 px-3 bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/20 text-blue-300 text-[9px] font-bold rounded-sm transition-all">
-                          <Shield className="w-3 h-3" />Revisar QA
-                        </button>
-                        <button onClick={() => setLocation("/generacion")}
-                          className="flex items-center gap-1.5 h-8 px-3 border border-white/10 text-white/35 hover:text-white/60 hover:border-white/20 text-[9px] font-medium rounded-sm transition-all">
-                          Regenerar
-                        </button>
+                        {/* Más acciones — colapsable */}
+                        <details className="relative">
+                          <summary className="flex items-center gap-1 h-9 px-3 border border-white/[0.08] text-white/30 hover:text-white/55 hover:border-white/15 text-[9px] font-medium rounded-sm transition-all cursor-pointer list-none select-none">
+                            Más acciones ▾
+                          </summary>
+                          <div className="absolute left-0 top-10 z-20 bg-[#0d1a2e] border border-white/10 rounded-sm shadow-xl py-1 min-w-[180px]">
+                            {outputStatus!.files.qaReport && (
+                              <a href={`/api/studio/qa-report/${page.num}`} target="_blank" rel="noreferrer"
+                                className="flex items-center gap-2 px-3 py-2 text-[9px] text-white/50 hover:text-white/80 hover:bg-white/5 transition-all">
+                                <FileText className="w-3 h-3 shrink-0" />QA Report
+                              </a>
+                            )}
+                            {outputStatus!.files.upperVisual && (
+                              <a href={`/assets/cloudbooks/ai-200/visual-atlas/pages/${page.num}/upper-art.png`}
+                                target="_blank" rel="noreferrer"
+                                className="flex items-center gap-2 px-3 py-2 text-[9px] text-white/50 hover:text-white/80 hover:bg-white/5 transition-all">
+                                <Image className="w-3 h-3 shrink-0" />Visual PNG
+                              </a>
+                            )}
+                            <button onClick={() => setLocation("/qa/1")}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-[9px] text-white/50 hover:text-white/80 hover:bg-white/5 transition-all text-left">
+                              <Shield className="w-3 h-3 shrink-0" />Revisar QA
+                            </button>
+                            <div className="border-t border-white/[0.06] my-1" />
+                            <button onClick={() => setLocation("/generacion")}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-[9px] text-amber-400/60 hover:text-amber-400 hover:bg-white/5 transition-all text-left">
+                              <Sparkles className="w-3 h-3 shrink-0" />Regenerar
+                            </button>
+                          </div>
+                        </details>
                       </div>
 
                       {/* ── Preview iframe del page.html 768×1152 ── */}
@@ -438,20 +442,25 @@ export default function Biblioteca() {
                           <div className="flex items-center gap-2 mb-2">
                             <Eye className="w-3 h-3 text-white/20" />
                             <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">
-                              Preview — página libro 768×1152
+                              Preview — Golden Master v24
                             </p>
                             <span className={cn(
                               "text-[7px] px-1.5 py-px rounded-sm border font-bold",
                               isRealVisual
                                 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                                : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                                : "bg-amber-500/10 text-amber-400/70 border-amber-500/15"
                             )}>
-                              {isRealVisual ? "VISUAL REAL" : "VISUAL PLACEHOLDER"}
+                              {isRealVisual ? "upper_visual_real" : "upper_visual_placeholder"}
                             </span>
+                            {!isRealVisual && (
+                              <span className="text-[7px] text-amber-400/50 italic">
+                                QA visual pendiente
+                              </span>
+                            )}
                           </div>
                           {/* Contenedor con proporción 768:1152 = 2:3 */}
                           <div
-                            className="rounded-sm border border-white/10 overflow-hidden bg-white relative"
+                            className="rounded-sm border border-white/10 overflow-hidden bg-[#edf2f8] relative"
                             style={{ width: 320, height: 480 }}
                           >
                             <iframe
@@ -468,9 +477,15 @@ export default function Biblioteca() {
                               }}
                             />
                           </div>
-                          <p className="text-[7px] text-white/20 mt-1.5">
-                            Escala 41.7% · Abrir en pestaña para tamaño real
-                          </p>
+                          <div className="flex items-center gap-3 mt-1.5">
+                            <p className="text-[7px] text-white/20">
+                              Escala 41.7% — abrir tamaño real para evaluar calidad
+                            </p>
+                            <a href={htmlPath} target="_blank" rel="noreferrer"
+                              className="flex items-center gap-1 text-[7px] text-teal-400/60 hover:text-teal-400 transition-all font-bold">
+                              <ExternalLink className="w-2.5 h-2.5" />Abrir tamaño real
+                            </a>
+                          </div>
                         </div>
                       )}
                     </>

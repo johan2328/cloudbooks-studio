@@ -5,7 +5,7 @@
   "batch": "Batch 01",
   "certificationId": "ai-200",
   "contractVersion": "v24",
-  "generatedAt": "2026-05-25T05:42:52.856Z",
+  "generatedAt": "2026-05-25T05:55:13.140Z",
   "templateApproach": "golden_master_v24",
   "textModel": "gpt-4o-mini",
   "imageModel": "gpt-image-2",
@@ -76,5 +76,5 @@
     ],
     "score": 10
   },
-  "durationMs": 67390
+  "durationMs": 84315
 }
