@@ -25,7 +25,11 @@ interface GenerationResult {
   durationMs: number;
   outputs: { html: string; metadata: string; qaReport: string; previewPng: string };
   previewGenerated: boolean;
-  previewMode?: "dalle3" | "dalle2" | "svg_fallback";
+  previewMode?: "gpt-image-1" | "svg_fallback";
+  imageModel?: string;
+  imageQuality?: string;
+  costGuardrail?: string;
+  generationMode?: "openai" | "fallback_html";
   imageError: string | null;
   qaVerdict: string;
   qaScores: Record<string, number>;
@@ -311,6 +315,15 @@ export default function Generacion() {
             {mode === "page" && isPage01 && (
               <div className="border-b border-white/[0.08] bg-[#0d1629]/50 shrink-0">
 
+                {/* Nota operativa de guardrail */}
+                <div className="flex items-center gap-2 px-6 py-2 bg-amber-500/5 border-b border-amber-500/15">
+                  <svg className="w-3 h-3 text-amber-400/70 shrink-0" fill="none" viewBox="0 0 16 16"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm9-3a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM6.75 7.25a.75.75 0 0 1 .75-.75h.75a.75.75 0 0 1 .75.75v3h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2.25h-.75a.75.75 0 0 1-.75-.75Z" fill="currentColor"/></svg>
+                  <p className="text-[8px] text-amber-400/70 leading-snug">
+                    <span className="font-bold text-amber-400/90">Guardrail activo:</span>{" "}
+                    gpt-image-1 medium solamente. Si falla, se genera fallback SVG sin escalar costo. High/hd/premium bloqueados.
+                  </p>
+                </div>
+
                 {/* Header del panel real */}
                 <div className="flex items-center gap-3 px-6 py-3 border-b border-white/[0.06]">
                   <div className="flex items-center gap-2">
@@ -433,12 +446,10 @@ export default function Generacion() {
                           <div className="col-span-1">
                             <div className="flex items-center gap-2 mb-1.5">
                               <p className="text-[7px] font-bold text-white/25 uppercase tracking-widest">Preview</p>
-                              {realResult.previewMode === "dalle3" ? (
-                                <span className="text-[7px] px-1.5 py-0.5 rounded-sm bg-violet-500/15 text-violet-400 border border-violet-500/20 font-semibold">DALL-E 3</span>
-                              ) : realResult.previewMode === "dalle2" ? (
-                                <span className="text-[7px] px-1.5 py-0.5 rounded-sm bg-violet-400/15 text-violet-300/80 border border-violet-400/20 font-semibold">DALL-E 2</span>
+                              {realResult.previewMode === "gpt-image-1" ? (
+                                <span className="text-[7px] px-1.5 py-0.5 rounded-sm bg-teal-500/15 text-teal-400 border border-teal-500/20 font-semibold">gpt-image-1 medium</span>
                               ) : (
-                                <span className="text-[7px] px-1.5 py-0.5 rounded-sm bg-teal-500/10 text-teal-400/70 border border-teal-500/15 font-semibold">SVG generado</span>
+                                <span className="text-[7px] px-1.5 py-0.5 rounded-sm bg-white/5 text-white/35 border border-white/10 font-semibold">SVG fallback</span>
                               )}
                             </div>
                             <div className="aspect-video bg-[#0a1220] border border-white/[0.07] rounded-sm overflow-hidden">
@@ -463,11 +474,9 @@ export default function Generacion() {
                                 ["page.html",     realResult.outputs.html,      Code2,    "text-blue-400"],
                                 ["metadata.json", realResult.outputs.metadata,  FileText, "text-teal-400"],
                                 ["qa-report.md",  realResult.outputs.qaReport,  Shield,   "text-sky-400"],
-                                [realResult.previewMode === "dalle2"
-                                ? "preview.png (DALL-E 2)"
-                                : realResult.outputs.previewPng.endsWith(".svg")
-                                  ? "preview.svg"
-                                  : "preview.png",
+                                [realResult.outputs.previewPng.endsWith(".svg")
+                                  ? "preview.svg (fallback)"
+                                  : "preview.png (gpt-image-1)",
                                 realResult.outputs.previewPng, Eye, "text-violet-400"],
                               ] as [string, string, typeof Code2, string][]).map(([file, url, Icon, color]) => (
                                 <a key={file} href={url} target="_blank" rel="noopener noreferrer"

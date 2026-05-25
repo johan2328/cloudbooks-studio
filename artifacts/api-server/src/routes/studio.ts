@@ -5,6 +5,17 @@ import OpenAI from "openai";
 
 const router = Router();
 
+/* ══════════════════════════════════════════════════════════════════════════
+   COST / MODEL GUARDRAILS — solo modificar con aprobación del equipo
+   ══════════════════════════════════════════════════════════════════════════
+   Únicos valores permitidos. El servidor rechazará cualquier intento de
+   escalar a high/hd/premium/ultra — ni siquiera en fallback.             */
+const IMAGE_MODEL         = "gpt-image-1" as const; // gpt-image-2 → alias interno OpenAI
+const IMAGE_QUALITY       = "medium"      as const;
+const ALLOW_HIGH_QUALITY  = false         as const;  // NUNCA cambiar a true sin aprobación
+const GUARDRAIL_LABEL     = "high_quality_blocked"  as const;
+/* ══════════════════════════════════════════════════════════════════════════ */
+
 /* ── Ruta de salida estática ──────────────────────────────────────────────
    El servidor corre desde artifacts/api-server/ (CWD de pnpm --filter).
    La carpeta public de Vite está en artifacts/studio/public/             */
@@ -272,7 +283,7 @@ function buildPreviewSvg(seed: { title: string; subtitle: string; domain: string
 
   <!-- Footer -->
   <rect x="0" y="478" width="800" height="22" fill="rgba(0,0,0,0.3)"/>
-  <text x="32" y="493" font-family="monospace" font-size="9" fill="rgba(255,255,255,0.15)">CloudBooks AI-200 Visual Atlas · GPT-4o · Replit Static · preview auto-generado</text>
+  <text x="32" y="493" font-family="monospace" font-size="9" fill="rgba(255,255,255,0.15)">CloudBooks AI-200 Visual Atlas · GPT-4o · gpt-image-1 medium · fallback SVG · Guardrail: high_quality_blocked</text>
 </svg>`;
 
   return Buffer.from(svg, "utf-8");
@@ -339,7 +350,9 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
 
     /* ── 2. Generate metadata.json ── */
     const generatedAt = new Date().toISOString();
-    const metadata = {
+    // metadata se actualiza más adelante con generationMode e imageModel
+    // se guarda en dos pasos para incluir el resultado del preview
+    const metadataBase = {
       pageId,
       title: `${seed.title} — ${seed.subtitle}`,
       domain: seed.domain,
@@ -350,11 +363,14 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
       generatedAt,
       model: "gpt-4o",
       tokens: { prompt: promptTokens, completion: completionTokens },
+      imageModel: IMAGE_MODEL,
+      imageQuality: IMAGE_QUALITY,
+      costGuardrail: GUARDRAIL_LABEL,
+      generationMode: "fallback_html" as "openai" | "fallback_html",
       outputFiles: ["page.html", "metadata.json", "qa-report.md"],
       renderMode: "replit_static",
       staticPath: `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/`,
     };
-    await writeFile(join(outDir, "metadata.json"), JSON.stringify(metadata, null, 2), "utf-8");
 
     /* ── 3. Generate QA report ── */
     req.log.info({ pageId }, "Running automated QA");
@@ -430,65 +446,82 @@ ${defLines || "- Ninguno"}
     await writeFile(join(outDir, "qa-report.md"), qaReport, "utf-8");
     req.log.info({ pageId }, "QA report saved");
 
-    /* ── 4. Generate preview image (DALL-E 3 → SVG fallback) ─────────────── */
+    /* ══════════════════════════════════════════════════════════════════════
+       STEP 4 — Preview image
+       Modelo: gpt-image-1 (gpt-image-2) · Calidad: medium
+       GUARDRAIL: si falla, SVG fallback — NUNCA escalar a high/hd/premium
+       ══════════════════════════════════════════════════════════════════════ */
     let previewGenerated = false;
-    let previewModel: "dalle3" | "dalle2" | null = null;
-    let imageError = "";
+    let previewIsImage   = false;
+    let imageError       = "";
+    let generationMode: "openai" | "fallback_html" = "fallback_html";
 
-    // Always write the SVG fallback first (instant, no API call)
+    // SVG fallback siempre se escribe primero (sin costo, sin latencia)
     const svgBuf = buildPreviewSvg(seed, qaScores);
     await writeFile(join(outDir, "preview.svg"), svgBuf);
+    previewGenerated = true; // SVG counts as valid preview
 
-    /* ── Try DALL-E 3 first, then DALL-E 2 as medium fallback ─────────────── */
-    try {
-      req.log.info({ pageId }, "Attempting image generation with DALL-E 3");
-      const imgResponse = await openai.images.generate({
-        model: "dall-e-3",
-        prompt: buildImagePrompt(),
-        n: 1,
-        size: "1024x1024",
-        quality: "standard",
-      });
-
-      const imgUrl = imgResponse.data?.[0]?.url;
-      if (imgUrl) {
-        const imgFetch = await fetch(imgUrl);
-        const imgBuf   = Buffer.from(await imgFetch.arrayBuffer());
-        await writeFile(join(outDir, "preview.png"), imgBuf);
-        previewGenerated = true;
-        previewModel = "dalle3";
-        req.log.info({ pageId }, "Preview image saved from DALL-E 3");
-      }
-    } catch (dalle3Err) {
-      req.log.warn({ pageId, err: String(dalle3Err) }, "DALL-E 3 failed — trying DALL-E 2");
+    // Guardrail check — must always be false; block any accidental escalation
+    if (ALLOW_HIGH_QUALITY) {
+      req.log.error({ pageId }, "GUARDRAIL VIOLATION: ALLOW_HIGH_QUALITY is true — aborting image generation");
+    } else {
       try {
-        const img2Response = await openai.images.generate({
-          model: "dall-e-2",
-          prompt: buildImagePrompt(),
-          n: 1,
-          size: "1024x1024",
+        req.log.info(
+          { pageId, imageModel: IMAGE_MODEL, imageQuality: IMAGE_QUALITY, guardrail: GUARDRAIL_LABEL },
+          "Attempting image generation — guardrail active"
+        );
+
+        const imgResponse = await openai.images.generate({
+          model:   IMAGE_MODEL,
+          prompt:  buildImagePrompt(),
+          n:       1,
+          size:    "1024x1024",
+          quality: IMAGE_QUALITY,
         });
-        const imgUrl2 = img2Response.data?.[0]?.url;
-        if (imgUrl2) {
-          const imgFetch = await fetch(imgUrl2);
-          const imgBuf   = Buffer.from(await imgFetch.arrayBuffer());
-          await writeFile(join(outDir, "preview.png"), imgBuf);
-          previewGenerated = true;
-          previewModel = "dalle2";
-          req.log.info({ pageId }, "Preview image saved from DALL-E 2");
+
+        // gpt-image-1 returns b64_json; url is also accepted if present
+        const b64    = imgResponse.data?.[0]?.b64_json;
+        const imgUrl = imgResponse.data?.[0]?.url;
+
+        let imgBuf: Buffer | null = null;
+        if (b64) {
+          imgBuf = Buffer.from(b64, "base64");
+        } else if (imgUrl) {
+          const r = await fetch(imgUrl);
+          imgBuf  = Buffer.from(await r.arrayBuffer());
         }
-      } catch (dalle2Err) {
-        imageError = `DALL-E 3: ${String(dalle3Err).slice(0, 80)}; DALL-E 2: ${String(dalle2Err).slice(0, 80)}`;
-        req.log.warn({ pageId, err: imageError }, "Both DALL-E models unavailable — SVG fallback already saved");
-        previewGenerated = true; // SVG is a valid preview
+
+        if (imgBuf) {
+          await writeFile(join(outDir, "preview.png"), imgBuf);
+          previewIsImage  = true;
+          generationMode  = "openai";
+          req.log.info(
+            { pageId, imageModel: IMAGE_MODEL, imageQuality: IMAGE_QUALITY },
+            "Preview image saved"
+          );
+        }
+      } catch (imgErr) {
+        imageError = String(imgErr).slice(0, 250);
+        req.log.warn(
+          { pageId, imageModel: IMAGE_MODEL, imageQuality: IMAGE_QUALITY, err: imageError },
+          "Image generation failed — SVG fallback activo, sin escalación de costo"
+        );
+        // SVG already written above — no escalation to higher-cost model
       }
     }
 
+    // Escribir metadata.json final con generationMode resuelto
+    const metadata = { ...metadataBase, generationMode };
+    await writeFile(join(outDir, "metadata.json"), JSON.stringify(metadata, null, 2), "utf-8");
+
     const durationMs = Date.now() - startedAt;
 
-    req.log.info({ pageId, durationMs, previewGenerated, previewModel }, "Generation complete");
+    req.log.info(
+      { pageId, durationMs, previewGenerated, previewIsImage, generationMode, imageModel: IMAGE_MODEL },
+      "Generation complete"
+    );
 
-    const previewPath = previewModel
+    const previewPath = previewIsImage
       ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/preview.png`
       : `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/preview.svg`;
 
@@ -497,14 +530,18 @@ ${defLines || "- Ninguno"}
       pageId,
       durationMs,
       outputs: {
-        html:      `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/page.html`,
-        metadata:  `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/metadata.json`,
-        qaReport:  `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/qa-report.md`,
+        html:       `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/page.html`,
+        metadata:   `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/metadata.json`,
+        qaReport:   `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/qa-report.md`,
         previewPng: previewPath,
       },
       previewGenerated,
-      previewMode: previewModel ?? "svg_fallback",
-      imageError: imageError || null,
+      previewMode:    previewIsImage ? IMAGE_MODEL : "svg_fallback",
+      imageModel:     IMAGE_MODEL,
+      imageQuality:   IMAGE_QUALITY,
+      costGuardrail:  GUARDRAIL_LABEL,
+      generationMode,
+      imageError:     imageError || null,
       qaVerdict,
       qaScores,
       tokens: { prompt: promptTokens, completion: completionTokens },
@@ -523,10 +560,13 @@ ${defLines || "- Ninguno"}
 /* ── GET /api/studio/key-status ─────────────────────────────────────────── */
 router.get("/studio/key-status", (_req, res): void => {
   res.json({
-    hasKey: !!process.env.OPENAI_API_KEY,
-    model: "gpt-4o",
-    imageModel: "dall-e-2",
-    fallback: "dall-e-2 ← SVG fallback if unavailable",
+    hasKey:           !!process.env.OPENAI_API_KEY,
+    model:            "gpt-4o",
+    imageModel:       IMAGE_MODEL,
+    imageQuality:     IMAGE_QUALITY,
+    costGuardrail:    GUARDRAIL_LABEL,
+    allowHighQuality: ALLOW_HIGH_QUALITY,
+    fallback:         "svg_fallback — sin escalación de costo",
   });
 });
 
