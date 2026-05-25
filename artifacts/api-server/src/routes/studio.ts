@@ -432,20 +432,21 @@ ${defLines || "- Ninguno"}
 
     /* ── 4. Generate preview image (DALL-E 3 → SVG fallback) ─────────────── */
     let previewGenerated = false;
-    let previewIsDalle   = false;
+    let previewModel: "dalle3" | "dalle2" | null = null;
     let imageError = "";
 
     // Always write the SVG fallback first (instant, no API call)
     const svgBuf = buildPreviewSvg(seed, qaScores);
     await writeFile(join(outDir, "preview.svg"), svgBuf);
 
+    /* ── Try DALL-E 3 first, then DALL-E 2 as medium fallback ─────────────── */
     try {
       req.log.info({ pageId }, "Attempting image generation with DALL-E 3");
       const imgResponse = await openai.images.generate({
         model: "dall-e-3",
         prompt: buildImagePrompt(),
         n: 1,
-        size: "1792x1024",
+        size: "1024x1024",
         quality: "standard",
       });
 
@@ -455,20 +456,39 @@ ${defLines || "- Ninguno"}
         const imgBuf   = Buffer.from(await imgFetch.arrayBuffer());
         await writeFile(join(outDir, "preview.png"), imgBuf);
         previewGenerated = true;
-        previewIsDalle   = true;
+        previewModel = "dalle3";
         req.log.info({ pageId }, "Preview image saved from DALL-E 3");
       }
-    } catch (imgErr) {
-      imageError = String(imgErr);
-      req.log.warn({ pageId, err: imageError }, "DALL-E unavailable — SVG fallback already saved");
-      previewGenerated = true; // SVG is a valid preview
+    } catch (dalle3Err) {
+      req.log.warn({ pageId, err: String(dalle3Err) }, "DALL-E 3 failed — trying DALL-E 2");
+      try {
+        const img2Response = await openai.images.generate({
+          model: "dall-e-2",
+          prompt: buildImagePrompt(),
+          n: 1,
+          size: "1024x1024",
+        });
+        const imgUrl2 = img2Response.data?.[0]?.url;
+        if (imgUrl2) {
+          const imgFetch = await fetch(imgUrl2);
+          const imgBuf   = Buffer.from(await imgFetch.arrayBuffer());
+          await writeFile(join(outDir, "preview.png"), imgBuf);
+          previewGenerated = true;
+          previewModel = "dalle2";
+          req.log.info({ pageId }, "Preview image saved from DALL-E 2");
+        }
+      } catch (dalle2Err) {
+        imageError = `DALL-E 3: ${String(dalle3Err).slice(0, 80)}; DALL-E 2: ${String(dalle2Err).slice(0, 80)}`;
+        req.log.warn({ pageId, err: imageError }, "Both DALL-E models unavailable — SVG fallback already saved");
+        previewGenerated = true; // SVG is a valid preview
+      }
     }
 
     const durationMs = Date.now() - startedAt;
 
-    req.log.info({ pageId, durationMs, previewGenerated, previewIsDalle }, "Generation complete");
+    req.log.info({ pageId, durationMs, previewGenerated, previewModel }, "Generation complete");
 
-    const previewPath = previewIsDalle
+    const previewPath = previewModel
       ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/preview.png`
       : `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/preview.svg`;
 
@@ -483,8 +503,8 @@ ${defLines || "- Ninguno"}
         previewPng: previewPath,
       },
       previewGenerated,
-      previewMode: previewIsDalle ? "dalle3" : "svg_fallback",
-      imageError: previewGenerated ? null : imageError,
+      previewMode: previewModel ?? "svg_fallback",
+      imageError: imageError || null,
       qaVerdict,
       qaScores,
       tokens: { prompt: promptTokens, completion: completionTokens },
@@ -505,7 +525,8 @@ router.get("/studio/key-status", (_req, res): void => {
   res.json({
     hasKey: !!process.env.OPENAI_API_KEY,
     model: "gpt-4o",
-    imageModel: "dall-e-3",
+    imageModel: "dall-e-2",
+    fallback: "dall-e-2 ← SVG fallback if unavailable",
   });
 });
 

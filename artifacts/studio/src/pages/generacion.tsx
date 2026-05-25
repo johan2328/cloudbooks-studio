@@ -25,7 +25,7 @@ interface GenerationResult {
   durationMs: number;
   outputs: { html: string; metadata: string; qaReport: string; previewPng: string };
   previewGenerated: boolean;
-  previewMode?: "dalle3" | "svg_fallback";
+  previewMode?: "dalle3" | "dalle2" | "svg_fallback";
   imageError: string | null;
   qaVerdict: string;
   qaScores: Record<string, number>;
@@ -435,6 +435,8 @@ export default function Generacion() {
                               <p className="text-[7px] font-bold text-white/25 uppercase tracking-widest">Preview</p>
                               {realResult.previewMode === "dalle3" ? (
                                 <span className="text-[7px] px-1.5 py-0.5 rounded-sm bg-violet-500/15 text-violet-400 border border-violet-500/20 font-semibold">DALL-E 3</span>
+                              ) : realResult.previewMode === "dalle2" ? (
+                                <span className="text-[7px] px-1.5 py-0.5 rounded-sm bg-violet-400/15 text-violet-300/80 border border-violet-400/20 font-semibold">DALL-E 2</span>
                               ) : (
                                 <span className="text-[7px] px-1.5 py-0.5 rounded-sm bg-teal-500/10 text-teal-400/70 border border-teal-500/15 font-semibold">SVG generado</span>
                               )}
@@ -461,7 +463,12 @@ export default function Generacion() {
                                 ["page.html",     realResult.outputs.html,      Code2,    "text-blue-400"],
                                 ["metadata.json", realResult.outputs.metadata,  FileText, "text-teal-400"],
                                 ["qa-report.md",  realResult.outputs.qaReport,  Shield,   "text-sky-400"],
-                                [realResult.outputs.previewPng.endsWith(".svg") ? "preview.svg" : "preview.png", realResult.outputs.previewPng, Eye, "text-violet-400"],
+                                [realResult.previewMode === "dalle2"
+                                ? "preview.png (DALL-E 2)"
+                                : realResult.outputs.previewPng.endsWith(".svg")
+                                  ? "preview.svg"
+                                  : "preview.png",
+                                realResult.outputs.previewPng, Eye, "text-violet-400"],
                               ] as [string, string, typeof Code2, string][]).map(([file, url, Icon, color]) => (
                                 <a key={file} href={url} target="_blank" rel="noopener noreferrer"
                                   className="flex items-center gap-2 px-2 py-1.5 bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.05] rounded-sm transition-all group">

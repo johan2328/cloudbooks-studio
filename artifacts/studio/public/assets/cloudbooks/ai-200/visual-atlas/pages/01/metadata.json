@@ -6,11 +6,11 @@
   "certificationId": "ai-200",
   "contractVersion": "v24",
   "version": "v1.0",
-  "generatedAt": "2026-05-25T03:34:14.389Z",
+  "generatedAt": "2026-05-25T03:39:05.003Z",
   "model": "gpt-4o",
   "tokens": {
     "prompt": 1445,
-    "completion": 2234
+    "completion": 2618
   },
   "outputFiles": [
     "page.html",
