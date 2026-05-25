@@ -1,10 +1,61 @@
 import type { AtlasPage, GenerationRun, QAReport, UserActionLog, ContractVersion, StudioState, OutputPack, AssetType, AssetSlot, AssetSlotStatus } from "./types";
 
+/* ─── GitHub cloudbooks-assets ───────────────────────────────────────────── */
+export const GITHUB_REPO    = "johan2328/cloudbooks-assets";
+export const GITHUB_BLOB    = `https://github.com/${GITHUB_REPO}/blob/main`;
+export const GITHUB_RAW     = `https://raw.githubusercontent.com/${GITHUB_REPO}/main`;
+export const GITHUB_MANIFEST= `${GITHUB_BLOB}/MANIFEST.json`;
+export const GITHUB_VA_BASE = `${GITHUB_BLOB}/ai-200/visual-atlas/pages`;
+export const GITHUB_VA_RAW  = `${GITHUB_RAW}/ai-200/visual-atlas/pages`;
+export const GITHUB_CONTRACT= `${GITHUB_BLOB}/ai-200/visual-atlas/contracts/visual-atlas-v24.md`;
+export const GITHUB_QA_BATCH= `${GITHUB_BLOB}/ai-200/visual-atlas/qa/qa_visual_batch_v23d_final_01_10.md`;
+
 /* ─── Helpers para OutputPack ────────────────────────────────────────────── */
 function makeSlot(type: AssetType, status: AssetSlotStatus, isDemo: boolean, extra?: Partial<AssetSlot>): AssetSlot {
   return { type, status, isDemo, ...extra };
 }
 
+/* Packs reales versionados en GitHub — Visual Atlas 01-10 */
+function makeGithubOutputPack(page: AtlasPage): OutputPack {
+  const pid      = page.id;
+  const blobPath = `${GITHUB_VA_BASE}/${pid}`;
+  const rawPath  = `${GITHUB_VA_RAW}/${pid}`;
+  return {
+    pageId: page.id,
+    pageNumber: page.pageNumber,
+    pageTitle: page.title,
+    contractVersion: page.contractVersion,
+    lastGenerationAt: page.lastRevision ? `${page.lastRevision}T10:00:00Z` : undefined,
+    lastGenerationVersion: page.currentVersion,
+    slots: {
+      preview:   makeSlot("preview",   "real_available", false, {
+        filename:"preview.png", url:`${rawPath}/preview.png`,
+        note:"Preview real · GitHub cloudbooks-assets",
+      }),
+      html:      makeSlot("html",      "real_available", false, {
+        filename:"page.html", url:`${blobPath}/page.html`,
+        note:"HTML real · GitHub cloudbooks-assets",
+      }),
+      png:       makeSlot("png",       "real_available", false, {
+        filename:"upper-art.png", url:`${rawPath}/upper-art.png`,
+        note:"Upper-art PNG real · GitHub cloudbooks-assets",
+      }),
+      pdf:       makeSlot("pdf",       "pending",        false, {
+        note:"PDF no existe en el repositorio — pendiente de exportación print-ready",
+      }),
+      qa_report: makeSlot("qa_report", "real_available", false, {
+        filename:"qa-report.md", url:`${blobPath}/qa-report.md`,
+        note:"QA Report real · GitHub cloudbooks-assets",
+      }),
+      contract:  makeSlot("contract",  "approved",       false, {
+        filename:"visual-atlas-v24.md", url:GITHUB_CONTRACT,
+        note:"Contrato Visual Atlas v24 · GitHub cloudbooks-assets",
+      }),
+    },
+  };
+}
+
+/* Packs placeholder — páginas aún no producidas */
 function makeOutputPack(page: AtlasPage): OutputPack {
   const hasQA = (["approved","exported","qa_review","needs_revision"] as const).includes(page.status as any);
   const isApproved = page.status === "approved" || page.status === "exported";
@@ -339,7 +390,10 @@ const CONTRACTS: ContractVersion[] = [
 ];
 
 /* ─── Output Packs iniciales (Visual Atlas 01–10) ────────────────────────── */
-const OUTPUT_PACKS: OutputPack[] = PAGES.map(makeOutputPack);
+const OUTPUT_PACKS: OutputPack[] = [
+  ...PAGES.slice(0, 10).map(makeGithubOutputPack),   // Batch 01-10: assets reales en GitHub
+  ...PAGES.slice(10).map(makeOutputPack),             // Batch 02-13: pendientes
+];
 
 /* ─── Seed inicial del store ─────────────────────────────────────────────── */
 export function buildInitialState(): StudioState {
