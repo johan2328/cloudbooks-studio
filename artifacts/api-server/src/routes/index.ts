@@ -5,6 +5,7 @@ import pagesRouter from "./pages";
 import qaRouter from "./qa";
 import generationRouter from "./generation";
 import contractRouter from "./contract";
+import studioRouter from "./studio";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(pagesRouter);
 router.use(qaRouter);
 router.use(generationRouter);
 router.use(contractRouter);
+router.use(studioRouter);
 
 export default router;

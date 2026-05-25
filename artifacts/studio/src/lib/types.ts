@@ -28,7 +28,8 @@ export interface AssetSlot {
   status: AssetSlotStatus;
   isDemo: boolean;          // true = contenido simulado
   filename?: string;
-  url?: string;             // ruta local o URL remota
+  url?: string;             // ruta de render: /assets/cloudbooks/... (replit_static) o /api/assets/proxy?path= (private_proxy)
+  githubPath?: string;      // ruta relativa en el repo GitHub: ai-200/visual-atlas/pages/01/preview.png
   sizeKb?: number;
   uploadedAt?: string;
   uploadedBy?: string;

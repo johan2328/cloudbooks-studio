@@ -1,20 +1,28 @@
 import type { AtlasPage, GenerationRun, QAReport, UserActionLog, ContractVersion, StudioState, OutputPack, AssetType, AssetSlot, AssetSlotStatus } from "./types";
 
-/* ─── GitHub cloudbooks-assets ───────────────────────────────────────────── */
+/* ─── GitHub cloudbooks-assets (source of truth privado) ────────────────── */
 export const GITHUB_REPO    = "johan2328/cloudbooks-assets";
 export const GITHUB_RAW     = `https://raw.githubusercontent.com/${GITHUB_REPO}/main`;
-export const GITHUB_MANIFEST= `${GITHUB_RAW}/MANIFEST.json`;
-export const GITHUB_VA_RAW  = `${GITHUB_RAW}/ai-200/visual-atlas/pages`;
-export const GITHUB_CONTRACT_RAW = `${GITHUB_RAW}/ai-200/visual-atlas/contracts/visual-atlas-v24.md`;
-export const GITHUB_QA_BATCH_RAW = `${GITHUB_RAW}/ai-200/visual-atlas/qa/qa_visual_batch_v23d_final_01_10.md`;
+export const GITHUB_MANIFEST_PATH = "MANIFEST.json";
+export const GITHUB_QA_BATCH_PATH = "ai-200/visual-atlas/qa/qa_visual_batch_v23d_final_01_10.md";
+export const GITHUB_CONTRACT_PATH = "ai-200/visual-atlas/contracts/visual-atlas-v24.md";
 
-/** URL raw para fetch/imagen — sin redirigir a GitHub */
-export function getRawAssetUrl(path: string) {
-  return `${GITHUB_RAW}/${path}`;
-}
-/** URL blob para abrir en GitHub como fuente secundaria */
+/** URL blob de GitHub — para links de "Ver fuente en GitHub" (requiere login) */
 export function getGithubBlobUrl(path: string) {
   return `https://github.com/${GITHUB_REPO}/blob/main/${path}`;
+}
+/** URL raw de GitHub — solo para descarga autenticada (repo privado) */
+export function getGithubRawUrl(path: string) {
+  return `${GITHUB_RAW}/${path}`;
+}
+
+/* ─── Replit static assets (modo render por defecto) ─────────────────────── */
+/** Base pública: artifacts/studio/public/assets/cloudbooks/ → /assets/cloudbooks/ */
+export const STATIC_BASE = "/assets/cloudbooks";
+
+/** Ruta de render estática — busca el asset en /public/assets/cloudbooks/ */
+export function getStaticAssetUrl(path: string) {
+  return `${STATIC_BASE}/${path}`;
 }
 
 /* ─── Helpers para OutputPack ────────────────────────────────────────────── */
@@ -22,11 +30,13 @@ function makeSlot(type: AssetType, status: AssetSlotStatus, isDemo: boolean, ext
   return { type, status, isDemo, ...extra };
 }
 
-/* Packs reales versionados en GitHub — Visual Atlas 01-10 */
+/* Packs reales versionados en GitHub — Visual Atlas 01-10
+   url       = ruta de render via Replit static (/assets/cloudbooks/...)
+   githubPath = ruta relativa en el repo (para links a GitHub y sync)          */
 function makeGithubOutputPack(page: AtlasPage): OutputPack {
-  const pid     = page.id;
-  const rawBase = `${GITHUB_VA_RAW}/${pid}`;
-  const vaPath  = `ai-200/visual-atlas/pages/${pid}`;
+  const pid    = page.id;
+  const ghBase = `ai-200/visual-atlas/pages/${pid}`;
+  const stBase = `ai-200/visual-atlas/pages/${pid}`;
   return {
     pageId: page.id,
     pageNumber: page.pageNumber,
@@ -37,31 +47,31 @@ function makeGithubOutputPack(page: AtlasPage): OutputPack {
     slots: {
       preview:   makeSlot("preview",   "real_available", false, {
         filename:"preview.png",
-        url:`${rawBase}/preview.png`,
-        note:`${vaPath}/preview.png`,
+        url:getStaticAssetUrl(`${stBase}/preview.png`),
+        githubPath:`${ghBase}/preview.png`,
       }),
       html:      makeSlot("html",      "real_available", false, {
         filename:"page.html",
-        url:`${rawBase}/page.html`,
-        note:`${vaPath}/page.html`,
+        url:getStaticAssetUrl(`${stBase}/page.html`),
+        githubPath:`${ghBase}/page.html`,
       }),
       png:       makeSlot("png",       "real_available", false, {
         filename:"upper-art.png",
-        url:`${rawBase}/upper-art.png`,
-        note:`${vaPath}/upper-art.png`,
+        url:getStaticAssetUrl(`${stBase}/upper-art.png`),
+        githubPath:`${ghBase}/upper-art.png`,
       }),
       pdf:       makeSlot("pdf",       "pending",        false, {
-        note:"PDF no existe en el repositorio — pendiente de exportación print-ready",
+        note:"Pendiente — no existe en el repo · exportación print-ready futura",
       }),
       qa_report: makeSlot("qa_report", "real_available", false, {
         filename:"qa-report.md",
-        url:`${rawBase}/qa-report.md`,
-        note:`${vaPath}/qa-report.md`,
+        url:getStaticAssetUrl(`${stBase}/qa-report.md`),
+        githubPath:`${ghBase}/qa-report.md`,
       }),
       contract:  makeSlot("contract",  "approved",       false, {
         filename:"visual-atlas-v24.md",
-        url:GITHUB_CONTRACT_RAW,
-        note:"ai-200/visual-atlas/contracts/visual-atlas-v24.md",
+        url:getStaticAssetUrl(GITHUB_CONTRACT_PATH),
+        githubPath:GITHUB_CONTRACT_PATH,
       }),
     },
   };

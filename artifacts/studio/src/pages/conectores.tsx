@@ -324,6 +324,83 @@ const CONNECTORS: Connector[] = [
     notes: "AssetSourceMode: 'public_raw' | 'replit_static' | 'private_proxy'. Correr este conector en el diagnóstico de acceso del panel Assets y Outputs para detectar automáticamente qué modo funciona en el entorno actual. Útil en el onboarding del equipo para verificar configuración sin salir del Studio.",
     mockAvailable: true,
   },
+  /* ── Asset source — replit_static mode ───────────────────────────────── */
+  {
+    id: "syncFromPrivateGithubToStatic",
+    name: "syncFromPrivateGithubToStatic",
+    signature: "syncFromPrivateGithubToStatic(collectionId: string, githubToken: string): Promise<SyncStaticResult>",
+    description: "Descarga los assets del repositorio privado cloudbooks-assets usando la API autenticada de GitHub y los copia al directorio estático del Studio (artifacts/studio/public/assets/cloudbooks/). Después del sync, el Studio sirve previews e imágenes sin depender de raw.githubusercontent.com ni exponer el token al browser. Equivale al comando: cp -r cloudbooks-assets/ai-200 studio/public/assets/cloudbooks/ai-200/",
+    category: "storage",
+    status: "planned",
+    inputs: [
+      { name: "collectionId", type: "string", required: true },
+      { name: "githubToken",  type: "string", required: true },
+    ],
+    outputs: [
+      { name: "copied",      type: "number"       },
+      { name: "skipped",     type: "number"       },
+      { name: "staticBase",  type: "string"       },
+      { name: "manifest",    type: "SyncManifest" },
+    ],
+    notes: "Requiere GITHUB_TOKEN en secretos del entorno. La ruta de destino es artifacts/studio/public/assets/cloudbooks/ que Vite sirve en /assets/cloudbooks/. Las URLs de los slots cambian automáticamente a /assets/cloudbooks/... después del sync. GitHub privado permanece como source of truth editorial.",
+    mockAvailable: false,
+  },
+  {
+    id: "validateStaticAsset",
+    name: "validateStaticAsset",
+    signature: "validateStaticAsset(path: string): Promise<StaticAssetValidation>",
+    description: "Verifica si un asset ya existe en el directorio estático de Replit y si la URL correspondiente responde con HTTP 200. Útil para diagnosticar qué páginas están sincronizadas y cuáles aún no. Puede correrse sobre un batch completo para generar un reporte de estado.",
+    category: "storage",
+    status: "planned",
+    inputs: [
+      { name: "path", type: "string", required: true },
+    ],
+    outputs: [
+      { name: "exists",      type: "boolean" },
+      { name: "url",         type: "string"  },
+      { name: "statusCode",  type: "number"  },
+      { name: "sizeKb",      type: "number"  },
+    ],
+    notes: "Ejemplo: validateStaticAsset('ai-200/visual-atlas/pages/01/preview.png') comprueba /assets/cloudbooks/ai-200/visual-atlas/pages/01/preview.png. El Studio muestra 'No sincronizado aún' si este conector devuelve exists: false. Correr este conector para todos los slots de un pack antes de renderizar para cachear el estado de sync.",
+    mockAvailable: true,
+  },
+  {
+    id: "listStaticAssets",
+    name: "listStaticAssets",
+    signature: "listStaticAssets(collectionId: string): Promise<StaticAssetInventory>",
+    description: "Genera un inventario completo de los assets estáticos disponibles para una colección. Escanea el directorio artifacts/studio/public/assets/cloudbooks/ e identifica qué páginas tienen sus assets sincronizados, cuáles están parcialmente sincronizadas y cuáles no tienen ningún asset.",
+    category: "storage",
+    status: "planned",
+    inputs: [
+      { name: "collectionId", type: "string", required: true },
+    ],
+    outputs: [
+      { name: "total",       type: "number"                 },
+      { name: "synced",      type: "number"                 },
+      { name: "partial",     type: "number"                 },
+      { name: "missing",     type: "number"                 },
+      { name: "inventory",   type: "PageAssetInventory[]"   },
+    ],
+    notes: "Usar antes de syncFromPrivateGithubToStatic para saber qué páginas ya tienen assets y no necesitan re-sincronización. También útil para el dashboard del Studio para mostrar el estado real de sync en lugar del estado calculado.",
+    mockAvailable: true,
+  },
+  {
+    id: "switchAssetSource",
+    name: "switchAssetSource",
+    signature: "switchAssetSource(mode: AssetSourceMode): Promise<void>",
+    description: "Cambia el modo de fuente de assets del Studio en runtime. Actualiza la configuración activa para que todas las URLs de render se recalculen según el nuevo modo. 'replit_static' usa /assets/cloudbooks/, 'private_proxy' usa /api/assets/proxy?path=, 'public_raw' usa raw.githubusercontent.com (no recomendado para repos privados).",
+    category: "storage",
+    status: "planned",
+    inputs: [
+      { name: "mode", type: "AssetSourceMode", required: true },
+    ],
+    outputs: [
+      { name: "previous", type: "AssetSourceMode" },
+      { name: "current",  type: "AssetSourceMode" },
+    ],
+    notes: "AssetSourceMode: 'replit_static' (activo por defecto) | 'private_proxy' (planificado) | 'public_raw' (no usar con repos privados). El cambio persiste en localStorage y se aplica a todos los slots del Studio hasta que se cambie de nuevo. El Studio actual tiene el modo como estado de componente — migrar a studio-store para persistencia.",
+    mockAvailable: true,
+  },
 ];
 
 const CATEGORY_CFG = {
