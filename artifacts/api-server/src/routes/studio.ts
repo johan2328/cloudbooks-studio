@@ -116,12 +116,12 @@ function renderVisualAtlasPage(data: VisualAtlasPageData): string {
         <div class="placeholder-inner">
           <div class="placeholder-icon">📦</div>
           <div class="placeholder-label">Visual pendiente</div>
-          <div class="placeholder-sub">Se generará con gpt-image-2 medium</div>
+          <div class="placeholder-sub">Se generará con gpt-image-2 medium · fondo blanco</div>
           <div class="placeholder-grid">
-            <div class="pg-cell"><span>Tiers</span><span class="pg-sub">Basic · Standard · Premium</span></div>
-            <div class="pg-cell"><span>Arquitectura</span><span class="pg-sub">Registry → AKS / ACI</span></div>
-            <div class="pg-cell"><span>Geo-rep</span><span class="pg-sub">Solo Premium · active-active</span></div>
-            <div class="pg-cell"><span>Auth</span><span class="pg-sub">Azure AD · RBAC · SP</span></div>
+            <div class="pg-cell"><span class="pg-num">01</span><span>Qué es ACR</span><span class="pg-sub">Registro privado Azure</span></div>
+            <div class="pg-cell"><span class="pg-num">02</span><span>Tiers ACR</span><span class="pg-sub">Basic · Standard · Premium</span></div>
+            <div class="pg-cell"><span class="pg-num">03</span><span>Arquitectura</span><span class="pg-sub">Registry → AKS / ACI</span></div>
+            <div class="pg-cell"><span class="pg-num">04</span><span>Geo-replicación</span><span class="pg-sub">Solo Premium · active-active</span></div>
           </div>
         </div>
       </div>`
@@ -134,70 +134,70 @@ function renderVisualAtlasPage(data: VisualAtlasPageData): string {
 <meta name="viewport" content="width=768">
 <title>Pág. ${data.pageNumber} — ${data.title} · AI-200 Visual Study Atlas</title>
 <style>
+/* ── GOLDEN MASTER v24 · LIGHT EDITORIAL THEME · LOCKED ─────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   width: 768px;
   height: 1152px;
   overflow: hidden;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  background: #0d1629;
-  color: rgba(255,255,255,0.85);
+  font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  background: #f4f6f9;
+  color: #0d1629;
   display: flex;
   flex-direction: column;
 }
 
-/* ── [A] TOPBAR ─────────────────────────────────────────────────────────── */
+/* ── [A] TOPBAR — navy delgado ───────────────────────────────────────────── */
 .topbar {
-  flex: 0 0 52px;
-  background: #080f1d;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  flex: 0 0 44px;
+  background: #0d1629;
   display: flex;
   align-items: center;
-  padding: 0 20px;
+  padding: 0 18px;
   gap: 10px;
 }
 .topbar-page {
   background: #0d9488;
   color: #fff;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 800;
   padding: 3px 8px;
-  border-radius: 3px;
-  letter-spacing: 0.05em;
+  border-radius: 2px;
+  letter-spacing: 0.06em;
   flex-shrink: 0;
 }
 .topbar-domain {
-  font-size: 10px;
-  color: rgba(255,255,255,0.35);
-  letter-spacing: 0.08em;
+  font-size: 9.5px;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   font-weight: 600;
 }
 .topbar-spacer { flex: 1; }
 .topbar-badge-domain {
-  font-size: 8.5px;
+  font-size: 8px;
   color: #0d9488;
-  border: 1px solid rgba(13,148,136,0.4);
+  border: 1px solid rgba(13,148,136,0.45);
   padding: 2px 7px;
-  border-radius: 3px;
-  font-weight: 600;
+  border-radius: 2px;
+  font-weight: 700;
 }
 .topbar-badge-cert {
-  font-size: 8.5px;
+  font-size: 8px;
   color: #fff;
   background: #0078d4;
   padding: 2px 7px;
-  border-radius: 3px;
+  border-radius: 2px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 
-/* ── [B] HERO EDITORIAL ─────────────────────────────────────────────────── */
+/* ── [B] HERO — blanco, título navy grande ───────────────────────────────── */
 .hero {
-  flex: 0 0 124px;
-  background: linear-gradient(135deg, #0d1629 0%, #0b1a2e 100%);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex: 0 0 130px;
+  background: #ffffff;
+  border-bottom: 1px solid #dde1e9;
   display: flex;
   align-items: stretch;
   padding: 0 24px;
@@ -207,71 +207,72 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
+  padding-right: 12px;
 }
 .hero-subtitle {
-  font-size: 9px;
-  color: rgba(255,255,255,0.3);
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  font-size: 8.5px;
+  color: #6b7a99;
+  font-weight: 700;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 .hero-title {
-  font-size: 26px;
+  font-size: 25px;
   font-weight: 900;
-  color: rgba(255,255,255,0.95);
-  line-height: 1.1;
+  color: #0d1629;
+  line-height: 1.08;
   letter-spacing: -0.02em;
 }
 .hero-context {
-  font-size: 10px;
-  color: rgba(255,255,255,0.42);
+  font-size: 9.5px;
+  color: #3d4f70;
   line-height: 1.55;
-  max-width: 580px;
+  max-width: 590px;
 }
 .hero-icon {
-  flex: 0 0 72px;
+  flex: 0 0 68px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 38px;
-  opacity: 0.18;
+  font-size: 36px;
+  opacity: 0.22;
 }
 
-/* ── [C] GUIDE QUESTION ─────────────────────────────────────────────────── */
+/* ── [C] PREGUNTA GUÍA — cápsula azul clara ──────────────────────────────── */
 .guide {
-  flex: 0 0 40px;
-  background: rgba(0,120,212,0.08);
-  border-bottom: 1px solid rgba(0,120,212,0.15);
+  flex: 0 0 38px;
+  background: #eef4ff;
+  border-bottom: 1px solid #c3d6f7;
   display: flex;
   align-items: center;
-  padding: 0 24px;
+  padding: 0 22px;
   gap: 10px;
 }
 .guide-label {
-  font-size: 8px;
-  color: #60a5fa;
+  font-size: 7.5px;
+  color: #1d4ed8;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   flex-shrink: 0;
 }
 .guide-pill {
-  background: rgba(0,120,212,0.15);
-  border: 1px solid rgba(0,120,212,0.25);
+  background: #dbeafe;
+  border: 1px solid #93c5fd;
   border-radius: 20px;
   padding: 3px 12px;
-  font-size: 10px;
-  color: #93c5fd;
+  font-size: 9.5px;
+  color: #1e3a8a;
   font-style: italic;
-  font-weight: 500;
+  font-weight: 600;
 }
 
-/* ── [D] UPPER VISUAL BLOCK ─────────────────────────────────────────────── */
+/* ── [D] UPPER VISUAL — fondo blanco, imagen clara ───────────────────────── */
 .upper-visual {
-  flex: 0 0 412px;
-  background: #070d1a;
-  border-bottom: 2px solid rgba(13,148,136,0.15);
+  flex: 0 0 408px;
+  background: #ffffff;
+  border-bottom: 2px solid #dde1e9;
   overflow: hidden;
   position: relative;
 }
@@ -287,86 +288,97 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #07111f;
+  background: #f8fafc;
 }
 .placeholder-inner {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
   padding: 20px 32px;
 }
-.placeholder-icon { font-size: 32px; opacity: 0.25; }
+.placeholder-icon { font-size: 32px; opacity: 0.35; }
 .placeholder-label {
   font-size: 11px;
   font-weight: 700;
-  color: rgba(255,255,255,0.25);
+  color: #6b7a99;
   letter-spacing: 0.08em;
 }
-.placeholder-sub { font-size: 9px; color: rgba(255,255,255,0.15); }
+.placeholder-sub { font-size: 9px; color: #9ca3af; }
 .placeholder-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 10px;
   margin-top: 12px;
   width: 100%;
-  max-width: 520px;
+  max-width: 560px;
 }
 .pg-cell {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.07);
+  background: #ffffff;
+  border: 1px solid #dde1e9;
   border-radius: 4px;
-  padding: 10px 14px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
   gap: 3px;
   font-size: 11px;
-  color: rgba(255,255,255,0.35);
-  font-weight: 600;
+  color: #0d1629;
+  font-weight: 700;
 }
-.pg-sub { font-size: 9px; color: rgba(255,255,255,0.2); font-weight: 400; }
+.pg-num {
+  font-size: 9px;
+  font-weight: 800;
+  color: #0d9488;
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+.pg-sub { font-size: 9px; color: #6b7a99; font-weight: 400; }
 
 /* ── [E] LOWER BLOCK ─────────────────────────────────────────────────────── */
 .lower-block {
   flex: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0;
   min-height: 0;
 }
 
-/* Trampas */
+/* Trampas — panel blanco, header rojo */
 .traps-panel {
-  background: rgba(220,38,38,0.04);
-  border-right: 1px solid rgba(255,255,255,0.06);
+  background: #ffffff;
+  border-right: 1px solid #dde1e9;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 .panel-header {
-  padding: 10px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 9px 16px;
   display: flex;
   align-items: center;
   gap: 7px;
   flex-shrink: 0;
 }
-.panel-header-icon { font-size: 12px; }
+.traps-panel .panel-header {
+  background: #dc2626;
+  border-bottom: none;
+}
+.panel-header-icon { font-size: 11px; }
 .panel-header-label {
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
-.traps-panel .panel-header-label { color: #f87171; }
+.traps-panel .panel-header-icon { color: rgba(255,255,255,0.8); }
+.traps-panel .panel-header-label { color: #fff; }
 .traps-list {
   flex: 1;
   padding: 10px 16px;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 10px;
   overflow: hidden;
+  background: #fff9f9;
 }
 .trap-item {
   display: flex;
@@ -377,12 +389,12 @@ body {
   flex-shrink: 0;
   width: 18px;
   height: 18px;
-  background: rgba(220,38,38,0.2);
-  border: 1px solid rgba(220,38,38,0.35);
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
   border-radius: 50%;
   font-size: 8.5px;
   font-weight: 800;
-  color: #f87171;
+  color: #dc2626;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -391,37 +403,43 @@ body {
 .trap-wrong {
   font-size: 9.5px;
   font-weight: 700;
-  color: rgba(255,255,255,0.55);
+  color: #374151;
   text-decoration: line-through;
-  text-decoration-color: rgba(248,113,113,0.5);
+  text-decoration-color: #f87171;
 }
-.trap-arrow { font-size: 8px; color: rgba(255,255,255,0.2); }
+.trap-arrow { font-size: 8px; color: #9ca3af; }
 .trap-correction {
   font-size: 9px;
-  color: rgba(255,255,255,0.6);
+  color: #1f2937;
   line-height: 1.45;
 }
 
-/* Autocheck */
+/* Autocheck — panel blanco, header navy */
 .autocheck-panel {
-  background: rgba(13,148,136,0.04);
+  background: #ffffff;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
-.autocheck-panel .panel-header-label { color: #34d399; }
+.autocheck-panel .panel-header {
+  background: #0d1629;
+  border-bottom: none;
+}
+.autocheck-panel .panel-header-icon { color: rgba(255,255,255,0.7); }
+.autocheck-panel .panel-header-label { color: #fff; }
 .autocheck-body {
   flex: 1;
   padding: 10px 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
   overflow: hidden;
+  background: #f8faff;
 }
 .autocheck-question {
   font-size: 10px;
   font-weight: 700;
-  color: rgba(255,255,255,0.7);
+  color: #0d1629;
   line-height: 1.4;
 }
 .autocheck-options { display: flex; flex-direction: column; gap: 4px; }
@@ -431,18 +449,18 @@ body {
   gap: 7px;
   padding: 5px 8px;
   border-radius: 3px;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid #e5e7eb;
   font-size: 9.5px;
 }
 .option-row.correct {
-  background: rgba(16,185,129,0.1);
-  border-color: rgba(16,185,129,0.3);
-  color: #34d399;
+  background: #d1fae5;
+  border-color: #6ee7b7;
+  color: #065f46;
   font-weight: 700;
 }
 .option-row.wrong-opt {
-  background: rgba(255,255,255,0.02);
-  color: rgba(255,255,255,0.3);
+  background: #f9fafb;
+  color: #6b7280;
 }
 .option-badge {
   flex-shrink: 0;
@@ -455,46 +473,45 @@ body {
   align-items: center;
   justify-content: center;
 }
-.option-row.correct .option-badge { background: rgba(16,185,129,0.25); color: #34d399; }
-.option-row.wrong-opt .option-badge { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.25); }
+.option-row.correct .option-badge { background: #a7f3d0; color: #065f46; }
+.option-row.wrong-opt .option-badge { background: #e5e7eb; color: #6b7280; }
 .autocheck-explanation {
   font-size: 9px;
-  color: rgba(255,255,255,0.45);
+  color: #1f2937;
   line-height: 1.45;
   padding: 6px 8px;
-  background: rgba(255,255,255,0.02);
-  border-left: 2px solid rgba(52,211,153,0.3);
+  background: #ecfdf5;
+  border-left: 2px solid #34d399;
   border-radius: 0 3px 3px 0;
 }
 .discard-notes { display: flex; flex-direction: column; gap: 2px; }
-.discard-note { font-size: 8px; color: rgba(255,255,255,0.2); line-height: 1.4; }
+.discard-note { font-size: 8px; color: #9ca3af; line-height: 1.4; }
 
-/* ── [F] FOOTER ─────────────────────────────────────────────────────────── */
+/* ── [F] FOOTER — navy ───────────────────────────────────────────────────── */
 .footer {
-  flex: 0 0 32px;
-  background: #060c18;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  flex: 0 0 30px;
+  background: #0d1629;
   display: flex;
   align-items: center;
-  padding: 0 20px;
+  padding: 0 18px;
   gap: 16px;
 }
 .footer-brand {
-  font-size: 8.5px;
+  font-size: 8px;
   font-family: monospace;
-  color: rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.25);
   font-weight: 600;
 }
 .footer-spacer { flex: 1; }
 .footer-page {
-  font-size: 8px;
-  font-family: monospace;
-  color: rgba(255,255,255,0.15);
-}
-.footer-contract {
   font-size: 7.5px;
   font-family: monospace;
-  color: rgba(13,148,136,0.35);
+  color: rgba(255,255,255,0.2);
+}
+.footer-contract {
+  font-size: 7px;
+  font-family: monospace;
+  color: rgba(13,148,136,0.5);
 }
 </style>
 </head>
@@ -610,6 +627,7 @@ function runStructuralQa(html: string, data: VisualAtlasPageData): StructuralQaR
     { name: "Respuesta correcta definida", ok: data.autocheck.correctOption >= 0 },
     { name: "Footer presente",             ok: html.includes("class=\"footer\"") },
     { name: "Sin CDN externos",            ok: !html.includes("googleapis.com") && !html.includes("cloudflare.com") },
+    { name: "Tema claro (no dark body)",   ok: html.includes("background: #f4f6f9") && !html.includes("background: #0d1629;\n  color: rgba(255,255,255") },
   ];
   const passed = checks.filter(c => c.ok).length;
   const total  = checks.length;
@@ -620,7 +638,14 @@ function runStructuralQa(html: string, data: VisualAtlasPageData): StructuralQaR
    PROMPT IMAGEN — solo para el bloque visual superior (gpt-image-2 medium)
    ══════════════════════════════════════════════════════════════════════════ */
 function buildImagePrompt(): string {
-  return `Premium certification study material visual. Dark navy background (#0d1629). Azure Container Registry architectural diagram showing: three service tier cards (Basic, Standard, Premium in violet with star) with feature comparison grid, plus horizontal flow diagram (Developer → ACR Registry → AKS/ACI/App Service). Technical certification aesthetic, teal accents (#0d9488), Azure blue (#0078d4). Grid layout, high information density, no decorative elements, pure educational atlas style.`;
+  return `Editorial certification atlas illustration. PURE WHITE background. Four numbered module cards arranged in a clean 2x2 grid on white:
+
+01 QUÉ ES ACR — small container/registry icon, 2 lines of light text, thin border, white card
+02 TIERS ACR — three horizontal tier badges (Basic gray, Standard blue, Premium teal with star), white card
+03 ARQUITECTURA INTERNA — simple flow: Developer → Registry → AKS / App Service / ACI, small Azure icons, white card
+04 GEO-REPLICACIÓN — globe outline with 3 region dots connected by lines, Premium badge, white card
+
+Style: clean editorial, certification textbook. Azure blue (#0078D4), teal (#0D9488), slate (#334155) for text. Light gray card borders (#E2E8F0). Module numbers in bold teal. Icons minimal and flat. NO dark backgrounds, NO black fills, NO dashboard UI, NO dense tables. Lots of white space. Professional, legible, sparse layout. 1024x1024 square.`;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

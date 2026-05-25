@@ -23,18 +23,57 @@ export default function Exportacion() {
   const all       = [...approved, ...exported];
   const notReady  = state.pages.filter(p => !["approved","exported"].includes(p.status) && parseInt(p.id,10) <= 10);
 
+  function pageFilePath(pageId: string, file: string): string {
+    const padded = pageId.padStart(2, "0");
+    return `/assets/cloudbooks/ai-200/visual-atlas/pages/${padded}/${file}`;
+  }
+
   function handleExport(pageId: string, format: ExportAsset["format"]) {
     const key = `${pageId}-${format}`;
     setExporting(key);
-    exportPage(pageId, format);
-    setTimeout(() => {
-      setExporting(null);
-      toast({ title: `Exportación ${format} completada`, description: `Página ${pageId} — ${FORMAT_CFG[format].label}` });
-    }, 1200);
+
+    if (format === "HTML") {
+      window.open(pageFilePath(pageId, "page.html"), "_blank");
+      exportPage(pageId, format);
+      setTimeout(() => {
+        setExporting(null);
+        toast({ title: "HTML abierto", description: `Página ${pageId} — page.html en nueva pestaña` });
+      }, 400);
+    } else if (format === "PNG") {
+      const a = document.createElement("a");
+      a.href = pageFilePath(pageId, "upper-visual.png");
+      a.download = `page-${pageId.padStart(2,"0")}-upper-visual.png`;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      exportPage(pageId, format);
+      setTimeout(() => {
+        setExporting(null);
+        toast({ title: "PNG descargado", description: `Página ${pageId} — upper-visual.png` });
+      }, 400);
+    } else if (format === "PDF") {
+      const htmlUrl = pageFilePath(pageId, "page.html");
+      window.open(htmlUrl, "_blank");
+      exportPage(pageId, format);
+      setTimeout(() => {
+        setExporting(null);
+        toast({
+          title: "HTML abierto para PDF",
+          description: "Usa Archivo → Imprimir → Guardar como PDF en el navegador",
+        });
+      }, 400);
+    } else {
+      exportPage(pageId, format);
+      setTimeout(() => {
+        setExporting(null);
+        toast({ title: `Exportación ${format}`, description: `Página ${pageId} — ${FORMAT_CFG[format].label}` });
+      }, 800);
+    }
   }
 
   function handleExportAll(format: ExportAsset["format"]) {
-    approved.forEach((p, i) => setTimeout(() => exportPage(p.id, format), i * 200));
+    approved.forEach((p, i) => setTimeout(() => handleExport(p.id, format), i * 300));
     toast({ title: `Exportación masiva ${format} iniciada`, description: `${approved.length} páginas en cola` });
   }
 
