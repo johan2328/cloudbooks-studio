@@ -33,3 +33,8 @@ externalPort = 3000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+OPENAI_API_KEY = "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"

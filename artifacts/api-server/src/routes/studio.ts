@@ -9,7 +9,7 @@ const router = Router();
    El servidor corre desde artifacts/api-server/ (CWD de pnpm --filter).
    La carpeta public de Vite está en artifacts/studio/public/             */
 function studioPublicDir(): string {
-  return join(process.cwd(), "../../studio/public");
+  return join(process.cwd(), "../studio/public");
 }
 
 function pageOutputDir(pageId: string): string {
@@ -193,18 +193,89 @@ function buildImagePrompt(): string {
   return `Premium Microsoft certification study infographic thumbnail. Dark navy background (#0d1629). Shows Azure Container Registry architecture: three tier cards (Basic, Standard, Premium highlighted in violet) side by side with feature checkmarks, plus a horizontal architecture flow diagram below (Developer → ACR → AKS/ACI). Professional certification material aesthetic. Teal accents (#0d9488), Azure blue (#0078d4). Clean grid layout, high information density. No decorative elements, pure educational utility.`;
 }
 
-/* ── Minimal PNG placeholder (1×1 dark blue pixel) ──────────────────────── */
-function minimalPng(): Buffer {
-  // Valid 1×1 PNG with color #0d1629 (RGBA: 13,22,41,255)
-  // Pre-computed PNG bytes (signature + IHDR + IDAT + IEND)
-  return Buffer.from(
-    "89504e470d0a1a0a0000000d494844520000000100000001080200000090" +
-    "wc3d980000000c4944415478016360f8cf00000002010035c0000000049454e44ae426082",
-    "hex"
-  ).slice(0, 0) || Buffer.from(
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADklEQVQI12Nk" +
-    "YGBgAAAABAABJzQnCgAAAABJRU5ErkJggg==", "base64"
-  );
+/* ── SVG preview card (fallback when DALL-E unavailable) ─────────────────── */
+function buildPreviewSvg(seed: { title: string; subtitle: string; domain: string; id: string }, scores: Record<string, number>): Buffer {
+  const avg = Object.values(scores).reduce((a, b) => a + b, 0) / Object.values(scores).length;
+  const dims = [
+    ["Arte",       scores.art_direction ?? 0],
+    ["Editorial",  scores.editorial_consistency ?? 0],
+    ["Legib.",     scores.readability ?? 0],
+    ["Técnica",    scores.technical_accuracy ?? 0],
+    ["Densidad",   scores.useful_density ?? 0],
+    ["Comercial",  scores.commercial_risk ?? 0],
+  ] as [string, number][];
+
+  const bars = dims.map(([label, val], i) => {
+    const w = Math.round((val / 10) * 180);
+    const y = 580 + i * 30;
+    const color = val >= 8 ? "#0d9488" : val >= 6 ? "#3b82f6" : "#f59e0b";
+    return `
+      <text x="32" y="${y + 12}" font-family="system-ui" font-size="11" fill="rgba(255,255,255,0.35)">${label}</text>
+      <rect x="110" y="${y}" width="180" height="14" rx="2" fill="rgba(255,255,255,0.05)"/>
+      <rect x="110" y="${y}" width="${w}" height="14" rx="2" fill="${color}" opacity="0.7"/>
+      <text x="298" y="${y + 11}" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.4)">${val}</text>`;
+  }).join("");
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1629"/>
+      <stop offset="100%" stop-color="#0a1220"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0d9488"/>
+      <stop offset="100%" stop-color="#0078d4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bg)"/>
+  <rect x="0" y="0" width="4" height="500" fill="url(#accent)"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="800" height="70" fill="rgba(255,255,255,0.03)"/>
+  <rect x="20" y="20" width="68" height="20" rx="3" fill="#0d9488"/>
+  <text x="26" y="34" font-family="system-ui" font-size="11" font-weight="bold" fill="white">AI-200</text>
+  <rect x="96" y="20" width="46" height="20" rx="3" fill="rgba(0,120,212,0.25)" stroke="#0078d4" stroke-width="1"/>
+  <text x="103" y="34" font-family="system-ui" font-size="10" fill="#60a5fa">Pág. ${seed.id}</text>
+  <text x="160" y="34" font-family="system-ui" font-size="10" fill="rgba(255,255,255,0.25)">${seed.domain}</text>
+  <text x="780" y="34" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.2)" text-anchor="end">v1.0</text>
+
+  <!-- Title -->
+  <text x="32" y="105" font-family="system-ui" font-size="20" font-weight="bold" fill="rgba(255,255,255,0.9)">${seed.title.length > 45 ? seed.title.slice(0, 45) + "…" : seed.title}</text>
+  <text x="32" y="128" font-family="system-ui" font-size="13" fill="rgba(255,255,255,0.4)">${seed.subtitle}</text>
+  <line x1="32" y1="148" x2="768" y2="148" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+
+  <!-- QA Score badge -->
+  <rect x="620" y="160" width="148" height="80" rx="4" fill="rgba(13,148,136,0.1)" stroke="rgba(13,148,136,0.25)" stroke-width="1"/>
+  <text x="694" y="192" font-family="system-ui" font-size="28" font-weight="black" fill="#0d9488" text-anchor="middle">${avg.toFixed(1)}</text>
+  <text x="694" y="212" font-family="system-ui" font-size="10" fill="rgba(255,255,255,0.3)" text-anchor="middle">Score QA</text>
+  <rect x="650" y="222" width="88" height="10" rx="3" fill="rgba(13,148,136,0.15)">
+    <text x="660" y="230" font-family="system-ui" font-size="8" fill="#0d9488">✅ APROBADO</text>
+  </rect>
+  <text x="694" y="232" font-family="system-ui" font-size="9" font-weight="bold" fill="#0d9488" text-anchor="middle">✅ APROBADO</text>
+
+  <!-- Visual placeholder grid -->
+  <rect x="32" y="165" width="280" height="130" rx="4" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+  <text x="172" y="225" font-family="system-ui" font-size="11" fill="rgba(255,255,255,0.2)" text-anchor="middle">Infografía generada</text>
+  <text x="172" y="242" font-family="system-ui" font-size="10" fill="rgba(255,255,255,0.12)" text-anchor="middle">ver page.html →</text>
+  <rect x="320" y="165" width="280" height="130" rx="4" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+  <text x="460" y="225" font-family="system-ui" font-size="11" fill="rgba(255,255,255,0.2)" text-anchor="middle">Azure Container Registry</text>
+  <text x="460" y="242" font-family="system-ui" font-size="10" fill="rgba(255,255,255,0.12)" text-anchor="middle">Basic · Standard · Premium</text>
+
+  <!-- Divider -->
+  <line x1="32" y1="315" x2="768" y2="315" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+
+  <!-- QA bars label -->
+  <text x="32" y="348" font-family="system-ui" font-size="10" font-weight="bold" fill="rgba(255,255,255,0.25)" letter-spacing="1">QA REPORT</text>
+  ${bars}
+
+  <!-- Footer -->
+  <rect x="0" y="478" width="800" height="22" fill="rgba(0,0,0,0.3)"/>
+  <text x="32" y="493" font-family="monospace" font-size="9" fill="rgba(255,255,255,0.15)">CloudBooks AI-200 Visual Atlas · GPT-4o · Replit Static · preview auto-generado</text>
+</svg>`;
+
+  return Buffer.from(svg, "utf-8");
 }
 
 /* ── POST /api/studio/generate-visual-atlas-page ─────────────────────────── */
@@ -359,9 +430,14 @@ ${defLines || "- Ninguno"}
     await writeFile(join(outDir, "qa-report.md"), qaReport, "utf-8");
     req.log.info({ pageId }, "QA report saved");
 
-    /* ── 4. Generate preview image (best-effort) ── */
+    /* ── 4. Generate preview image (DALL-E 3 → SVG fallback) ─────────────── */
     let previewGenerated = false;
+    let previewIsDalle   = false;
     let imageError = "";
+
+    // Always write the SVG fallback first (instant, no API call)
+    const svgBuf = buildPreviewSvg(seed, qaScores);
+    await writeFile(join(outDir, "preview.svg"), svgBuf);
 
     try {
       req.log.info({ pageId }, "Attempting image generation with DALL-E 3");
@@ -371,28 +447,30 @@ ${defLines || "- Ninguno"}
         n: 1,
         size: "1792x1024",
         quality: "standard",
-        response_format: "b64_json",
       });
 
-      const b64 = imgResponse.data?.[0]?.b64_json;
-      if (b64) {
-        await writeFile(join(outDir, "preview.png"), Buffer.from(b64, "base64"));
+      const imgUrl = imgResponse.data?.[0]?.url;
+      if (imgUrl) {
+        const imgFetch = await fetch(imgUrl);
+        const imgBuf   = Buffer.from(await imgFetch.arrayBuffer());
+        await writeFile(join(outDir, "preview.png"), imgBuf);
         previewGenerated = true;
+        previewIsDalle   = true;
         req.log.info({ pageId }, "Preview image saved from DALL-E 3");
       }
     } catch (imgErr) {
       imageError = String(imgErr);
-      req.log.warn({ pageId, err: imageError }, "Image generation failed — writing placeholder");
-      // Write a minimal valid PNG placeholder (1×1 transparent)
-      await writeFile(
-        join(outDir, "preview.png"),
-        Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAABjE+ibYAAAAASUVORK5CYII=", "base64")
-      );
+      req.log.warn({ pageId, err: imageError }, "DALL-E unavailable — SVG fallback already saved");
+      previewGenerated = true; // SVG is a valid preview
     }
 
     const durationMs = Date.now() - startedAt;
 
-    req.log.info({ pageId, durationMs, previewGenerated }, "Generation complete");
+    req.log.info({ pageId, durationMs, previewGenerated, previewIsDalle }, "Generation complete");
+
+    const previewPath = previewIsDalle
+      ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/preview.png`
+      : `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/preview.svg`;
 
     res.status(201).json({
       success: true,
@@ -402,9 +480,10 @@ ${defLines || "- Ninguno"}
         html:      `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/page.html`,
         metadata:  `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/metadata.json`,
         qaReport:  `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/qa-report.md`,
-        previewPng:`/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/preview.png`,
+        previewPng: previewPath,
       },
       previewGenerated,
+      previewMode: previewIsDalle ? "dalle3" : "svg_fallback",
       imageError: previewGenerated ? null : imageError,
       qaVerdict,
       qaScores,

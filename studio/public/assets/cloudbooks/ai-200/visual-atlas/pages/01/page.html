@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azure Container Registry (ACR) — Arquitectura y Tiers</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            background-color: #0d1629;
+            overflow: hidden;
+            width: 1200px;
+            height: 900px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 72px;
+            padding: 0 32px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        .badge {
+            background-color: #0d9488;
+            color: #fff;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 12px;
+            margin-right: 8px;
+        }
+        .title {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 22px;
+            font-weight: bold;
+        }
+        .subtitle {
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 13px;
+        }
+        .header-right .badge {
+            margin-left: 8px;
+        }
+        .badge-outline {
+            color: #0d9488;
+            border: 1px solid #0d9488;
+            background: none;
+        }
+        .badge-filled {
+            background-color: #0078d4;
+            color: #fff;
+        }
+        .main-content {
+            display: grid;
+            grid-template-rows: 320px 140px 240px;
+            gap: 16px;
+            padding: 16px 32px;
+            height: 828px;
+        }
+        .card {
+            background-color: #0f1e35;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+            padding: 16px;
+            color: rgba(255, 255, 255, 0.85);
+        }
+        .card-header {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .card-body {
+            font-size: 14px;
+        }
+        .card-footer {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.45);
+            margin-top: 8px;
+        }
+        .tier-card {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .tier-card.standard {
+            border-color: rgba(13, 148, 136, 0.3);
+        }
+        .tier-card.premium {
+            border: 2px solid #7c3aed;
+            background-color: #1a1335;
+        }
+        .badge-tier {
+            display: inline-block;
+            background-color: #0d9488;
+            color: #fff;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+        .badge-premium {
+            background-color: #7c3aed;
+        }
+        .architecture-flow {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+        .architecture-flow div {
+            display: flex;
+            align-items: center;
+        }
+        .architecture-flow span {
+            margin: 0 8px;
+        }
+        .trap-card {
+            background-color: rgba(217, 119, 6, 0.08);
+            border: 1px solid rgba(217, 119, 6, 0.25);
+        }
+        .autocheck-card {
+            background-color: rgba(5, 150, 105, 0.06);
+            border: 1px solid rgba(5, 150, 105, 0.2);
+        }
+        .warning-text {
+            color: #d97706;
+        }
+        .success-text {
+            color: #059669;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="badge">01</div>
+            <div>
+                <div class="title">Azure Container Registry (ACR)</div>
+                <div class="subtitle">Arquitectura y Tiers</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="badge badge-outline">Gestión de Contenedores</div>
+            <div class="badge badge-filled">AI-200</div>
+        </div>
+    </div>
+    <div class="main-content">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+            <div class="card tier-card">
+                <div class="card-header">Basic <span style="font-size: 12px;">~$0.167/día</span></div>
+                <div class="card-body">
+                    <div>💾 Storage: 10 GiB</div>
+                    <div>🔗 Webhooks: 10</div>
+                    <div>✅ Public access</div>
+                    <div>❌ Geo-replication</div>
+                    <div>❌ Private endpoints</div>
+                    <div>❌ Content Trust</div>
+                    <div>❌ Zone redundancy</div>
+                </div>
+            </div>
+            <div class="card tier-card standard">
+                <div class="card-header">Standard <span class="badge-tier">Más común</span></div>
+                <div class="card-body">
+                    <div>💾 Storage: 100 GiB</div>
+                    <div>🔗 Webhooks: 10</div>
+                    <div>✅ Public access</div>
+                    <div>✅ Content Trust (Notary v2)</div>
+                    <div>❌ Geo-replication</div>
+                    <div>❌ Private endpoints</div>
+                    <div>❌ Zone redundancy</div>
+                </div>
+            </div>
+            <div class="card tier-card premium">
+                <div class="card-header">Premium <span class="badge-tier badge-premium">⭐ Más preguntas AI-200</span></div>
+                <div class="card-body">
+                    <div>💾 Storage: 500 GiB</div>
+                    <div>🔗 Webhooks: 500</div>
+                    <div>✅ Geo-replication (active-active)</div>
+                    <div>✅ Private endpoints / Private Link</div>
+                    <div>✅ Content Trust (Notary v2)</div>
+                    <div>✅ Zone redundancy</div>
+                    <div>✅ Customer-managed keys</div>
+                    <div>✅ Dedicated data endpoints</div>
+                </div>
+                <div class="card-footer">Features exclusivos de Premium son los más evaluados</div>
+            </div>
+        </div>
+        <div class="card architecture-flow">
+            <div>Flujo de Arquitectura</div>
+            <div>
+                <span>[Desarrollador]</span>
+                <span>→</span>
+                <span>git push / az acr build</span>
+                <span>→</span>
+                <span>[Azure Container Registry]</span>
+                <span>→</span>
+                <span>pull</span>
+                <span>→</span>
+                <span>[AKS] [ACI] [App Service]</span>
+            </div>
+            <div>
+                <span>[Trigger: code commit / base image update / schedule]</span>
+                <span>→</span>
+                <span>[ACR Tasks: build multi-step]</span>
+                <span>→</span>
+                <span>[Push to ACR]</span>
+            </div>
+            <div style="font-size: 12px; color: rgba(255, 255, 255, 0.45);">Auth: Azure AD + RBAC | Service Principal | Admin (disable in prod)</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="card trap-card">
+                <div class="card-header">⚠ Trampas del Examen</div>
+                <div class="card-body">
+                    <div class="warning-text">⚠ Geo-replication: SOLO disponible en Premium</div>
+                    <div class="warning-text">⚠ Private endpoints: SOLO disponible en Premium</div>
+                    <div class="warning-text">⚠ Content Trust (Notary v2): SOLO disponible en Premium</div>
+                    <div class="warning-text">⚠ Zone redundancy: NO existe en Basic ni Standard</div>
+                    <div class="warning-text">⚠ ACR Tasks: NO requiere Docker instalado localmente</div>
+                    <div class="warning-text">⚠ Admin user: SIEMPRE desactivar en producción</div>
+                </div>
+            </div>
+            <div class="card autocheck-card">
+                <div class="card-header">✓ Autocheck</div>
+                <div class="card-body">
+                    <div class="success-text">□ ¿Conozco los 3 tiers y sus límites de almacenamiento?</div>
+                    <div class="success-text">□ ¿Qué 4 features son exclusivos de Premium?</div>
+                    <div class="success-text">□ ¿Cuándo usar Private Endpoints vs acceso público?</div>
+                    <div class="success-text">□ ¿Qué es geo-replication activa-activa?</div>
+                    <div class="success-text">□ ¿Para qué sirve ACR Tasks y cuándo reemplaza a Docker?</div>
+                    <div class="success-text">□ ¿Por qué desactivar el admin user en producción?</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

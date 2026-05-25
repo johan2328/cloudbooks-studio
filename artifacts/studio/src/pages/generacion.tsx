@@ -25,6 +25,7 @@ interface GenerationResult {
   durationMs: number;
   outputs: { html: string; metadata: string; qaReport: string; previewPng: string };
   previewGenerated: boolean;
+  previewMode?: "dalle3" | "svg_fallback";
   imageError: string | null;
   qaVerdict: string;
   qaScores: Record<string, number>;
@@ -430,22 +431,25 @@ export default function Generacion() {
                         <div className="p-4 grid grid-cols-3 gap-4">
                           {/* Preview image */}
                           <div className="col-span-1">
-                            <p className="text-[7px] font-bold text-white/25 uppercase tracking-widest mb-1.5">Preview generado</p>
-                            <div className="aspect-video bg-[#0a1220] border border-white/[0.07] rounded-sm overflow-hidden">
-                              {realResult.previewGenerated ? (
-                                <img
-                                  key={previewKey}
-                                  src={`${realResult.outputs.previewPng}?v=${previewKey}`}
-                                  alt="Preview generado"
-                                  className="w-full h-full object-cover"
-                                />
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <p className="text-[7px] font-bold text-white/25 uppercase tracking-widest">Preview</p>
+                              {realResult.previewMode === "dalle3" ? (
+                                <span className="text-[7px] px-1.5 py-0.5 rounded-sm bg-violet-500/15 text-violet-400 border border-violet-500/20 font-semibold">DALL-E 3</span>
                               ) : (
-                                <div className="flex flex-col items-center justify-center h-full gap-1">
-                                  <Image className="w-4 h-4 text-white/15" />
-                                  <p className="text-[7px] text-white/20">DALL-E no disponible</p>
-                                  <p className="text-[6px] text-white/10">{realResult.imageError?.slice(0, 50)}</p>
-                                </div>
+                                <span className="text-[7px] px-1.5 py-0.5 rounded-sm bg-teal-500/10 text-teal-400/70 border border-teal-500/15 font-semibold">SVG generado</span>
                               )}
+                            </div>
+                            <div className="aspect-video bg-[#0a1220] border border-white/[0.07] rounded-sm overflow-hidden">
+                              <img
+                                key={previewKey}
+                                src={`${realResult.outputs.previewPng}?v=${previewKey}`}
+                                alt="Preview generado"
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                            <div className="mt-1.5 flex items-center gap-1.5">
+                              <HardDrive className="w-2.5 h-2.5 text-teal-400/40 shrink-0" />
+                              <p className="text-[7px] text-teal-400/50 font-semibold">Replit static</p>
                             </div>
                           </div>
 
@@ -454,11 +458,11 @@ export default function Generacion() {
                             <p className="text-[7px] font-bold text-white/25 uppercase tracking-widest mb-1.5">Outputs generados</p>
                             <div className="space-y-1">
                               {([
-                                ["page.html",     realResult.outputs.html,      Code2,    "text-blue-400",    "Ver infografía HTML"],
-                                ["metadata.json", realResult.outputs.metadata,  FileText, "text-teal-400",    "Ver metadatos"],
-                                ["qa-report.md",  realResult.outputs.qaReport,  Shield,   "text-sky-400",     "Ver reporte QA"],
-                                ["preview.png",   realResult.outputs.previewPng,Eye,      "text-violet-400",  "Ver preview"],
-                              ] as const).map(([file, url, Icon, color, label]) => (
+                                ["page.html",     realResult.outputs.html,      Code2,    "text-blue-400"],
+                                ["metadata.json", realResult.outputs.metadata,  FileText, "text-teal-400"],
+                                ["qa-report.md",  realResult.outputs.qaReport,  Shield,   "text-sky-400"],
+                                [realResult.outputs.previewPng.endsWith(".svg") ? "preview.svg" : "preview.png", realResult.outputs.previewPng, Eye, "text-violet-400"],
+                              ] as [string, string, typeof Code2, string][]).map(([file, url, Icon, color]) => (
                                 <a key={file} href={url} target="_blank" rel="noopener noreferrer"
                                   className="flex items-center gap-2 px-2 py-1.5 bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.05] rounded-sm transition-all group">
                                   <Icon className={cn("w-3 h-3 shrink-0", color)} />
@@ -466,6 +470,10 @@ export default function Generacion() {
                                   <ExternalLink className="w-2.5 h-2.5 text-white/15 group-hover:text-white/40 shrink-0" />
                                 </a>
                               ))}
+                            </div>
+                            <div className="mt-2 flex items-center gap-1.5 px-1">
+                              <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400/50 shrink-0" />
+                              <p className="text-[7px] text-emerald-400/50">status: qa_pending → Ejecutar QA</p>
                             </div>
                           </div>
 
