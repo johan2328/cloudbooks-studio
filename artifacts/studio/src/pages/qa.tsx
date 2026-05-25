@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
 import Layout from "@/components/Layout";
 import { cn, statusColorDark, statusLabel, scoreColorDark, formatDateTime } from "@/lib/utils";
 import { useStudio } from "@/lib/studio-store";
 import {
   CheckCircle2, RotateCcw, AlertTriangle, ChevronLeft, ChevronRight,
-  ShieldCheck, Shield, Eye, Loader2, History,
+  ShieldCheck, Shield, Eye, Loader2, History, MoreHorizontal, Info,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -43,6 +43,17 @@ export default function QAPage() {
   const [checkedDefects, setCheckedDefects] = useState<Set<string>>(new Set());
   const [qaRunning, setQaRunning] = useState(false);
   const [activeTab, setActiveTab] = useState<"qa" | "historial">("qa");
+  const [showMoreActions, setShowMoreActions] = useState(false);
+  const moreActionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (moreActionsRef.current && !moreActionsRef.current.contains(e.target as Node))
+        setShowMoreActions(false);
+    }
+    if (showMoreActions) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showMoreActions]);
 
   const page = getPage(pageNum);
   const qa   = getQAForPage(pageNum);
@@ -147,7 +158,7 @@ export default function QAPage() {
 
         {/* ── Tabs ── */}
         <div className="flex border-b border-white/[0.06] bg-[#0d1629] shrink-0">
-          {([["qa", "QA y Aprobación"], ["historial", "Historial de runs"]] as const).map(([id, label]) => (
+          {([["qa", "QA y Aprobación"], ["historial", "Historial de ejecuciones"]] as const).map(([id, label]) => (
             <button key={id} onClick={() => setActiveTab(id)}
               className={cn(
                 "px-4 py-2.5 text-[9px] font-bold uppercase tracking-wider transition-all",
@@ -164,27 +175,71 @@ export default function QAPage() {
               {/* ── Panel izquierdo: diagnóstico ── */}
               <div className="flex-1 overflow-y-auto p-5 space-y-4 max-w-xl">
 
-                {/* Acciones */}
+                {/* Acciones — 1 primario + 1 secundario + kebab */}
                 <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
-                  <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">Acciones de aprobación</p>
-                  <div className="flex flex-wrap gap-2">
-                    <button onClick={handleRunQA} disabled={qaRunning}
-                      className="flex items-center gap-1.5 h-8 px-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 rounded-sm text-[10px] font-semibold text-blue-300 transition-all disabled:opacity-40">
-                      {qaRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3" />}
-                      {qaRunning ? "Ejecutando QA…" : "Ejecutar QA"}
-                    </button>
-                    <button onClick={handleApprove} disabled={!canApprove}
-                      className="flex items-center gap-1.5 h-8 px-3 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 rounded-sm text-[10px] font-semibold text-emerald-300 transition-all disabled:opacity-30">
-                      <CheckCircle2 className="w-3 h-3" />Aprobar página
-                    </button>
-                    <button onClick={() => setShowRevisionInput(v => !v)}
-                      className="flex items-center gap-1.5 h-8 px-3 bg-amber-600/10 hover:bg-amber-600/20 border border-amber-500/20 rounded-sm text-[10px] font-semibold text-amber-300/80 transition-all">
-                      <AlertTriangle className="w-3 h-3" />Solicitar corrección
-                    </button>
-                    <button onClick={handleRegen} disabled={!canRegen}
-                      className="flex items-center gap-1.5 h-8 px-3 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-sm text-[10px] font-semibold text-white/40 transition-all disabled:opacity-30">
-                      <RotateCcw className="w-3 h-3" />Regenerar selectivo
-                    </button>
+                  <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">Siguiente acción</p>
+                  <div className="flex items-center gap-2">
+
+                    {/* Primario: único por estado */}
+                    {!qa ? (
+                      <button onClick={handleRunQA} disabled={qaRunning}
+                        className="flex items-center gap-1.5 h-8 px-3 bg-blue-600 hover:bg-blue-500 rounded-sm text-[10px] font-bold text-white transition-all disabled:opacity-50">
+                        {qaRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3" />}
+                        {qaRunning ? "Ejecutando QA…" : "Ejecutar QA"}
+                      </button>
+                    ) : canApprove ? (
+                      <button onClick={handleApprove}
+                        className="flex items-center gap-1.5 h-8 px-3 bg-emerald-600 hover:bg-emerald-500 rounded-sm text-[10px] font-bold text-white transition-all">
+                        <CheckCircle2 className="w-3 h-3" />Aprobar página
+                      </button>
+                    ) : (
+                      <button onClick={() => setShowRevisionInput(v => !v)}
+                        className="flex items-center gap-1.5 h-8 px-3 bg-amber-600/80 hover:bg-amber-500/80 rounded-sm text-[10px] font-bold text-white transition-all">
+                        <AlertTriangle className="w-3 h-3" />Solicitar corrección
+                      </button>
+                    )}
+
+                    {/* Secundario: re-ejecutar si ya hay QA */}
+                    {qa && (
+                      <button onClick={handleRunQA} disabled={qaRunning}
+                        className="flex items-center gap-1.5 h-8 px-2.5 border border-white/10 rounded-sm text-[10px] text-white/40 hover:text-white/70 hover:border-white/20 transition-all disabled:opacity-40">
+                        <RotateCcw className="w-3 h-3" />Re-ejecutar QA
+                      </button>
+                    )}
+
+                    {/* Más acciones — kebab */}
+                    <div className="relative ml-auto" ref={moreActionsRef}>
+                      <button onClick={() => setShowMoreActions(v => !v)}
+                        className="flex items-center gap-1 h-8 px-2.5 border border-white/10 rounded-sm text-[9px] text-white/30 hover:text-white/60 hover:border-white/20 transition-all">
+                        <MoreHorizontal className="w-3.5 h-3.5" />
+                      </button>
+                      {showMoreActions && (
+                        <div className="absolute right-0 top-9 w-48 bg-[#0d1629] border border-white/10 rounded-sm shadow-xl z-50 py-1">
+                          {canRegen && (
+                            <button onClick={() => { handleRegen(); setShowMoreActions(false); }}
+                              className="w-full text-left px-3 py-2 text-[10px] text-white/50 hover:bg-white/5 hover:text-white/80 flex items-center gap-2">
+                              <RotateCcw className="w-3 h-3" />Regenerar selectivo
+                            </button>
+                          )}
+                          {!qa && canApprove && (
+                            <button onClick={() => { handleApprove(); setShowMoreActions(false); }}
+                              className="w-full text-left px-3 py-2 text-[10px] text-white/50 hover:bg-white/5 hover:text-white/80 flex items-center gap-2">
+                              <CheckCircle2 className="w-3 h-3" />Aprobar sin QA
+                            </button>
+                          )}
+                          <div className="border-t border-white/[0.06] my-1" />
+                          <button className="w-full text-left px-3 py-2 text-[10px] text-white/25 flex items-center gap-2 cursor-not-allowed">
+                            Marcar como excepción
+                          </button>
+                          <button className="w-full text-left px-3 py-2 text-[10px] text-white/25 flex items-center gap-2 cursor-not-allowed">
+                            Descargar reporte QA
+                          </button>
+                          <button className="w-full text-left px-3 py-2 text-[10px] text-white/25 flex items-center gap-2 cursor-not-allowed">
+                            Comparar versiones
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {showRevisionInput && (
@@ -353,40 +408,79 @@ export default function QAPage() {
           )}
 
           {activeTab === "historial" && (
-            <div className="overflow-y-auto h-full p-5 space-y-2 max-w-2xl">
-              <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-4">Runs de generación · Pág. {pageNum}</p>
+            <div className="overflow-y-auto h-full p-5 max-w-2xl">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Historial de ejecuciones · Pág. {pageNum}</p>
+                <span className="text-[7px] text-white/20 font-mono">{runs.length} run{runs.length !== 1 ? "s" : ""}</span>
+              </div>
+
+              {/* Banner demo seed */}
+              {runs.length > 0 && runs.every(r => r.id.startsWith("run-")) && (
+                <div className="flex items-start gap-2 mb-4 px-3 py-2.5 bg-amber-500/5 border border-amber-500/15 rounded-sm">
+                  <Info className="w-3 h-3 text-amber-400/60 shrink-0 mt-0.5" />
+                  <p className="text-[9px] text-amber-400/70 leading-snug">
+                    Estos runs son <span className="font-semibold">datos de demostración</span> hasta ejecutar una generación real desde Replit.
+                    Ve a <span className="text-amber-400">Generación → Página 01 → Generar con OpenAI</span> para crear el primer run real.
+                  </p>
+                </div>
+              )}
+
               {runs.length === 0 ? (
                 <div className="text-center py-12">
                   <History className="w-6 h-6 text-white/10 mx-auto mb-2" />
                   <p className="text-sm text-white/20">Sin runs de generación todavía</p>
                 </div>
               ) : (
-                runs.map(run => (
-                  <div key={run.id} className="bg-[#0d1629] border border-white/[0.07] rounded-sm p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-bold text-white/20 font-mono">{run.version}</span>
-                        <span className={cn("text-[8px] px-1.5 py-0.5 rounded-sm font-semibold",
-                          run.type === "selective_regeneration" ? "bg-sky-500/15 text-sky-400" : "bg-violet-500/15 text-violet-400")}>
-                          {run.type === "selective_regeneration" ? "Regeneración selectiva" : "Generación completa"}
-                        </span>
-                        <span className={cn("text-[8px] px-1.5 py-0.5 rounded-sm font-semibold",
-                          run.status === "completed" ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400")}>
-                          {run.status === "completed" ? "Completada" : run.status}
-                        </span>
+                <div className="space-y-2">
+                  {[...runs].sort((a, b) => {
+                    // real runs (non-seed) first, then by date desc
+                    const aDemo = a.id.startsWith("run-");
+                    const bDemo = b.id.startsWith("run-");
+                    if (aDemo !== bDemo) return aDemo ? 1 : -1;
+                    return b.createdAt.localeCompare(a.createdAt);
+                  }).map(run => {
+                    const isDemo = run.id.startsWith("run-");
+                    return (
+                      <div key={run.id} className={cn("border rounded-sm p-4",
+                        isDemo ? "bg-[#0d1629] border-white/[0.06]" : "bg-teal-500/5 border-teal-500/20")}>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[9px] font-bold text-white/25 font-mono">{run.version}</span>
+                            {/* Origin badge */}
+                            {isDemo ? (
+                              <span className="text-[7px] px-1.5 py-0.5 rounded-sm bg-white/[0.05] text-white/30 border border-white/[0.08] font-semibold">
+                                Demo seed
+                              </span>
+                            ) : (
+                              <span className="text-[7px] px-1.5 py-0.5 rounded-sm bg-teal-500/15 text-teal-400 border border-teal-500/25 font-semibold">
+                                OpenAI real
+                              </span>
+                            )}
+                            {/* Type badge */}
+                            <span className={cn("text-[7px] px-1.5 py-0.5 rounded-sm font-semibold",
+                              run.type === "selective_regeneration" ? "bg-sky-500/10 text-sky-400/70" : "bg-violet-500/10 text-violet-400/70")}>
+                              {run.type === "selective_regeneration" ? "Selectiva" : "Completa"}
+                            </span>
+                            {/* QA badge */}
+                            <span className={cn("text-[7px] px-1.5 py-0.5 rounded-sm font-semibold",
+                              isDemo ? "bg-white/[0.04] text-white/25" : "bg-emerald-500/10 text-emerald-400/80")}>
+                              {isDemo ? "QA simulado" : "QA real"}
+                            </span>
+                          </div>
+                          <span className="text-[8px] text-white/20 shrink-0">{formatDateTime(run.createdAt)}</span>
+                        </div>
+                        {run.note && <p className="text-[9px] text-white/40 mb-2">{run.note}</p>}
+                        {run.promptTokens && (
+                          <div className="flex flex-wrap gap-3 text-[8px] text-white/20">
+                            <span>HTML: <span className="text-white/35 font-mono">{run.model}</span></span>
+                            {!isDemo && <span className="text-teal-400/50">Imagen: gpt-image-1 medium</span>}
+                            <span>{((run.promptTokens + (run.completionTokens ?? 0)) / 1000).toFixed(1)}k tokens</span>
+                          </div>
+                        )}
                       </div>
-                      <span className="text-[9px] text-white/20">{formatDateTime(run.createdAt)}</span>
-                    </div>
-                    {run.note && <p className="text-[9px] text-white/40 mb-2">{run.note}</p>}
-                    {run.promptTokens && (
-                      <div className="flex gap-4 text-[8px] text-white/20">
-                        <span>Modelo: <span className="text-white/40 font-mono">{run.model}</span></span>
-                        <span>Prompt: <span className="text-white/40">{run.promptTokens.toLocaleString()}</span></span>
-                        <span>Completion: <span className="text-white/40">{run.completionTokens?.toLocaleString()}</span></span>
-                      </div>
-                    )}
-                  </div>
-                ))
+                    );
+                  })}
+                </div>
               )}
             </div>
           )}

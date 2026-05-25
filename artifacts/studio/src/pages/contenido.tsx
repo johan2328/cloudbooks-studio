@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useGetPage, useUpdatePage, getListPagesQueryKey, getGetPageQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { groundingLabel, groundingDot, formatDate, statusColorDark, statusLabel, scoreColorDark } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { useForm } from "react-hook-form";
-import { Save, ChevronLeft, ChevronRight, ExternalLink, FlaskConical } from "lucide-react";
+import { Save, ChevronLeft, ChevronRight, ExternalLink, FlaskConical, MoreHorizontal, Sparkles, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const DOMAINS = [
@@ -58,6 +58,18 @@ export default function Contenido() {
 
   const { data: page, isLoading } = useGetPage(id, { query: { enabled: !!id, queryKey: getGetPageQueryKey(id) } });
   const updatePage = useUpdatePage();
+
+  const [showMoreActions, setShowMoreActions] = useState(false);
+  const moreActionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (moreActionsRef.current && !moreActionsRef.current.contains(e.target as Node))
+        setShowMoreActions(false);
+    }
+    if (showMoreActions) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showMoreActions]);
 
   const { register, handleSubmit, reset, formState: { isDirty } } = useForm<FormValues>({
     defaultValues: {
@@ -241,20 +253,12 @@ export default function Contenido() {
                   className="bg-[#0d1629] border-white/10 text-blue-400/70 text-sm resize-none font-mono focus-visible:ring-teal-500/50 placeholder:text-blue-400/30" />
               </FieldBlock>
 
-              <div className="flex gap-2 pt-2">
+              <div className="pt-2">
                 <Button type="submit" disabled={!isDirty || updatePage.isPending}
                   className="bg-teal-600 hover:bg-teal-700 text-white text-xs h-8"
                   data-testid="button-save-content">
                   <Save className="w-3.5 h-3.5 mr-1.5" />
                   {updatePage.isPending ? "Guardando..." : "Guardar ficha editorial"}
-                </Button>
-                <Button type="button" variant="outline" className="text-xs h-8 bg-transparent border-white/10 text-white/50 hover:text-white/80 hover:bg-white/5"
-                  onClick={() => setLocation(`/qa/${id}`)}>
-                  Ver QA
-                </Button>
-                <Button type="button" variant="outline" className="text-xs h-8 bg-transparent border-white/10 text-white/50 hover:text-white/80 hover:bg-white/5"
-                  onClick={() => setLocation(`/generacion`)}>
-                  Generar
                 </Button>
               </div>
             </form>
@@ -307,14 +311,77 @@ export default function Contenido() {
               </div>
             )}
 
-            {/* Quick actions */}
+            {/* Siguiente paso */}
             <div className="border-t border-white/[0.06] pt-4">
-              <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">Acciones rápidas</p>
-              <div className="space-y-1.5">
-                <ActionBtn label="Panel QA" onClick={() => setLocation(`/qa/${id}`)} />
-                <ActionBtn label="Ir a Generación" onClick={() => setLocation(`/generacion`)} variant="teal" />
-                {prevId && <ActionBtn label={`← Pág. ${String(id - 1).padStart(2, "0")}`} onClick={() => setLocation(`/contenido/${prevId}`)} />}
-                {nextId && <ActionBtn label={`Pág. ${String(id + 1).padStart(2, "0")} →`} onClick={() => setLocation(`/contenido/${nextId}`)} />}
+              <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">Siguiente paso</p>
+
+              {/* Primario: único por estado de grounding */}
+              {page.groundingStatus === "verified" ? (
+                <button onClick={() => setLocation("/generacion")}
+                  className="w-full flex items-center justify-center gap-2 h-9 px-3 mb-2 bg-teal-600 hover:bg-teal-500 text-white text-[10px] font-bold rounded-sm transition-colors">
+                  <Sparkles className="w-3.5 h-3.5" />Ir a Generación
+                </button>
+              ) : (
+                <div className="mb-2">
+                  <button disabled
+                    className="w-full flex items-center justify-center gap-2 h-9 px-3 bg-teal-600/20 text-teal-400/40 text-[10px] font-bold rounded-sm cursor-not-allowed mb-1">
+                    <Sparkles className="w-3.5 h-3.5" />Ir a Generación
+                  </button>
+                  <p className="text-[8px] text-white/20 text-center">
+                    {page.groundingStatus === "unverified"
+                      ? "Completa el grounding primero"
+                      : "Grounding parcial — verifica las fuentes"}
+                  </p>
+                </div>
+              )}
+
+              {/* Secundario */}
+              <ActionBtn label="Panel QA" onClick={() => setLocation(`/qa/${id}`)} />
+
+              {/* Nav */}
+              {(prevId || nextId) && (
+                <div className="flex gap-1 mt-2">
+                  {prevId && (
+                    <button onClick={() => setLocation(`/contenido/${prevId}`)}
+                      className="flex-1 text-[9px] px-2 py-1.5 rounded-sm border border-white/10 text-white/30 hover:bg-white/5 transition-colors text-center">
+                      ← {String(id - 1).padStart(2, "0")}
+                    </button>
+                  )}
+                  {nextId && (
+                    <button onClick={() => setLocation(`/contenido/${nextId}`)}
+                      className="flex-1 text-[9px] px-2 py-1.5 rounded-sm border border-white/10 text-white/30 hover:bg-white/5 transition-colors text-center">
+                      {String(id + 1).padStart(2, "0")} →
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Más acciones — kebab */}
+              <div className="relative mt-3" ref={moreActionsRef}>
+                <button onClick={() => setShowMoreActions(v => !v)}
+                  className="flex items-center gap-1.5 text-[9px] text-white/25 hover:text-white/50 transition-colors">
+                  <MoreHorizontal className="w-3.5 h-3.5" />Más acciones
+                </button>
+                {showMoreActions && (
+                  <div className="absolute left-0 bottom-7 w-52 bg-[#0d1629] border border-white/10 rounded-sm shadow-xl z-50 py-1">
+                    <button className="w-full text-left px-3 py-2 text-[10px] text-white/30 flex items-center gap-2 cursor-not-allowed">
+                      <Zap className="w-3 h-3" />Detectar brechas de contenido
+                    </button>
+                    <button className="w-full text-left px-3 py-2 text-[10px] text-white/30 flex items-center gap-2 cursor-not-allowed">
+                      Re-ejecutar grounding
+                    </button>
+                    <button className="w-full text-left px-3 py-2 text-[10px] text-white/30 flex items-center gap-2 cursor-not-allowed">
+                      Validar todas las fuentes
+                    </button>
+                    <div className="border-t border-white/[0.06] my-1" />
+                    <button className="w-full text-left px-3 py-2 text-[10px] text-white/30 flex items-center gap-2 cursor-not-allowed">
+                      Enviar a todos los formatos
+                    </button>
+                    <button className="w-full text-left px-3 py-2 text-[10px] text-white/30 flex items-center gap-2 cursor-not-allowed">
+                      Sincronizar Sheet/CSV
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

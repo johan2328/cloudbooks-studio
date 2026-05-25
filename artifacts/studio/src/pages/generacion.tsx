@@ -5,7 +5,7 @@ import { useStudio } from "@/lib/studio-store";
 import {
   Play, Shield, CheckCircle2, Clock, AlertCircle, Loader2, Zap,
   ChevronRight, Key, Sparkles, ExternalLink, FileText, Eye, Image,
-  XCircle, Info, RefreshCw, HardDrive, Code2,
+  XCircle, Info, RefreshCw, HardDrive, Code2, MoreHorizontal,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -104,6 +104,17 @@ export default function Generacion() {
   const [hasKey, setHasKey]           = useState<boolean | null>(null);
   const [keyChecked, setKeyChecked]   = useState(false);
   const [previewKey, setPreviewKey]   = useState(0); // force img reload
+  const [showMoreGenActions, setShowMoreGenActions] = useState(false);
+  const moreGenActionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (moreGenActionsRef.current && !moreGenActionsRef.current.contains(e.target as Node))
+        setShowMoreGenActions(false);
+    }
+    if (showMoreGenActions) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showMoreGenActions]);
 
   const { toast } = useToast();
   const { state, startGeneration } = useStudio();
@@ -335,10 +346,12 @@ export default function Generacion() {
                   </div>
                   <div className="ml-auto flex items-center gap-2">
                     {!hasKey && keyChecked && (
-                      <p className="text-[8px] text-amber-400/70 max-w-xs">
-                        OPENAI_API_KEY no configurada en Secrets. Agrégala para ejecutar generación real.
+                      <p className="text-[8px] text-amber-400/70 max-w-[180px]">
+                        OPENAI_API_KEY no configurada en Secrets.
                       </p>
                     )}
+
+                    {/* Primario: único botón visible */}
                     <button
                       onClick={runRealGeneration}
                       disabled={isRealRunning || !keyChecked}
@@ -352,9 +365,40 @@ export default function Generacion() {
                       )}>
                       {isRealRunning
                         ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Generando…</>
-                        : <><Sparkles className="w-3.5 h-3.5" />Generar con OpenAI</>
+                        : <><Sparkles className="w-3.5 h-3.5" />Generar pág. 01</>
                       }
                     </button>
+
+                    {/* Más acciones — kebab */}
+                    <div className="relative" ref={moreGenActionsRef}>
+                      <button onClick={() => setShowMoreGenActions(v => !v)}
+                        className="h-9 px-2.5 border border-white/10 rounded-sm text-white/30 hover:text-white/60 hover:border-white/20 transition-all">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+                      {showMoreGenActions && (
+                        <div className="absolute right-0 top-10 w-52 bg-[#0d1629] border border-white/10 rounded-sm shadow-xl z-50 py-1">
+                          <div className="px-3 py-1.5 text-[7px] font-bold text-white/20 uppercase tracking-widest border-b border-white/[0.06]">
+                            Acciones de generación
+                          </div>
+                          <button className="w-full text-left px-3 py-2 text-[10px] text-white/30 flex items-center gap-2 cursor-not-allowed">
+                            <Zap className="w-3 h-3" />Generar batch 01–05
+                          </button>
+                          <button className="w-full text-left px-3 py-2 text-[10px] text-white/30 flex items-center gap-2 cursor-not-allowed">
+                            <RefreshCw className="w-3 h-3" />Regeneración selectiva
+                          </button>
+                          <button className="w-full text-left px-3 py-2 text-[10px] text-white/30 flex items-center gap-2 cursor-not-allowed">
+                            Reintentar último run
+                          </button>
+                          <div className="border-t border-white/[0.06] my-1" />
+                          <button className="w-full text-left px-3 py-2 text-[10px] text-white/25 flex items-center gap-2 cursor-not-allowed">
+                            Ver logs técnicos
+                          </button>
+                          <button className="w-full text-left px-3 py-2 text-[10px] text-white/25 flex items-center gap-2 cursor-not-allowed">
+                            Limpiar fallback SVG
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
