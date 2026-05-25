@@ -4,7 +4,7 @@ import Layout from "@/components/Layout";
 import { cn } from "@/lib/utils";
 import {
   CheckCircle2, Clock, AlertTriangle, Loader2, Sparkles,
-  ChevronRight, ExternalLink, Shield, FileText, Eye,
+  ExternalLink, Shield, FileText, Eye, Download, Image, XCircle,
 } from "lucide-react";
 
 /* ─── Datos editoriales (Batch 01–10) ─────────────────────────────────────── */
@@ -123,11 +123,34 @@ const PAGES: PageEdit[] = [
 /* ─── Tipos ─────────────────────────────────────────────────────────────── */
 interface OutputStatus {
   hasOutput: boolean;
-  generationMode: "openai" | "fallback_html" | "none";
+  generationMode: "openai_image" | "placeholder_image" | "fallback_html" | "none";
+  templateApproach: string | null;
   generatedAt: string | null;
-  files: { html: boolean; metadata: boolean; qaReport: boolean; previewPng: boolean; previewSvg: boolean };
+  files: {
+    html: boolean;
+    metadata: boolean;
+    qaReport: boolean;
+    upperVisual: boolean;
+    previewPng: boolean;
+    previewSvg: boolean;
+  };
   htmlPath: string | null;
   previewPath: string | null;
+}
+
+type RunState =
+  | "success_with_real_upper_visual"
+  | "success_with_placeholder_visual"
+  | "legacy_fallback"
+  | "failed_no_html"
+  | "no_output";
+
+function computeRunState(s: OutputStatus | null): RunState {
+  if (!s || !s.hasOutput) return "no_output";
+  if (!s.files.html) return "failed_no_html";
+  if (s.generationMode === "openai_image") return "success_with_real_upper_visual";
+  if (s.generationMode === "placeholder_image") return "success_with_placeholder_visual";
+  return "legacy_fallback";
 }
 
 type Tab = "output" | "contenido";
@@ -253,109 +276,206 @@ export default function Biblioteca() {
           {/* ── Tab: Output real ── */}
           {tab === "output" && (
             <div className="flex-1 overflow-y-auto p-5">
-              <div className="max-w-2xl space-y-4">
+              <div className="max-w-3xl space-y-5">
                 {loadingOutput ? (
                   <div className="flex items-center gap-2 py-8">
                     <Loader2 className="w-4 h-4 animate-spin text-white/20" />
                     <span className="text-[10px] text-white/30">Verificando output en disco…</span>
                   </div>
-                ) : hasOutput ? (
-                  <>
-                    {/* Banner: output real */}
-                    <div className={cn(
-                      "flex items-start gap-3 px-4 py-3 rounded-sm border",
-                      outputStatus!.generationMode === "openai"
-                        ? "bg-emerald-500/8 border-emerald-500/20"
-                        : "bg-blue-500/8 border-blue-500/20"
-                    )}>
-                      <CheckCircle2 className={cn("w-4 h-4 mt-0.5 shrink-0",
-                        outputStatus!.generationMode === "openai" ? "text-emerald-400" : "text-blue-400")} />
-                      <div className="flex-1">
-                        <p className={cn("text-[10px] font-bold",
-                          outputStatus!.generationMode === "openai" ? "text-emerald-300" : "text-blue-300")}>
-                          {outputStatus!.generationMode === "openai"
-                            ? "Output generado por OpenAI"
-                            : "Output generado · HTML real + fallback SVG"}
-                        </p>
-                        {outputStatus!.generatedAt && (
-                          <p className="text-[9px] text-white/35 mt-0.5">
-                            {new Date(outputStatus!.generatedAt).toLocaleDateString("es-ES", {
-                              day: "2-digit", month: "long", year: "numeric",
-                            })}
+                ) : (() => {
+                  const runState = computeRunState(outputStatus);
+
+                  /* ── Sin output ── */
+                  if (runState === "no_output") return (
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3 px-4 py-4 bg-white/[0.02] border border-white/[0.06] rounded-sm">
+                        <Clock className="w-4 h-4 text-white/20 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-[11px] font-bold text-white/45">Sin output generado todavía</p>
+                          <p className="text-[9px] text-white/30 mt-1 leading-relaxed">
+                            {page.num === "01"
+                              ? "Siguiente paso: generar página 01 con OpenAI."
+                              : `La generación de la página ${page.num} se habilitará en batch una vez que página 01 esté aprobada.`}
                           </p>
-                        )}
-                        <div className="flex gap-1.5 mt-2 flex-wrap">
-                          {outputStatus!.files.html && <Chip label="HTML" ok />}
-                          {outputStatus!.files.metadata && <Chip label="Metadata" ok />}
-                          {outputStatus!.files.qaReport && <Chip label="QA Report" ok />}
-                          {outputStatus!.files.previewPng && <Chip label="Preview PNG" ok />}
-                          {!outputStatus!.files.previewPng && outputStatus!.files.previewSvg && <Chip label="Preview SVG" ok />}
                         </div>
                       </div>
-                      {outputStatus!.htmlPath && (
-                        <a href={outputStatus!.htmlPath} target="_blank" rel="noreferrer"
-                          className="flex items-center gap-1 h-7 px-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-sm text-[9px] text-white/50 hover:text-white/80 transition-all shrink-0">
-                          <ExternalLink className="w-3 h-3" />HTML
-                        </a>
+                      {page.num === "01" && (
+                        <button onClick={() => setLocation("/generacion")}
+                          className="flex items-center gap-2 h-9 px-4 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 text-white text-[10px] font-bold rounded-sm transition-all">
+                          <Sparkles className="w-3.5 h-3.5" />Generar página 01
+                        </button>
                       )}
                     </div>
+                  );
 
-                    {/* Preview visual */}
-                    {outputStatus!.previewPath && (
-                      <div className="max-w-xs">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <Eye className="w-3 h-3 text-white/20" />
-                          <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Preview</p>
-                          <span className={cn(
-                            "text-[7px] px-1.5 py-px rounded-sm border font-bold",
-                            outputStatus!.generationMode === "openai"
-                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                              : "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                          )}>
-                            {outputStatus!.generationMode === "openai" ? "REAL" : "SVG FALLBACK"}
-                          </span>
-                        </div>
-                        <div className="rounded-sm border border-white/[0.08] overflow-hidden bg-[#0a1220]">
-                          <img src={outputStatus!.previewPath} alt="Preview real"
-                            className="w-full h-auto" style={{ aspectRatio: "8.5/11", objectFit: "contain" }} />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Acciones secundarias */}
-                    <div className="flex gap-2">
-                      <button onClick={() => setLocation("/qa/1")}
-                        className="flex items-center gap-1.5 h-7 px-3 bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/20 text-blue-300 text-[9px] font-bold rounded-sm transition-all">
-                        <Shield className="w-3 h-3" />Revisar QA
-                      </button>
-                      <button onClick={() => setLocation("/generacion")}
-                        className="flex items-center gap-1.5 h-7 px-3 border border-white/10 text-white/35 hover:text-white/60 hover:border-white/20 text-[9px] font-medium rounded-sm transition-all">
-                        Regenerar
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  /* Sin output real */
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3 px-4 py-4 bg-white/[0.02] border border-white/[0.06] rounded-sm">
-                      <Clock className="w-4 h-4 text-white/20 mt-0.5 shrink-0" />
+                  /* ── HTML faltante ── */
+                  if (runState === "failed_no_html") return (
+                    <div className="flex items-start gap-3 px-4 py-4 bg-red-500/8 border border-red-500/20 rounded-sm">
+                      <XCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
                       <div>
-                        <p className="text-[11px] font-bold text-white/45">Sin output real generado todavía</p>
-                        <p className="text-[9px] text-white/30 mt-1 leading-relaxed">
-                          {page.num === "01"
-                            ? "Siguiente paso: generar página 01 con OpenAI."
-                            : `La generación de la página ${page.num} se habilitará en batch una vez que página 01 esté aprobada.`}
+                        <p className="text-[10px] font-bold text-red-300">Generación incompleta — sin page.html válido</p>
+                        <p className="text-[9px] text-white/35 mt-1">
+                          Los metadatos indican que existe un run pero no hay HTML renderizable. Regenerar para obtener salida válida.
                         </p>
                       </div>
                     </div>
-                    {page.num === "01" && (
+                  );
+
+                  /* ── Legacy fallback (solo SVG) ── */
+                  if (runState === "legacy_fallback") return (
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3 px-4 py-3 bg-amber-500/8 border border-amber-500/20 rounded-sm">
+                        <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-[10px] font-bold text-amber-300">Fallback no válido para aprobación</p>
+                          <p className="text-[9px] text-white/40 mt-1 leading-relaxed">
+                            Este run es de una generación anterior con SVG fallback. No cumple el golden master v24.
+                            Regenerar para obtener el HTML 768×1152 con visual real.
+                          </p>
+                        </div>
+                      </div>
                       <button onClick={() => setLocation("/generacion")}
-                        className="flex items-center gap-2 h-9 px-4 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 text-white text-[10px] font-bold rounded-sm transition-all">
-                        <Sparkles className="w-3.5 h-3.5" />Generar página 01 con OpenAI
+                        className="flex items-center gap-2 h-8 px-4 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 text-white text-[10px] font-bold rounded-sm transition-all">
+                        <Sparkles className="w-3.5 h-3.5" />Regenerar con golden master
                       </button>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  );
+
+                  /* ── Output válido (success_with_real / placeholder) ── */
+                  const isRealVisual = runState === "success_with_real_upper_visual";
+                  const htmlPath = outputStatus!.htmlPath;
+
+                  return (
+                    <>
+                      {/* ── Banner de estado ── */}
+                      <div className={cn(
+                        "flex items-start gap-3 px-4 py-3 rounded-sm border",
+                        isRealVisual ? "bg-emerald-500/8 border-emerald-500/20" : "bg-blue-500/8 border-blue-500/20"
+                      )}>
+                        <CheckCircle2 className={cn("w-4 h-4 mt-0.5 shrink-0",
+                          isRealVisual ? "text-emerald-400" : "text-blue-400")} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className={cn("text-[10px] font-bold",
+                              isRealVisual ? "text-emerald-300" : "text-blue-300")}>
+                              {isRealVisual
+                                ? "success_with_real_upper_visual"
+                                : "success_with_placeholder_visual"}
+                            </p>
+                            <span className="text-[7px] font-bold px-1.5 py-px border rounded-sm bg-white/5 border-white/10 text-white/30">
+                              golden_master_v24
+                            </span>
+                          </div>
+                          {outputStatus!.generatedAt && (
+                            <p className="text-[9px] text-white/35 mt-0.5">
+                              {new Date(outputStatus!.generatedAt).toLocaleString("es-ES", {
+                                day: "2-digit", month: "long", year: "numeric",
+                                hour: "2-digit", minute: "2-digit",
+                              })}
+                            </p>
+                          )}
+                          {/* Chips de archivos */}
+                          <div className="flex gap-1.5 mt-2 flex-wrap">
+                            <Chip label="HTML 768×1152" ok={outputStatus!.files.html} />
+                            <Chip label="Metadata" ok={outputStatus!.files.metadata} />
+                            <Chip label="QA Report" ok={outputStatus!.files.qaReport} />
+                            {isRealVisual
+                              ? <Chip label="Visual gpt-image-2" ok={outputStatus!.files.upperVisual} />
+                              : <Chip label="Visual placeholder" ok />
+                            }
+                            <span className="text-[7px] font-bold px-1.5 py-px border rounded-sm bg-red-500/5 border-red-500/15 text-red-400/60">
+                              SVG fallback: deshabilitado
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* ── Botones de exportación ── */}
+                      <div className="flex flex-wrap gap-2">
+                        {htmlPath && (
+                          <a href={htmlPath} target="_blank" rel="noreferrer"
+                            className="flex items-center gap-1.5 h-8 px-3 bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/25 text-emerald-300 text-[9px] font-bold rounded-sm transition-all">
+                            <ExternalLink className="w-3 h-3" />Abrir HTML
+                          </a>
+                        )}
+                        {htmlPath && (
+                          <a href={htmlPath} download={`page-${page.num}.html`}
+                            className="flex items-center gap-1.5 h-8 px-3 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white/50 hover:text-white/80 text-[9px] font-bold rounded-sm transition-all">
+                            <Download className="w-3 h-3" />Descargar HTML
+                          </a>
+                        )}
+                        {outputStatus!.files.qaReport && (
+                          <a href={`/api/studio/qa-report/${page.num}`}
+                            target="_blank" rel="noreferrer"
+                            className="flex items-center gap-1.5 h-8 px-3 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white/50 hover:text-white/80 text-[9px] font-bold rounded-sm transition-all">
+                            <FileText className="w-3 h-3" />QA Report
+                          </a>
+                        )}
+                        {outputStatus!.files.upperVisual ? (
+                          <a href={`/assets/cloudbooks/ai-200/visual-atlas/pages/${page.num}/upper-visual.png`}
+                            target="_blank" rel="noreferrer"
+                            className="flex items-center gap-1.5 h-8 px-3 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white/50 hover:text-white/80 text-[9px] font-bold rounded-sm transition-all">
+                            <Image className="w-3 h-3" />Visual PNG
+                          </a>
+                        ) : (
+                          <span className="flex items-center gap-1.5 h-8 px-3 border border-white/[0.06] text-white/20 text-[9px] rounded-sm">
+                            <Image className="w-3 h-3" />Visual PNG pendiente
+                          </span>
+                        )}
+                        <button onClick={() => setLocation("/qa/1")}
+                          className="flex items-center gap-1.5 h-8 px-3 bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/20 text-blue-300 text-[9px] font-bold rounded-sm transition-all">
+                          <Shield className="w-3 h-3" />Revisar QA
+                        </button>
+                        <button onClick={() => setLocation("/generacion")}
+                          className="flex items-center gap-1.5 h-8 px-3 border border-white/10 text-white/35 hover:text-white/60 hover:border-white/20 text-[9px] font-medium rounded-sm transition-all">
+                          Regenerar
+                        </button>
+                      </div>
+
+                      {/* ── Preview iframe del page.html 768×1152 ── */}
+                      {htmlPath && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Eye className="w-3 h-3 text-white/20" />
+                            <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">
+                              Preview — página libro 768×1152
+                            </p>
+                            <span className={cn(
+                              "text-[7px] px-1.5 py-px rounded-sm border font-bold",
+                              isRealVisual
+                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                            )}>
+                              {isRealVisual ? "VISUAL REAL" : "VISUAL PLACEHOLDER"}
+                            </span>
+                          </div>
+                          {/* Contenedor con proporción 768:1152 = 2:3 */}
+                          <div
+                            className="rounded-sm border border-white/10 overflow-hidden bg-white relative"
+                            style={{ width: 320, height: 480 }}
+                          >
+                            <iframe
+                              src={htmlPath}
+                              title={`Página ${page.num} — golden master v24`}
+                              scrolling="no"
+                              style={{
+                                width: 768,
+                                height: 1152,
+                                transform: "scale(0.4167)",
+                                transformOrigin: "top left",
+                                border: "none",
+                                pointerEvents: "none",
+                              }}
+                            />
+                          </div>
+                          <p className="text-[7px] text-white/20 mt-1.5">
+                            Escala 41.7% · Abrir en pestaña para tamaño real
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           )}
