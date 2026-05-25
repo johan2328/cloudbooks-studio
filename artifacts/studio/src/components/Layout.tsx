@@ -88,14 +88,14 @@ export default function Layout({ children, title }: LayoutProps) {
             <p className="text-[7px] font-bold text-white/20 uppercase tracking-widest">Configuración activa</p>
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-400 shrink-0" />
-              <span className="text-[8px] text-teal-300/70 font-semibold">gpt-4o · HTML</span>
+              <span className="text-[8px] text-teal-300/70 font-semibold">gpt-4o-mini · texto/QA</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-              <span className="text-[8px] text-blue-300/70 font-semibold">gpt-image-1 medium</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />
+              <span className="text-[8px] text-violet-300/70 font-semibold">gpt-image-2 medium</span>
             </div>
             <p className="text-[7px] text-white/15 leading-tight mt-0.5">
-              High / hd bloqueados · fallback SVG si imagen falla
+              High bloqueado · template v24 locked
             </p>
           </div>
         </nav>

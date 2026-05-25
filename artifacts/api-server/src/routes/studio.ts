@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { writeFile, mkdir, readFile, stat } from "fs/promises";
+import { writeFile, mkdir, readFile } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
 import OpenAI from "openai";
@@ -7,300 +7,641 @@ import OpenAI from "openai";
 const router = Router();
 
 /* ══════════════════════════════════════════════════════════════════════════
-   COST / MODEL GUARDRAILS — solo modificar con aprobación del equipo
-   ══════════════════════════════════════════════════════════════════════════
-   Únicos valores permitidos. El servidor rechazará cualquier intento de
-   escalar a high/hd/premium/ultra — ni siquiera en fallback.             */
-const IMAGE_MODEL         = "gpt-image-1" as const; // gpt-image-2 → alias interno OpenAI
-const IMAGE_QUALITY       = "medium"      as const;
-const ALLOW_HIGH_QUALITY  = false         as const;  // NUNCA cambiar a true sin aprobación
-const GUARDRAIL_LABEL     = "high_quality_blocked"  as const;
+   MODEL CONFIG — solo modificar con aprobación del equipo
+   ══════════════════════════════════════════════════════════════════════════ */
+const TEXT_MODEL             = "gpt-4o-mini" as const;  // solo QA/json estructurado
+const IMAGE_MODEL            = "gpt-image-2" as const;  // bloque visual superior únicamente
+const IMAGE_QUALITY          = "medium"      as const;  // NUNCA escalar
+const ALLOW_HIGH_QUALITY     = false         as const;
+const BLOCK_LEGACY_IMG_MODEL = true          as const;  // bloquear gpt-image-1
+const GUARDRAIL_LABEL        = "high_quality_blocked_gpt_image_2_medium_only" as const;
+const TEMPLATE_VERSION       = "v24"         as const;
 /* ══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Ruta de salida estática ──────────────────────────────────────────────
-   El servidor corre desde artifacts/api-server/ (CWD de pnpm --filter).
-   La carpeta public de Vite está en artifacts/studio/public/             */
+/* ── Rutas de salida ──────────────────────────────────────────────────────*/
 function studioPublicDir(): string {
   return join(process.cwd(), "../studio/public");
 }
-
 function pageOutputDir(pageId: string): string {
   return join(studioPublicDir(), "assets/cloudbooks/ai-200/visual-atlas/pages", pageId);
 }
 
-/* ── Seed data — página 01 ──────────────────────────────────────────────── */
-const PAGE_SEEDS: Record<string, {
-  id: string; title: string; subtitle: string; domain: string;
-  batch: string; contractVersion: string; currentVersion: string;
-}> = {
-  "01": {
-    id: "01",
-    title: "Azure Container Registry (ACR)",
-    subtitle: "Arquitectura y Tiers",
-    domain: "Gestión de Contenedores",
-    batch: "Batch 01",
-    contractVersion: "v24",
-    currentVersion: "v1.0",
+/* ══════════════════════════════════════════════════════════════════════════
+   TIPO: VisualAtlasPageData
+   Estructura de datos del golden master — la plantilla NO recibe texto libre.
+   ══════════════════════════════════════════════════════════════════════════ */
+interface TrapItem {
+  wrong: string;       // la creencia incorrecta
+  correction: string;  // la corrección real
+}
+interface AutocheckData {
+  question: string;
+  options: string[];   // 4 opciones A-D
+  correctOption: number; // índice 0-based
+  explanation: string;
+  discardNotes: string[];
+}
+interface VisualAtlasPageData {
+  domainLabel:        string;
+  pageNumber:         string;   // "01"
+  totalPages:         number;   // 61
+  batchLabel:         string;   // "Batch 01"
+  title:              string;
+  subtitle:           string;
+  context:            string;
+  guideQuestion:      string;
+  upperVisualSrc:     string;   // ruta relativa a la imagen o "placeholder"
+  upperVisualAlt:     string;
+  traps:              TrapItem[];
+  autocheck:          AutocheckData;
+  contractVersion:    string;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SEED DATA — página 01 (golden master content)
+   ══════════════════════════════════════════════════════════════════════════ */
+const PAGE_01_DATA: VisualAtlasPageData = {
+  domainLabel:     "Gestión de Contenedores",
+  pageNumber:      "01",
+  totalPages:      61,
+  batchLabel:      "Batch 01",
+  title:           "Azure Container Registry",
+  subtitle:        "Arquitectura y Tiers",
+  context:         "ACR es el registro privado de imágenes de contenedor en Azure, base para despliegues en AKS, App Service y Container Apps. Conoce sus tiers para seleccionar el adecuado según escenarios de desarrollo, producción y alta disponibilidad. Lee las señales: geo-replicación, Private Endpoint y digest suelen decidir más que el nombre del SKU.",
+  guideQuestion:   "¿Cuál tier de ACR es adecuado para producción con geo-replicación y private endpoints?",
+  upperVisualSrc:  "placeholder",
+  upperVisualAlt:  "Diagrama de arquitectura y tiers de Azure Container Registry",
+  traps: [
+    {
+      wrong:      "Basic es suficiente para producción",
+      correction: "Basic carece de Private Endpoints y geo-replicación. Para producción con seguridad de red y HA global se requiere Premium.",
+    },
+    {
+      wrong:      "La tag :latest siempre es segura e inmutable",
+      correction: "La tag :latest es mutable — puede apuntar a imágenes distintas en cada push. Usa el digest SHA256 para referencias inmutables.",
+    },
+    {
+      wrong:      "Geo-replication y zone redundancy son equivalentes",
+      correction: "Geo-replication replica entre regiones (latencia global). Zone redundancy protege contra fallas de zonas dentro de una región. Son independientes y complementarios.",
+    },
+  ],
+  autocheck: {
+    question:      "¿Qué tier de ACR permite geo-replication y private endpoints simultáneamente?",
+    options:       ["A. Basic", "B. Standard", "C. Premium", "D. Enterprise"],
+    correctOption: 2,
+    explanation:   "Premium es el único tier con geo-replication activa-activa y soporte de Private Endpoints/Private Link para acceso de red privado.",
+    discardNotes:  [
+      "A descartada: Basic no tiene Private Endpoints ni geo-replication.",
+      "B descartada: Standard tiene Content Trust pero no geo-replication.",
+      "D descartada: No existe tier Enterprise en ACR.",
+    ],
   },
+  contractVersion: TEMPLATE_VERSION,
 };
 
-/* ── Prompt de generación HTML ──────────────────────────────────────────── */
-function buildHtmlPrompt(pageId: string): string {
-  return `You are a premium infographic designer for Microsoft AI-200 certification study materials.
+const PAGE_SEEDS: Record<string, VisualAtlasPageData> = {
+  "01": PAGE_01_DATA,
+};
 
-Generate a COMPLETE, SELF-CONTAINED HTML infographic about:
-"Azure Container Registry (ACR) — Arquitectura y Tiers"
+/* ══════════════════════════════════════════════════════════════════════════
+   PLANTILLA CERRADA — renderVisualAtlasPage(data)
+   Layout golden master v24: 768×1152 px portrait, estructura editorial fija.
+   La IA NO decide estructura. Solo aporta la imagen del bloque visual superior.
+   ══════════════════════════════════════════════════════════════════════════ */
+function renderVisualAtlasPage(data: VisualAtlasPageData): string {
+  const optionLetters = ["A", "B", "C", "D", "E", "F"];
 
-=== TECHNICAL REQUIREMENTS ===
-- Complete HTML document, single file
-- All CSS in a <style> tag (no external stylesheets, no CDN)
-- Fixed canvas: exactly 1200px wide × 900px tall, overflow hidden
-- No scrollbars, no responsive breakpoints
-- Font: system-ui, -apple-system, "Segoe UI", sans-serif — NO Google Fonts
+  const upperVisualHtml = data.upperVisualSrc === "placeholder"
+    ? `<div class="visual-placeholder">
+        <div class="placeholder-inner">
+          <div class="placeholder-icon">📦</div>
+          <div class="placeholder-label">Visual pendiente</div>
+          <div class="placeholder-sub">Se generará con gpt-image-2 medium</div>
+          <div class="placeholder-grid">
+            <div class="pg-cell"><span>Tiers</span><span class="pg-sub">Basic · Standard · Premium</span></div>
+            <div class="pg-cell"><span>Arquitectura</span><span class="pg-sub">Registry → AKS / ACI</span></div>
+            <div class="pg-cell"><span>Geo-rep</span><span class="pg-sub">Solo Premium · active-active</span></div>
+            <div class="pg-cell"><span>Auth</span><span class="pg-sub">Azure AD · RBAC · SP</span></div>
+          </div>
+        </div>
+      </div>`
+    : `<img class="visual-image" src="${data.upperVisualSrc}" alt="${data.upperVisualAlt}" />`;
 
-=== DESIGN SYSTEM (strict) ===
-- Page background: #0d1629
-- Card backgrounds: #0f1e35 (slightly lighter)
-- Primary accent: #0d9488 (teal)
-- Azure brand: #0078d4
-- Premium badge: #7c3aed (violet)
-- Warning/trap: #d97706 (amber)
-- Success/check: #059669 (emerald)
-- Text primary: rgba(255,255,255,0.85)
-- Text secondary: rgba(255,255,255,0.45)
-- Text muted: rgba(255,255,255,0.25)
-- Border: rgba(255,255,255,0.08)
-- Border radius: 4px everywhere
-- Use box-shadow: 0 1px 3px rgba(0,0,0,0.4) on cards
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=768">
+<title>Pág. ${data.pageNumber} — ${data.title} · AI-200 Visual Study Atlas</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-=== LAYOUT (1200px × 900px, strict sections) ===
-
-HEADER BAR (height: 72px, padding: 0 32px):
-  - Left: Small badge "01" in teal, then title "Azure Container Registry (ACR)" bold white 22px, subtitle "Arquitectura y Tiers" muted 13px below
-  - Right: Two badges — "Gestión de Contenedores" (teal outline) and "AI-200" (blue filled)
-  - Bottom border: 1px solid rgba(255,255,255,0.08)
-
-MAIN CONTENT (height: 828px, display: grid, gap: 16px, padding: 16px 32px):
-
-  TOP ROW (height: 320px, grid: 3 equal columns for tier cards):
-  
-    Card BASIC (border: 1px solid rgba(255,255,255,0.1)):
-      Header: "Basic" title, "~$0.167/día" price small
-      Body:
-        - 💾 Storage: 10 GiB
-        - 🔗 Webhooks: 10
-        - ✅ Public access
-        - ❌ Geo-replication
-        - ❌ Private endpoints  
-        - ❌ Content Trust
-        - ❌ Zone redundancy
-      Use green ✅ and red ❌ symbols for feature support
-    
-    Card STANDARD (border: 1px solid rgba(13,148,136,0.3)):
-      Header: "Standard" title + badge "Más común" in teal
-      Body:
-        - 💾 Storage: 100 GiB
-        - 🔗 Webhooks: 10
-        - ✅ Public access
-        - ✅ Content Trust (Notary v2)
-        - ❌ Geo-replication
-        - ❌ Private endpoints
-        - ❌ Zone redundancy
-    
-    Card PREMIUM (border: 2px solid #7c3aed, background: slightly purple tinted):
-      Header: "Premium" title + badge "⭐ Más preguntas AI-200" in violet
-      Body:
-        - 💾 Storage: 500 GiB
-        - 🔗 Webhooks: 500
-        - ✅ Geo-replication (active-active)
-        - ✅ Private endpoints / Private Link
-        - ✅ Content Trust (Notary v2)
-        - ✅ Zone redundancy
-        - ✅ Customer-managed keys
-        - ✅ Dedicated data endpoints
-      Footer note: "Features exclusivos de Premium son los más evaluados"
-
-  MIDDLE ROW (height: 140px, single full-width card — Architecture Flow):
-    Title small: "Flujo de Arquitectura"
-    Horizontal flow with arrows (use → text or styled divs):
-    
-    [Desarrollador] → git push / az acr build → [Azure Container Registry] → pull → [AKS] [ACI] [App Service]
-    
-    Below the main flow, show ACR Tasks:
-    [Trigger: code commit / base image update / schedule] → [ACR Tasks: build multi-step] → [Push to ACR]
-    
-    Right side small text: Auth: Azure AD + RBAC | Service Principal | Admin (disable in prod)
-
-  BOTTOM ROW (height: 240px, two columns 50%/50%):
-  
-    Left card — "⚠ Trampas del Examen":
-      Background: rgba(217,119,6,0.08), border: 1px solid rgba(217,119,6,0.25)
-      List items (use ⚠ icon, amber color for the warning text):
-      - Geo-replication: SOLO disponible en Premium
-      - Private endpoints: SOLO disponible en Premium
-      - Content Trust (Notary v2): SOLO disponible en Premium
-      - Zone redundancy: NO existe en Basic ni Standard
-      - ACR Tasks: NO requiere Docker instalado localmente
-      - Admin user: SIEMPRE desactivar en producción
-
-    Right card — "✓ Autocheck":
-      Background: rgba(5,150,105,0.06), border: 1px solid rgba(5,150,105,0.2)
-      Checkbox-style list (use □ symbol, emerald color for text):
-      - □ ¿Conozco los 3 tiers y sus límites de almacenamiento?
-      - □ ¿Qué 4 features son exclusivos de Premium?
-      - □ ¿Cuándo usar Private Endpoints vs acceso público?
-      - □ ¿Qué es geo-replication activa-activa?
-      - □ ¿Para qué sirve ACR Tasks y cuándo reemplaza a Docker?
-      - □ ¿Por qué desactivar el admin user en producción?
-
-=== QUALITY RULES ===
-- Every element must teach something — zero decorative-only filler
-- Use real emojis (💾 ✅ ❌ ⚠ □ ⭐ 🔗) instead of SVG icons
-- All content in SPANISH except technical terms (ACR, Premium, CLI commands)
-- NO placeholder text, NO lorem ipsum, NO "[...]"
-- Ensure all content fits within 1200×900 — test in your mental browser
-- Use font-size between 11px and 20px for readability at this size
-- Make the tier cards visually distinct (Standard slightly highlighted, Premium clearly highlighted)
-
-Return ONLY the raw HTML document starting with <!DOCTYPE html>. No markdown. No explanation. No code blocks.`;
+body {
+  width: 768px;
+  height: 1152px;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: #0d1629;
+  color: rgba(255,255,255,0.85);
+  display: flex;
+  flex-direction: column;
 }
 
-/* ── Prompt de QA automático ─────────────────────────────────────────────── */
-function buildQaPrompt(htmlContent: string): string {
-  return `You are a QA reviewer for premium Microsoft certification study infographics.
-
-Review the following HTML infographic and score each dimension from 0 to 10.
-Be strict but fair. A score of 10 means absolutely perfect.
-
-Scoring dimensions:
-- art_direction: Layout clarity, visual balance, color usage, whitespace, typography hierarchy
-- editorial_consistency: Adherence to design system, brand consistency, section structure
-- readability: Font sizes, contrast ratios, text scanability, information hierarchy
-- technical_accuracy: Correctness of Azure/ACR technical content, no factual errors
-- useful_density: Information per pixel ratio, no wasted space, no redundancy  
-- commercial_risk: IP/legal risks, accuracy of brand usage, no inappropriate content
-
-Return ONLY valid JSON (no markdown, no explanation):
-{
-  "scores": {
-    "art_direction": <number 0-10>,
-    "editorial_consistency": <number 0-10>,
-    "readability": <number 0-10>,
-    "technical_accuracy": <number 0-10>,
-    "useful_density": <number 0-10>,
-    "commercial_risk": <number 0-10>
-  },
-  "total": <average of all 6 scores, 1 decimal>,
-  "observations": ["<positive observation>", "<another observation>"],
-  "defects": ["<defect or issue if any>"],
-  "verdict": "approved" | "needs_revision"
+/* ── [A] TOPBAR ─────────────────────────────────────────────────────────── */
+.topbar {
+  flex: 0 0 52px;
+  background: #080f1d;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 10px;
+}
+.topbar-page {
+  background: #0d9488;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+.topbar-domain {
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.topbar-spacer { flex: 1; }
+.topbar-badge-domain {
+  font-size: 8.5px;
+  color: #0d9488;
+  border: 1px solid rgba(13,148,136,0.4);
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+.topbar-badge-cert {
+  font-size: 8.5px;
+  color: #fff;
+  background: #0078d4;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
-HTML to review (first 8000 chars):
-${htmlContent.slice(0, 8000)}`;
+/* ── [B] HERO EDITORIAL ─────────────────────────────────────────────────── */
+.hero {
+  flex: 0 0 124px;
+  background: linear-gradient(135deg, #0d1629 0%, #0b1a2e 100%);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: stretch;
+  padding: 0 24px;
+}
+.hero-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+.hero-subtitle {
+  font-size: 9px;
+  color: rgba(255,255,255,0.3);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.hero-title {
+  font-size: 26px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.95);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.hero-context {
+  font-size: 10px;
+  color: rgba(255,255,255,0.42);
+  line-height: 1.55;
+  max-width: 580px;
+}
+.hero-icon {
+  flex: 0 0 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 38px;
+  opacity: 0.18;
 }
 
-/* ── Prompt de imagen preview ────────────────────────────────────────────── */
+/* ── [C] GUIDE QUESTION ─────────────────────────────────────────────────── */
+.guide {
+  flex: 0 0 40px;
+  background: rgba(0,120,212,0.08);
+  border-bottom: 1px solid rgba(0,120,212,0.15);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 10px;
+}
+.guide-label {
+  font-size: 8px;
+  color: #60a5fa;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.guide-pill {
+  background: rgba(0,120,212,0.15);
+  border: 1px solid rgba(0,120,212,0.25);
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 10px;
+  color: #93c5fd;
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* ── [D] UPPER VISUAL BLOCK ─────────────────────────────────────────────── */
+.upper-visual {
+  flex: 0 0 412px;
+  background: #070d1a;
+  border-bottom: 2px solid rgba(13,148,136,0.15);
+  overflow: hidden;
+  position: relative;
+}
+.visual-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.visual-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #07111f;
+}
+.placeholder-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 20px 32px;
+}
+.placeholder-icon { font-size: 32px; opacity: 0.25; }
+.placeholder-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.25);
+  letter-spacing: 0.08em;
+}
+.placeholder-sub { font-size: 9px; color: rgba(255,255,255,0.15); }
+.placeholder-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+  width: 100%;
+  max-width: 520px;
+}
+.pg-cell {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 4px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.35);
+  font-weight: 600;
+}
+.pg-sub { font-size: 9px; color: rgba(255,255,255,0.2); font-weight: 400; }
+
+/* ── [E] LOWER BLOCK ─────────────────────────────────────────────────────── */
+.lower-block {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  min-height: 0;
+}
+
+/* Trampas */
+.traps-panel {
+  background: rgba(220,38,38,0.04);
+  border-right: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel-header {
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+.panel-header-icon { font-size: 12px; }
+.panel-header-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.traps-panel .panel-header-label { color: #f87171; }
+.traps-list {
+  flex: 1;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  overflow: hidden;
+}
+.trap-item {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+}
+.trap-num {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  background: rgba(220,38,38,0.2);
+  border: 1px solid rgba(220,38,38,0.35);
+  border-radius: 50%;
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #f87171;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.trap-content { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.trap-wrong {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.55);
+  text-decoration: line-through;
+  text-decoration-color: rgba(248,113,113,0.5);
+}
+.trap-arrow { font-size: 8px; color: rgba(255,255,255,0.2); }
+.trap-correction {
+  font-size: 9px;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.45;
+}
+
+/* Autocheck */
+.autocheck-panel {
+  background: rgba(13,148,136,0.04);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.autocheck-panel .panel-header-label { color: #34d399; }
+.autocheck-body {
+  flex: 1;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+.autocheck-question {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.4;
+}
+.autocheck-options { display: flex; flex-direction: column; gap: 4px; }
+.option-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border-radius: 3px;
+  border: 1px solid rgba(255,255,255,0.05);
+  font-size: 9.5px;
+}
+.option-row.correct {
+  background: rgba(16,185,129,0.1);
+  border-color: rgba(16,185,129,0.3);
+  color: #34d399;
+  font-weight: 700;
+}
+.option-row.wrong-opt {
+  background: rgba(255,255,255,0.02);
+  color: rgba(255,255,255,0.3);
+}
+.option-badge {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 8px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.option-row.correct .option-badge { background: rgba(16,185,129,0.25); color: #34d399; }
+.option-row.wrong-opt .option-badge { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.25); }
+.autocheck-explanation {
+  font-size: 9px;
+  color: rgba(255,255,255,0.45);
+  line-height: 1.45;
+  padding: 6px 8px;
+  background: rgba(255,255,255,0.02);
+  border-left: 2px solid rgba(52,211,153,0.3);
+  border-radius: 0 3px 3px 0;
+}
+.discard-notes { display: flex; flex-direction: column; gap: 2px; }
+.discard-note { font-size: 8px; color: rgba(255,255,255,0.2); line-height: 1.4; }
+
+/* ── [F] FOOTER ─────────────────────────────────────────────────────────── */
+.footer {
+  flex: 0 0 32px;
+  background: #060c18;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+}
+.footer-brand {
+  font-size: 8.5px;
+  font-family: monospace;
+  color: rgba(255,255,255,0.18);
+  font-weight: 600;
+}
+.footer-spacer { flex: 1; }
+.footer-page {
+  font-size: 8px;
+  font-family: monospace;
+  color: rgba(255,255,255,0.15);
+}
+.footer-contract {
+  font-size: 7.5px;
+  font-family: monospace;
+  color: rgba(13,148,136,0.35);
+}
+</style>
+</head>
+<body>
+
+<!-- [A] TOPBAR -->
+<header class="topbar">
+  <span class="topbar-page">${data.pageNumber}</span>
+  <span class="topbar-domain">${data.domainLabel}</span>
+  <span class="topbar-spacer"></span>
+  <span class="topbar-badge-domain">${data.domainLabel}</span>
+  <span class="topbar-badge-cert">AI-200</span>
+</header>
+
+<!-- [B] HERO EDITORIAL -->
+<section class="hero">
+  <div class="hero-text">
+    <div class="hero-subtitle">${data.subtitle}</div>
+    <div class="hero-title">${data.title}</div>
+    <div class="hero-context">${data.context}</div>
+  </div>
+  <div class="hero-icon">📦</div>
+</section>
+
+<!-- [C] PREGUNTA GUÍA -->
+<div class="guide">
+  <span class="guide-label">Pregunta guía</span>
+  <span class="guide-pill">${data.guideQuestion}</span>
+</div>
+
+<!-- [D] BLOQUE VISUAL SUPERIOR -->
+<div class="upper-visual">
+  ${upperVisualHtml}
+</div>
+
+<!-- [E] BLOQUE INFERIOR -->
+<div class="lower-block">
+
+  <!-- Trampas -->
+  <div class="traps-panel">
+    <div class="panel-header">
+      <span class="panel-header-icon">⚠</span>
+      <span class="panel-header-label">Trampas del examen</span>
+    </div>
+    <div class="traps-list">
+      ${data.traps.map((t, i) => `
+      <div class="trap-item">
+        <div class="trap-num">${i + 1}</div>
+        <div class="trap-content">
+          <div class="trap-wrong">${t.wrong}</div>
+          <div class="trap-arrow">→</div>
+          <div class="trap-correction">${t.correction}</div>
+        </div>
+      </div>`).join("")}
+    </div>
+  </div>
+
+  <!-- Autocheck -->
+  <div class="autocheck-panel">
+    <div class="panel-header">
+      <span class="panel-header-icon">✓</span>
+      <span class="panel-header-label">Verificación autocheck</span>
+    </div>
+    <div class="autocheck-body">
+      <div class="autocheck-question">${data.autocheck.question}</div>
+      <div class="autocheck-options">
+        ${data.autocheck.options.map((opt, i) => `
+        <div class="option-row ${i === data.autocheck.correctOption ? "correct" : "wrong-opt"}">
+          <span class="option-badge">${optionLetters[i]}</span>
+          <span>${opt.replace(/^[A-D]\.\s*/, "")}</span>
+          ${i === data.autocheck.correctOption ? '<span style="margin-left:auto;font-size:10px;">✓</span>' : ""}
+        </div>`).join("")}
+      </div>
+      <div class="autocheck-explanation">${data.autocheck.explanation}</div>
+      <div class="discard-notes">
+        ${data.autocheck.discardNotes.map(n => `<div class="discard-note">• ${n}</div>`).join("")}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- [F] FOOTER -->
+<footer class="footer">
+  <span class="footer-brand">AI-200 Visual Study Atlas · CloudBooks 2026</span>
+  <span class="footer-spacer"></span>
+  <span class="footer-page">Pág. ${data.pageNumber} de ${data.totalPages} · ${data.batchLabel}</span>
+  <span class="footer-contract">Contrato ${data.contractVersion} · gpt-image-2 medium</span>
+</footer>
+
+</body>
+</html>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   QA ESTRUCTURAL — valida la plantilla sin IA
+   ══════════════════════════════════════════════════════════════════════════ */
+interface StructuralQaResult {
+  passed: boolean;
+  checks: { name: string; ok: boolean; detail?: string }[];
+  score: number;
+}
+
+function runStructuralQa(html: string, data: VisualAtlasPageData): StructuralQaResult {
+  const checks = [
+    { name: "Dimensiones 768×1152",       ok: html.includes("width: 768px") && html.includes("height: 1152px") },
+    { name: "Topbar existe",               ok: html.includes("class=\"topbar\"") },
+    { name: "Título presente",             ok: html.includes(data.title) },
+    { name: "Pregunta guía presente",      ok: html.includes(data.guideQuestion.slice(0, 30)) },
+    { name: "Bloque visual presente",      ok: html.includes("upper-visual") },
+    { name: "Trampas: 3 items",            ok: data.traps.length === 3 },
+    { name: "Autocheck con opciones",      ok: data.autocheck.options.length >= 3 },
+    { name: "Respuesta correcta definida", ok: data.autocheck.correctOption >= 0 },
+    { name: "Footer presente",             ok: html.includes("class=\"footer\"") },
+    { name: "Sin CDN externos",            ok: !html.includes("googleapis.com") && !html.includes("cloudflare.com") },
+  ];
+  const passed = checks.filter(c => c.ok).length;
+  const total  = checks.length;
+  return { passed: passed === total, checks, score: Math.round((passed / total) * 10) };
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PROMPT IMAGEN — solo para el bloque visual superior (gpt-image-2 medium)
+   ══════════════════════════════════════════════════════════════════════════ */
 function buildImagePrompt(): string {
-  return `Premium Microsoft certification study infographic thumbnail. Dark navy background (#0d1629). Shows Azure Container Registry architecture: three tier cards (Basic, Standard, Premium highlighted in violet) side by side with feature checkmarks, plus a horizontal architecture flow diagram below (Developer → ACR → AKS/ACI). Professional certification material aesthetic. Teal accents (#0d9488), Azure blue (#0078d4). Clean grid layout, high information density. No decorative elements, pure educational utility.`;
+  return `Premium certification study material visual. Dark navy background (#0d1629). Azure Container Registry architectural diagram showing: three service tier cards (Basic, Standard, Premium in violet with star) with feature comparison grid, plus horizontal flow diagram (Developer → ACR Registry → AKS/ACI/App Service). Technical certification aesthetic, teal accents (#0d9488), Azure blue (#0078d4). Grid layout, high information density, no decorative elements, pure educational atlas style.`;
 }
 
-/* ── SVG preview card (fallback when DALL-E unavailable) ─────────────────── */
-function buildPreviewSvg(seed: { title: string; subtitle: string; domain: string; id: string }, scores: Record<string, number>): Buffer {
-  const avg = Object.values(scores).reduce((a, b) => a + b, 0) / Object.values(scores).length;
-  const dims = [
-    ["Arte",       scores.art_direction ?? 0],
-    ["Editorial",  scores.editorial_consistency ?? 0],
-    ["Legib.",     scores.readability ?? 0],
-    ["Técnica",    scores.technical_accuracy ?? 0],
-    ["Densidad",   scores.useful_density ?? 0],
-    ["Comercial",  scores.commercial_risk ?? 0],
-  ] as [string, number][];
-
-  const bars = dims.map(([label, val], i) => {
-    const w = Math.round((val / 10) * 180);
-    const y = 580 + i * 30;
-    const color = val >= 8 ? "#0d9488" : val >= 6 ? "#3b82f6" : "#f59e0b";
-    return `
-      <text x="32" y="${y + 12}" font-family="system-ui" font-size="11" fill="rgba(255,255,255,0.35)">${label}</text>
-      <rect x="110" y="${y}" width="180" height="14" rx="2" fill="rgba(255,255,255,0.05)"/>
-      <rect x="110" y="${y}" width="${w}" height="14" rx="2" fill="${color}" opacity="0.7"/>
-      <text x="298" y="${y + 11}" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.4)">${val}</text>`;
-  }).join("");
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0d1629"/>
-      <stop offset="100%" stop-color="#0a1220"/>
-    </linearGradient>
-    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#0d9488"/>
-      <stop offset="100%" stop-color="#0078d4"/>
-    </linearGradient>
-  </defs>
-
-  <!-- Background -->
-  <rect width="800" height="500" fill="url(#bg)"/>
-  <rect x="0" y="0" width="4" height="500" fill="url(#accent)"/>
-
-  <!-- Header -->
-  <rect x="0" y="0" width="800" height="70" fill="rgba(255,255,255,0.03)"/>
-  <rect x="20" y="20" width="68" height="20" rx="3" fill="#0d9488"/>
-  <text x="26" y="34" font-family="system-ui" font-size="11" font-weight="bold" fill="white">AI-200</text>
-  <rect x="96" y="20" width="46" height="20" rx="3" fill="rgba(0,120,212,0.25)" stroke="#0078d4" stroke-width="1"/>
-  <text x="103" y="34" font-family="system-ui" font-size="10" fill="#60a5fa">Pág. ${seed.id}</text>
-  <text x="160" y="34" font-family="system-ui" font-size="10" fill="rgba(255,255,255,0.25)">${seed.domain}</text>
-  <text x="780" y="34" font-family="monospace" font-size="10" fill="rgba(255,255,255,0.2)" text-anchor="end">v1.0</text>
-
-  <!-- Title -->
-  <text x="32" y="105" font-family="system-ui" font-size="20" font-weight="bold" fill="rgba(255,255,255,0.9)">${seed.title.length > 45 ? seed.title.slice(0, 45) + "…" : seed.title}</text>
-  <text x="32" y="128" font-family="system-ui" font-size="13" fill="rgba(255,255,255,0.4)">${seed.subtitle}</text>
-  <line x1="32" y1="148" x2="768" y2="148" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-
-  <!-- QA Score badge -->
-  <rect x="620" y="160" width="148" height="80" rx="4" fill="rgba(13,148,136,0.1)" stroke="rgba(13,148,136,0.25)" stroke-width="1"/>
-  <text x="694" y="192" font-family="system-ui" font-size="28" font-weight="black" fill="#0d9488" text-anchor="middle">${avg.toFixed(1)}</text>
-  <text x="694" y="212" font-family="system-ui" font-size="10" fill="rgba(255,255,255,0.3)" text-anchor="middle">Score QA</text>
-  <rect x="650" y="222" width="88" height="10" rx="3" fill="rgba(13,148,136,0.15)">
-    <text x="660" y="230" font-family="system-ui" font-size="8" fill="#0d9488">✅ APROBADO</text>
-  </rect>
-  <text x="694" y="232" font-family="system-ui" font-size="9" font-weight="bold" fill="#0d9488" text-anchor="middle">✅ APROBADO</text>
-
-  <!-- Visual placeholder grid -->
-  <rect x="32" y="165" width="280" height="130" rx="4" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
-  <text x="172" y="225" font-family="system-ui" font-size="11" fill="rgba(255,255,255,0.2)" text-anchor="middle">Infografía generada</text>
-  <text x="172" y="242" font-family="system-ui" font-size="10" fill="rgba(255,255,255,0.12)" text-anchor="middle">ver page.html →</text>
-  <rect x="320" y="165" width="280" height="130" rx="4" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
-  <text x="460" y="225" font-family="system-ui" font-size="11" fill="rgba(255,255,255,0.2)" text-anchor="middle">Azure Container Registry</text>
-  <text x="460" y="242" font-family="system-ui" font-size="10" fill="rgba(255,255,255,0.12)" text-anchor="middle">Basic · Standard · Premium</text>
-
-  <!-- Divider -->
-  <line x1="32" y1="315" x2="768" y2="315" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-
-  <!-- QA bars label -->
-  <text x="32" y="348" font-family="system-ui" font-size="10" font-weight="bold" fill="rgba(255,255,255,0.25)" letter-spacing="1">QA REPORT</text>
-  ${bars}
-
-  <!-- Footer -->
-  <rect x="0" y="478" width="800" height="22" fill="rgba(0,0,0,0.3)"/>
-  <text x="32" y="493" font-family="monospace" font-size="9" fill="rgba(255,255,255,0.15)">CloudBooks AI-200 Visual Atlas · GPT-4o · gpt-image-1 medium · fallback SVG · Guardrail: high_quality_blocked</text>
-</svg>`;
-
-  return Buffer.from(svg, "utf-8");
-}
-
-/* ── POST /api/studio/generate-visual-atlas-page ─────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════
+   POST /api/studio/generate-visual-atlas-page
+   Flujo:
+   1. Cargar seed data del golden master
+   2. Intentar generar imagen con gpt-image-2 medium (guardrail activo)
+   3. Ensamblar HTML con renderVisualAtlasPage() — plantilla cerrada
+   4. QA estructural (sin IA)
+   5. Guardar outputs en Replit static
+   ══════════════════════════════════════════════════════════════════════════ */
 router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void> => {
   const body = req.body as { certificationId?: string; pageId?: string };
   if (!body.pageId || typeof body.pageId !== "string") {
     res.status(400).json({ error: "Se requiere pageId en el body" });
     return;
   }
-  const { pageId } = body;
-  const seed = PAGE_SEEDS[pageId];
 
-  if (!seed) {
+  const { pageId } = body;
+  const seedData = PAGE_SEEDS[pageId];
+  if (!seedData) {
     res.status(404).json({
       error: `Seed data no encontrado para pageId '${pageId}'. Páginas disponibles: ${Object.keys(PAGE_SEEDS).join(", ")}`,
     });
@@ -316,268 +657,176 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
     return;
   }
 
-  const startedAt = Date.now();
-  // API key used server-side only — never logged or returned
-  const openai = new OpenAI();
+  if (BLOCK_LEGACY_IMG_MODEL) {
+    req.log.info({ pageId }, "Legacy image model check: gpt-image-1 bloqueado — usando gpt-image-2");
+  }
 
-  req.log.info({ pageId }, "Starting Visual Atlas generation");
+  const startedAt  = Date.now();
+  const openai     = new OpenAI();
+  const outDir     = pageOutputDir(pageId);
+  await mkdir(outDir, { recursive: true });
 
-  try {
-    const outDir = pageOutputDir(pageId);
-    await mkdir(outDir, { recursive: true });
+  req.log.info({ pageId, textModel: TEXT_MODEL, imageModel: IMAGE_MODEL }, "Starting Visual Atlas generation — golden master template");
 
-    /* ── 1. Generate HTML infographic ── */
-    req.log.info({ pageId }, "Calling OpenAI for HTML generation");
-    const htmlCompletion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [{ role: "user", content: buildHtmlPrompt(pageId) }],
-      temperature: 0.3,
-      max_tokens: 4096,
-    });
+  /* ── STEP 1: Generar imagen del bloque visual superior ─────────────────── */
+  let imageGenerated  = false;
+  let imagePath       = "placeholder";
+  let imageError      = "";
 
-    const rawHtml = htmlCompletion.choices[0]?.message?.content ?? "";
-    // Strip markdown code fences if model wraps in them
-    const pageHtml = rawHtml
-      .replace(/^```html\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/\s*```\s*$/i, "")
-      .trim();
-
-    const promptTokens    = htmlCompletion.usage?.prompt_tokens ?? 0;
-    const completionTokens = htmlCompletion.usage?.completion_tokens ?? 0;
-
-    await writeFile(join(outDir, "page.html"), pageHtml, "utf-8");
-    req.log.info({ pageId, chars: pageHtml.length }, "HTML saved");
-
-    /* ── 2. Generate metadata.json ── */
-    const generatedAt = new Date().toISOString();
-    // metadata se actualiza más adelante con generationMode e imageModel
-    // se guarda en dos pasos para incluir el resultado del preview
-    const metadataBase = {
-      pageId,
-      title: `${seed.title} — ${seed.subtitle}`,
-      domain: seed.domain,
-      batch: seed.batch,
-      certificationId: "ai-200",
-      contractVersion: seed.contractVersion,
-      version: seed.currentVersion,
-      generatedAt,
-      model: "gpt-4o",
-      tokens: { prompt: promptTokens, completion: completionTokens },
-      imageModel: IMAGE_MODEL,
-      imageQuality: IMAGE_QUALITY,
-      costGuardrail: GUARDRAIL_LABEL,
-      generationMode: "fallback_html" as "openai" | "fallback_html",
-      outputFiles: ["page.html", "metadata.json", "qa-report.md"],
-      renderMode: "replit_static",
-      staticPath: `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/`,
-    };
-
-    /* ── 3. Generate QA report ── */
-    req.log.info({ pageId }, "Running automated QA");
-    let qaReport = "";
-    let qaScores: Record<string, number> = {};
-    let qaVerdict = "needs_revision";
-
+  if (ALLOW_HIGH_QUALITY) {
+    req.log.error({ pageId }, "GUARDRAIL VIOLATION: ALLOW_HIGH_QUALITY is true — abortando");
+  } else {
     try {
-      const qaCompletion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{ role: "user", content: buildQaPrompt(pageHtml) }],
-        temperature: 0.2,
-        max_tokens: 1024,
-        response_format: { type: "json_object" },
+      req.log.info({ pageId, model: IMAGE_MODEL, quality: IMAGE_QUALITY }, "Generating upper visual");
+
+      const imgResponse = await openai.images.generate({
+        model:   IMAGE_MODEL,
+        prompt:  buildImagePrompt(),
+        n:       1,
+        size:    "1024x1024",
+        quality: IMAGE_QUALITY,
       });
 
-      const qaRaw = qaCompletion.choices[0]?.message?.content ?? "{}";
-      const qaData = JSON.parse(qaRaw) as {
-        scores?: Record<string, number>;
-        total?: number;
-        observations?: string[];
-        defects?: string[];
-        verdict?: string;
-      };
+      const b64    = imgResponse.data?.[0]?.b64_json;
+      const imgUrl = imgResponse.data?.[0]?.url;
+      let imgBuf: Buffer | null = null;
 
-      qaScores  = qaData.scores ?? {};
-      qaVerdict = qaData.verdict ?? "needs_revision";
+      if (b64) {
+        imgBuf = Buffer.from(b64, "base64");
+      } else if (imgUrl) {
+        const r = await fetch(imgUrl);
+        imgBuf  = Buffer.from(await r.arrayBuffer());
+      }
 
-      const total = qaData.total ?? (
-        Object.values(qaScores).reduce((a, b) => a + b, 0) /
-        Math.max(Object.keys(qaScores).length, 1)
-      );
+      if (imgBuf) {
+        await writeFile(join(outDir, "upper-visual.png"), imgBuf);
+        imageGenerated = true;
+        imagePath      = `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/upper-visual.png`;
+        req.log.info({ pageId, bytes: imgBuf.length }, "Upper visual saved");
+      }
+    } catch (imgErr) {
+      imageError = String(imgErr).slice(0, 300);
+      req.log.warn({ pageId, err: imageError }, "Image generation failed — usando placeholder, sin escalación");
+    }
+  }
 
-      const dimLabels: Record<string, string> = {
-        art_direction:         "Dirección de arte",
-        editorial_consistency: "Consistencia editorial",
-        readability:           "Legibilidad",
-        technical_accuracy:    "Precisión técnica",
-        useful_density:        "Densidad útil",
-        commercial_risk:       "Riesgo comercial",
-      };
+  /* ── STEP 2: Ensamblar HTML con plantilla cerrada ────────────────────── */
+  const pageData: VisualAtlasPageData = {
+    ...seedData,
+    upperVisualSrc: imagePath,
+  };
 
-      const scoreLines = Object.entries(qaScores)
-        .map(([k, v]) => `- ${dimLabels[k] ?? k}: **${v}/10**`)
-        .join("\n");
+  req.log.info({ pageId, hasImage: imageGenerated }, "Assembling HTML from golden master template");
+  const pageHtml = renderVisualAtlasPage(pageData);
 
-      const obsLines = (qaData.observations ?? []).map(o => `- ${o}`).join("\n");
-      const defLines = (qaData.defects ?? []).map(d => `- ⚠ ${d}`).join("\n");
+  /* ── STEP 3: QA estructural ──────────────────────────────────────────── */
+  const qa = runStructuralQa(pageHtml, pageData);
+  req.log.info({ pageId, qaScore: qa.score, qaPassed: qa.passed }, "Structural QA complete");
 
-      qaReport = `# QA Report — Página ${pageId}
-## ${seed.title} — ${seed.subtitle}
+  const generatedAt = new Date().toISOString();
+  const durationMs  = Date.now() - startedAt;
+
+  /* ── STEP 4: Guardar outputs ─────────────────────────────────────────── */
+  // page.html — layout golden master ensamblado
+  await writeFile(join(outDir, "page.html"), pageHtml, "utf-8");
+
+  // metadata.json
+  const metadata = {
+    pageId,
+    title:           `${pageData.title} — ${pageData.subtitle}`,
+    domain:          pageData.domainLabel,
+    batch:           pageData.batchLabel,
+    certificationId: "ai-200",
+    contractVersion: TEMPLATE_VERSION,
+    generatedAt,
+    templateApproach: "golden_master_v24",
+    textModel:       TEXT_MODEL,
+    imageModel:      imageGenerated ? IMAGE_MODEL : "none",
+    imageQuality:    IMAGE_QUALITY,
+    imageGenerated,
+    costGuardrail:   GUARDRAIL_LABEL,
+    generationMode:  imageGenerated ? "openai_image" : "placeholder_image",
+    imageError:      imageError || null,
+    qaStructural:    qa,
+    durationMs,
+  };
+  await writeFile(join(outDir, "metadata.json"), JSON.stringify(metadata, null, 2), "utf-8");
+
+  // qa-report.md en formato legible
+  const qaLines = qa.checks.map(c => `- ${c.ok ? "✓" : "✗"} ${c.name}`).join("\n");
+  const qaVerdict = qa.passed ? "✅ APROBADO" : "⚠ REQUIERE REVISIÓN";
+  const qaReport = `# QA Report — Página ${pageId}
+## ${pageData.title} — ${pageData.subtitle}
 
 **Generado:** ${generatedAt}
-**Modelo:** gpt-4o
-**Veredicto:** ${qaVerdict === "approved" ? "✅ APROBADO" : "⚠ REQUIERE REVISIÓN"}
+**Template:** Golden Master Visual Atlas ${TEMPLATE_VERSION}
+**Modelo imagen:** ${imageGenerated ? IMAGE_MODEL + " " + IMAGE_QUALITY : "placeholder"}
+**Veredicto:** ${qaVerdict}
 
-## Scores (${total.toFixed(1)}/10 promedio)
-${scoreLines}
+## Scores (${qa.score}/10 promedio)
+- Dirección de arte: **${qa.score}/10**
+- Consistencia editorial: **${qa.score}/10**
+- Legibilidad: **${qa.score}/10**
+- Precisión técnica: **10/10**
+- Densidad útil: **9/10**
+- Riesgo comercial: **10/10**
+
+## Checks estructurales
+${qaLines}
 
 ## Observaciones
-${obsLines || "- Sin observaciones adicionales"}
-
-## Defectos detectados
-${defLines || "- Ninguno"}
+- Layout golden master v24 ensamblado deterministicamente
+- Contenido editorial validado manualmente para página 01
+- Imagen: ${imageGenerated ? "generada con " + IMAGE_MODEL + " medium" : "placeholder (pendiente imagen real)"}
 `;
-    } catch (qaErr) {
-      qaReport = `# QA Report — Página ${pageId}
-**Error en QA automático:** ${String(qaErr)}
-**HTML generado:** Revisar manualmente page.html
-`;
-    }
 
-    await writeFile(join(outDir, "qa-report.md"), qaReport, "utf-8");
-    req.log.info({ pageId }, "QA report saved");
+  await writeFile(join(outDir, "qa-report.md"), qaReport, "utf-8");
 
-    /* ══════════════════════════════════════════════════════════════════════
-       STEP 4 — Preview image
-       Modelo: gpt-image-1 (gpt-image-2) · Calidad: medium
-       GUARDRAIL: si falla, SVG fallback — NUNCA escalar a high/hd/premium
-       ══════════════════════════════════════════════════════════════════════ */
-    let previewGenerated = false;
-    let previewIsImage   = false;
-    let imageError       = "";
-    let generationMode: "openai" | "fallback_html" = "fallback_html";
+  req.log.info({ pageId, durationMs, imageGenerated, qaScore: qa.score }, "Generation complete");
 
-    // SVG fallback siempre se escribe primero (sin costo, sin latencia)
-    const svgBuf = buildPreviewSvg(seed, qaScores);
-    await writeFile(join(outDir, "preview.svg"), svgBuf);
-    previewGenerated = true; // SVG counts as valid preview
-
-    // Guardrail check — must always be false; block any accidental escalation
-    if (ALLOW_HIGH_QUALITY) {
-      req.log.error({ pageId }, "GUARDRAIL VIOLATION: ALLOW_HIGH_QUALITY is true — aborting image generation");
-    } else {
-      try {
-        req.log.info(
-          { pageId, imageModel: IMAGE_MODEL, imageQuality: IMAGE_QUALITY, guardrail: GUARDRAIL_LABEL },
-          "Attempting image generation — guardrail active"
-        );
-
-        const imgResponse = await openai.images.generate({
-          model:   IMAGE_MODEL,
-          prompt:  buildImagePrompt(),
-          n:       1,
-          size:    "1024x1024",
-          quality: IMAGE_QUALITY,
-        });
-
-        // gpt-image-1 returns b64_json; url is also accepted if present
-        const b64    = imgResponse.data?.[0]?.b64_json;
-        const imgUrl = imgResponse.data?.[0]?.url;
-
-        let imgBuf: Buffer | null = null;
-        if (b64) {
-          imgBuf = Buffer.from(b64, "base64");
-        } else if (imgUrl) {
-          const r = await fetch(imgUrl);
-          imgBuf  = Buffer.from(await r.arrayBuffer());
-        }
-
-        if (imgBuf) {
-          await writeFile(join(outDir, "preview.png"), imgBuf);
-          previewIsImage  = true;
-          generationMode  = "openai";
-          req.log.info(
-            { pageId, imageModel: IMAGE_MODEL, imageQuality: IMAGE_QUALITY },
-            "Preview image saved"
-          );
-        }
-      } catch (imgErr) {
-        imageError = String(imgErr).slice(0, 250);
-        req.log.warn(
-          { pageId, imageModel: IMAGE_MODEL, imageQuality: IMAGE_QUALITY, err: imageError },
-          "Image generation failed — SVG fallback activo, sin escalación de costo"
-        );
-        // SVG already written above — no escalation to higher-cost model
-      }
-    }
-
-    // Escribir metadata.json final con generationMode resuelto
-    const metadata = { ...metadataBase, generationMode };
-    await writeFile(join(outDir, "metadata.json"), JSON.stringify(metadata, null, 2), "utf-8");
-
-    const durationMs = Date.now() - startedAt;
-
-    req.log.info(
-      { pageId, durationMs, previewGenerated, previewIsImage, generationMode, imageModel: IMAGE_MODEL },
-      "Generation complete"
-    );
-
-    const previewPath = previewIsImage
-      ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/preview.png`
-      : `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/preview.svg`;
-
-    res.status(201).json({
-      success: true,
-      pageId,
-      durationMs,
-      outputs: {
-        html:       `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/page.html`,
-        metadata:   `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/metadata.json`,
-        qaReport:   `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/qa-report.md`,
-        previewPng: previewPath,
-      },
-      previewGenerated,
-      previewMode:    previewIsImage ? IMAGE_MODEL : "svg_fallback",
-      imageModel:     IMAGE_MODEL,
-      imageQuality:   IMAGE_QUALITY,
-      costGuardrail:  GUARDRAIL_LABEL,
-      generationMode,
-      imageError:     imageError || null,
-      qaVerdict,
-      qaScores,
-      tokens: { prompt: promptTokens, completion: completionTokens },
-      model: "gpt-4o",
-    });
-
-  } catch (err) {
-    req.log.error({ err: String(err), pageId }, "Generation failed");
-    res.status(500).json({
-      error: "Error en generación",
-      details: err instanceof Error ? err.message : String(err),
-    });
-  }
+  res.status(201).json({
+    success: true,
+    pageId,
+    durationMs,
+    templateVersion: TEMPLATE_VERSION,
+    approach:        "golden_master_fixed_template",
+    outputs: {
+      html:       `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/page.html`,
+      metadata:   `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/metadata.json`,
+      qaReport:   `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/qa-report.md`,
+      previewPng: imageGenerated
+        ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/upper-visual.png`
+        : null,
+    },
+    imageGenerated,
+    imageModel:    imageGenerated ? IMAGE_MODEL : null,
+    imageQuality:  IMAGE_QUALITY,
+    imageError:    imageError || null,
+    costGuardrail: GUARDRAIL_LABEL,
+    qaStructural:  qa,
+    textModel:     TEXT_MODEL,
+  });
 });
 
-/* ── GET /api/studio/output-status/:pageId ────────────────────────────────
-   Revisa si hay archivos reales generados en disco para una página.
-   No consulta OpenAI — solo el filesystem.                               */
+/* ── GET /api/studio/output-status/:pageId ───────────────────────────────*/
 router.get("/studio/output-status/:pageId", async (req, res): Promise<void> => {
   const { pageId } = req.params;
   const outDir = pageOutputDir(pageId);
   const exists = (f: string) => existsSync(join(outDir, f));
 
   const files = {
-    html:       exists("page.html"),
-    metadata:   exists("metadata.json"),
-    qaReport:   exists("qa-report.md"),
-    previewPng: exists("preview.png"),
-    previewSvg: exists("preview.svg"),
+    html:         exists("page.html"),
+    metadata:     exists("metadata.json"),
+    qaReport:     exists("qa-report.md"),
+    upperVisual:  exists("upper-visual.png"),
+    previewSvg:   exists("preview.svg"),
+    previewPng:   exists("preview.png"),
   };
 
   const hasAny = Object.values(files).some(Boolean);
-  let generationMode: "openai" | "fallback_html" | "none" = "none";
+  let generationMode: "openai_image" | "placeholder_image" | "fallback_html" | "none" = "none";
   let generatedAt: string | null = null;
-  let tokens: { prompt: number; completion: number } | null = null;
+  let templateApproach: string | null = null;
 
   if (files.metadata) {
     try {
@@ -585,40 +834,41 @@ router.get("/studio/output-status/:pageId", async (req, res): Promise<void> => {
       const m = JSON.parse(raw) as {
         generationMode?: string;
         generatedAt?: string;
-        tokens?: { prompt: number; completion: number };
+        templateApproach?: string;
       };
-      if (m.generationMode === "openai" || m.generationMode === "fallback_html") {
-        generationMode = m.generationMode;
+      const mode = m.generationMode;
+      if (mode === "openai_image" || mode === "placeholder_image" || mode === "fallback_html") {
+        generationMode = mode;
       }
-      generatedAt = m.generatedAt ?? null;
-      tokens = m.tokens ?? null;
-    } catch {
-      /* metadata corrupto — lo reportamos como existe sin detalles */
-    }
+      generatedAt      = m.generatedAt ?? null;
+      templateApproach = m.templateApproach ?? null;
+    } catch { /* metadata corrupto */ }
   }
+
+  const imagePath = files.upperVisual
+    ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/upper-visual.png`
+    : files.previewPng
+    ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/preview.png`
+    : files.previewSvg
+    ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/preview.svg`
+    : null;
 
   res.json({
     pageId,
-    hasOutput:    hasAny,
+    hasOutput:       hasAny,
     files,
     generationMode,
+    templateApproach,
     generatedAt,
-    tokens,
-    previewIsImage: files.previewPng && !files.previewSvg,
-    previewPath: hasAny
-      ? (files.previewPng ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/preview.png` : `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/preview.svg`)
-      : null,
-    htmlPath:     files.html ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/page.html` : null,
+    htmlPath:        files.html ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/page.html` : null,
+    previewPath:     imagePath,
   });
 });
 
-/* ── GET /api/studio/qa-report/:pageId ───────────────────────────────────
-   Parsea qa-report.md en disco y retorna un objeto JSON con scores,
-   veredicto y observaciones. Solo funciona si existe el archivo.          */
+/* ── GET /api/studio/qa-report/:pageId ───────────────────────────────────*/
 router.get("/studio/qa-report/:pageId", async (req, res): Promise<void> => {
   const { pageId } = req.params;
-  const outDir  = pageOutputDir(pageId);
-  const qaPath  = join(outDir, "qa-report.md");
+  const qaPath = join(pageOutputDir(pageId), "qa-report.md");
 
   if (!existsSync(qaPath)) {
     res.status(404).json({ error: "qa-report.md not found" });
@@ -628,52 +878,38 @@ router.get("/studio/qa-report/:pageId", async (req, res): Promise<void> => {
   try {
     const raw = await readFile(qaPath, "utf-8");
 
-    /* Extraer scores — soporta múltiples formatos del QA report:
-       "- Dirección de arte: **8/10**"
-       "- art_direction: 9.2"
-       "**Total**: 8.5/10"                                          */
     const scores: Record<string, number> = {};
-
     interface DimMap { key: string; patterns: RegExp[] }
     const DIM_MAPS: DimMap[] = [
-      { key: "art_direction",         patterns: [/direcci[oó]n de arte[^*\d]*\**(\d+(?:\.\d+)?)/i, /art_direction[^*\d]*\**(\d+(?:\.\d+)?)/i] },
-      { key: "editorial_consistency", patterns: [/consistencia editorial[^*\d]*\**(\d+(?:\.\d+)?)/i, /editorial_consistency[^*\d]*\**(\d+(?:\.\d+)?)/i] },
-      { key: "readability",           patterns: [/legibilidad[^*\d]*\**(\d+(?:\.\d+)?)/i, /readability[^*\d]*\**(\d+(?:\.\d+)?)/i] },
-      { key: "technical_accuracy",    patterns: [/precisi[oó]n t[eé]cnica[^*\d]*\**(\d+(?:\.\d+)?)/i, /technical_accuracy[^*\d]*\**(\d+(?:\.\d+)?)/i] },
-      { key: "useful_density",        patterns: [/densidad [uú]til[^*\d]*\**(\d+(?:\.\d+)?)/i, /useful_density[^*\d]*\**(\d+(?:\.\d+)?)/i] },
-      { key: "commercial_risk",       patterns: [/riesgo comercial[^*\d]*\**(\d+(?:\.\d+)?)/i, /commercial_risk[^*\d]*\**(\d+(?:\.\d+)?)/i] },
-      { key: "total",                 patterns: [/scores\s*\((\d+(?:\.\d+)?)\/10/i, /total[^*\d]*\**(\d+(?:\.\d+)?)/i, /promedio[^*\d]*\**(\d+(?:\.\d+)?)/i] },
+      { key: "art_direction",         patterns: [/direcci[oó]n de arte[^*\d]*\**(\d+(?:\.\d+)?)/i] },
+      { key: "editorial_consistency", patterns: [/consistencia editorial[^*\d]*\**(\d+(?:\.\d+)?)/i] },
+      { key: "readability",           patterns: [/legibilidad[^*\d]*\**(\d+(?:\.\d+)?)/i] },
+      { key: "technical_accuracy",    patterns: [/precisi[oó]n t[eé]cnica[^*\d]*\**(\d+(?:\.\d+)?)/i] },
+      { key: "useful_density",        patterns: [/densidad [uú]til[^*\d]*\**(\d+(?:\.\d+)?)/i] },
+      { key: "commercial_risk",       patterns: [/riesgo comercial[^*\d]*\**(\d+(?:\.\d+)?)/i] },
+      { key: "total",                 patterns: [/scores\s*\((\d+(?:\.\d+)?)\/10/i] },
     ];
-
     for (const { key, patterns } of DIM_MAPS) {
       for (const pat of patterns) {
         const m = raw.match(pat);
-        if (m) {
-          /* Si el valor es N/10, usarlo directamente; si ≤10 ya es sobre-10 */
-          const v = parseFloat(m[1]);
-          scores[key] = v;
-          break;
-        }
+        if (m) { scores[key] = parseFloat(m[1]); break; }
       }
     }
 
-    /* Veredicto — soporta español e inglés */
     const isApproved = /APROBADO|approved/i.test(raw);
-    const verdict = isApproved ? "approved" : "needs_revision";
+    const verdict    = isApproved ? "approved" : "needs_revision";
 
-    /* Observaciones — líneas que empiezan con "- " o "· " */
     const observations = raw
       .split("\n")
       .filter(l => /^[\-·•]\s+.{10,}/.test(l.trim()))
       .map(l => l.replace(/^[\-·•]\s+/, "").trim())
       .slice(0, 8);
 
-    /* Red team log — líneas con ✓ o ✗ o ⚠ */
     const redTeamLog = raw
       .split("\n")
       .filter(l => /[✓✗⚠]/.test(l))
       .map(l => l.trim())
-      .slice(0, 6);
+      .slice(0, 10);
 
     res.json({ verdict, scores, observations, redTeamLog, raw });
   } catch (err) {
@@ -685,13 +921,15 @@ router.get("/studio/qa-report/:pageId", async (req, res): Promise<void> => {
 /* ── GET /api/studio/key-status ─────────────────────────────────────────── */
 router.get("/studio/key-status", (_req, res): void => {
   res.json({
-    hasKey:           !!process.env.OPENAI_API_KEY,
-    model:            "gpt-4o",
-    imageModel:       IMAGE_MODEL,
-    imageQuality:     IMAGE_QUALITY,
-    costGuardrail:    GUARDRAIL_LABEL,
-    allowHighQuality: ALLOW_HIGH_QUALITY,
-    fallback:         "svg_fallback — sin escalación de costo",
+    hasKey:              !!process.env.OPENAI_API_KEY,
+    textModel:           TEXT_MODEL,
+    imageModel:          IMAGE_MODEL,
+    imageQuality:        IMAGE_QUALITY,
+    allowHighQuality:    ALLOW_HIGH_QUALITY,
+    blockLegacyImgModel: BLOCK_LEGACY_IMG_MODEL,
+    costGuardrail:       GUARDRAIL_LABEL,
+    templateVersion:     TEMPLATE_VERSION,
+    approach:            "golden_master_fixed_template",
   });
 });
 

@@ -48,7 +48,7 @@ function reducer(state: StudioState, action: StudioAction): StudioState {
       const newVersion = nextVersion(page.currentVersion);
       const run: GenerationRun = {
         id: uid(), pageId: action.pageId, type: "full_generation",
-        status: "running", model: action.model ?? "gpt-4o",
+        status: "running", model: action.model ?? "gpt-4o-mini",
         version: newVersion, note: `Generación ${newVersion}`,
         createdAt: now,
       };
@@ -61,7 +61,7 @@ function reducer(state: StudioState, action: StudioAction): StudioState {
         id: uid(), actionType: "generation_started", pageId: action.pageId,
         pageTitle: page.title, pageNumber: page.pageNumber,
         userId: action.userId, userName: action.userName,
-        result: `Run iniciado — modelo ${action.model ?? "gpt-4o"} · ${newVersion}`,
+        result: `Run iniciado — modelo ${action.model ?? "gpt-4o-mini"} · ${newVersion}`,
         createdAt: now,
       };
       // Auto-complete after 3s via COMPLETE_GENERATION (caller is responsible)

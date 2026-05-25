@@ -1,259 +1,491 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Azure Container Registry (ACR) — Arquitectura y Tiers</title>
-    <style>
-        body {
-            margin: 0;
-            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-            background-color: #0d1629;
-            color: rgba(255, 255, 255, 0.85);
-            overflow: hidden;
-            width: 1200px;
-            height: 900px;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 32px;
-            height: 72px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .header-left {
-            display: flex;
-            align-items: center;
-        }
-        .badge {
-            background-color: #0d9488;
-            color: #fff;
-            border-radius: 4px;
-            padding: 2px 8px;
-            margin-right: 8px;
-            font-size: 14px;
-        }
-        .title {
-            font-size: 22px;
-            font-weight: bold;
-        }
-        .subtitle {
-            font-size: 13px;
-            color: rgba(255, 255, 255, 0.25);
-        }
-        .header-right .badge {
-            margin-left: 8px;
-        }
-        .badge-outline {
-            border: 1px solid #0d9488;
-            color: #0d9488;
-            background: transparent;
-        }
-        .badge-filled {
-            background-color: #0078d4;
-            color: #fff;
-        }
-        .main {
-            display: grid;
-            grid-template-rows: 320px 140px 240px;
-            gap: 16px;
-            padding: 16px 32px;
-            height: 828px;
-        }
-        .card {
-            background-color: #0f1e35;
-            border-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-            padding: 16px;
-            color: rgba(255, 255, 255, 0.85);
-        }
-        .card-basic {
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .card-standard {
-            border: 1px solid rgba(13, 148, 136, 0.3);
-        }
-        .card-premium {
-            border: 2px solid #7c3aed;
-            background-color: #1a133b;
-        }
-        .card-header {
-            font-size: 18px;
-            margin-bottom: 8px;
-        }
-        .card-price {
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.45);
-        }
-        .badge-highlight {
-            background-color: #0d9488;
-            color: #fff;
-            border-radius: 4px;
-            padding: 2px 8px;
-            font-size: 12px;
-            margin-left: 8px;
-        }
-        .badge-premium {
-            background-color: #7c3aed;
-            color: #fff;
-            border-radius: 4px;
-            padding: 2px 8px;
-            font-size: 12px;
-            margin-left: 8px;
-        }
-        .card-body {
-            font-size: 14px;
-            line-height: 1.5;
-        }
-        .card-footer {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.45);
-            margin-top: 8px;
-        }
-        .architecture-flow {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-        }
-        .architecture-flow-title {
-            font-size: 16px;
-            margin-bottom: 8px;
-        }
-        .flow {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        .flow div {
-            display: flex;
-            align-items: center;
-        }
-        .flow-arrow {
-            margin: 0 4px;
-        }
-        .auth-info {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.45);
-            text-align: right;
-        }
-        .trap-card {
-            background-color: rgba(217, 119, 6, 0.08);
-            border: 1px solid rgba(217, 119, 6, 0.25);
-        }
-        .trap-card li {
-            color: #d97706;
-        }
-        .check-card {
-            background-color: rgba(5, 150, 105, 0.06);
-            border: 1px solid rgba(5, 150, 105, 0.2);
-        }
-        .check-card li {
-            color: #059669;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=768">
+<title>Pág. 01 — Azure Container Registry · AI-200 Visual Study Atlas</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  width: 768px;
+  height: 1152px;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: #0d1629;
+  color: rgba(255,255,255,0.85);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── [A] TOPBAR ─────────────────────────────────────────────────────────── */
+.topbar {
+  flex: 0 0 52px;
+  background: #080f1d;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 10px;
+}
+.topbar-page {
+  background: #0d9488;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+.topbar-domain {
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.topbar-spacer { flex: 1; }
+.topbar-badge-domain {
+  font-size: 8.5px;
+  color: #0d9488;
+  border: 1px solid rgba(13,148,136,0.4);
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+.topbar-badge-cert {
+  font-size: 8.5px;
+  color: #fff;
+  background: #0078d4;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* ── [B] HERO EDITORIAL ─────────────────────────────────────────────────── */
+.hero {
+  flex: 0 0 124px;
+  background: linear-gradient(135deg, #0d1629 0%, #0b1a2e 100%);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: stretch;
+  padding: 0 24px;
+}
+.hero-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+.hero-subtitle {
+  font-size: 9px;
+  color: rgba(255,255,255,0.3);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.hero-title {
+  font-size: 26px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.95);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.hero-context {
+  font-size: 10px;
+  color: rgba(255,255,255,0.42);
+  line-height: 1.55;
+  max-width: 580px;
+}
+.hero-icon {
+  flex: 0 0 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 38px;
+  opacity: 0.18;
+}
+
+/* ── [C] GUIDE QUESTION ─────────────────────────────────────────────────── */
+.guide {
+  flex: 0 0 40px;
+  background: rgba(0,120,212,0.08);
+  border-bottom: 1px solid rgba(0,120,212,0.15);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 10px;
+}
+.guide-label {
+  font-size: 8px;
+  color: #60a5fa;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.guide-pill {
+  background: rgba(0,120,212,0.15);
+  border: 1px solid rgba(0,120,212,0.25);
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 10px;
+  color: #93c5fd;
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* ── [D] UPPER VISUAL BLOCK ─────────────────────────────────────────────── */
+.upper-visual {
+  flex: 0 0 412px;
+  background: #070d1a;
+  border-bottom: 2px solid rgba(13,148,136,0.15);
+  overflow: hidden;
+  position: relative;
+}
+.visual-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.visual-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #07111f;
+}
+.placeholder-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 20px 32px;
+}
+.placeholder-icon { font-size: 32px; opacity: 0.25; }
+.placeholder-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.25);
+  letter-spacing: 0.08em;
+}
+.placeholder-sub { font-size: 9px; color: rgba(255,255,255,0.15); }
+.placeholder-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+  width: 100%;
+  max-width: 520px;
+}
+.pg-cell {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 4px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.35);
+  font-weight: 600;
+}
+.pg-sub { font-size: 9px; color: rgba(255,255,255,0.2); font-weight: 400; }
+
+/* ── [E] LOWER BLOCK ─────────────────────────────────────────────────────── */
+.lower-block {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  min-height: 0;
+}
+
+/* Trampas */
+.traps-panel {
+  background: rgba(220,38,38,0.04);
+  border-right: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel-header {
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+.panel-header-icon { font-size: 12px; }
+.panel-header-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.traps-panel .panel-header-label { color: #f87171; }
+.traps-list {
+  flex: 1;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  overflow: hidden;
+}
+.trap-item {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+}
+.trap-num {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  background: rgba(220,38,38,0.2);
+  border: 1px solid rgba(220,38,38,0.35);
+  border-radius: 50%;
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #f87171;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.trap-content { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.trap-wrong {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.55);
+  text-decoration: line-through;
+  text-decoration-color: rgba(248,113,113,0.5);
+}
+.trap-arrow { font-size: 8px; color: rgba(255,255,255,0.2); }
+.trap-correction {
+  font-size: 9px;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.45;
+}
+
+/* Autocheck */
+.autocheck-panel {
+  background: rgba(13,148,136,0.04);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.autocheck-panel .panel-header-label { color: #34d399; }
+.autocheck-body {
+  flex: 1;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+.autocheck-question {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.4;
+}
+.autocheck-options { display: flex; flex-direction: column; gap: 4px; }
+.option-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border-radius: 3px;
+  border: 1px solid rgba(255,255,255,0.05);
+  font-size: 9.5px;
+}
+.option-row.correct {
+  background: rgba(16,185,129,0.1);
+  border-color: rgba(16,185,129,0.3);
+  color: #34d399;
+  font-weight: 700;
+}
+.option-row.wrong-opt {
+  background: rgba(255,255,255,0.02);
+  color: rgba(255,255,255,0.3);
+}
+.option-badge {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 8px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.option-row.correct .option-badge { background: rgba(16,185,129,0.25); color: #34d399; }
+.option-row.wrong-opt .option-badge { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.25); }
+.autocheck-explanation {
+  font-size: 9px;
+  color: rgba(255,255,255,0.45);
+  line-height: 1.45;
+  padding: 6px 8px;
+  background: rgba(255,255,255,0.02);
+  border-left: 2px solid rgba(52,211,153,0.3);
+  border-radius: 0 3px 3px 0;
+}
+.discard-notes { display: flex; flex-direction: column; gap: 2px; }
+.discard-note { font-size: 8px; color: rgba(255,255,255,0.2); line-height: 1.4; }
+
+/* ── [F] FOOTER ─────────────────────────────────────────────────────────── */
+.footer {
+  flex: 0 0 32px;
+  background: #060c18;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+}
+.footer-brand {
+  font-size: 8.5px;
+  font-family: monospace;
+  color: rgba(255,255,255,0.18);
+  font-weight: 600;
+}
+.footer-spacer { flex: 1; }
+.footer-page {
+  font-size: 8px;
+  font-family: monospace;
+  color: rgba(255,255,255,0.15);
+}
+.footer-contract {
+  font-size: 7.5px;
+  font-family: monospace;
+  color: rgba(13,148,136,0.35);
+}
+</style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-left">
-            <div class="badge">01</div>
-            <div>
-                <div class="title">Azure Container Registry (ACR)</div>
-                <div class="subtitle">Arquitectura y Tiers</div>
-            </div>
-        </div>
-        <div class="header-right">
-            <div class="badge badge-outline">Gestión de Contenedores</div>
-            <div class="badge badge-filled">AI-200</div>
-        </div>
+
+<!-- [A] TOPBAR -->
+<header class="topbar">
+  <span class="topbar-page">01</span>
+  <span class="topbar-domain">Gestión de Contenedores</span>
+  <span class="topbar-spacer"></span>
+  <span class="topbar-badge-domain">Gestión de Contenedores</span>
+  <span class="topbar-badge-cert">AI-200</span>
+</header>
+
+<!-- [B] HERO EDITORIAL -->
+<section class="hero">
+  <div class="hero-text">
+    <div class="hero-subtitle">Arquitectura y Tiers</div>
+    <div class="hero-title">Azure Container Registry</div>
+    <div class="hero-context">ACR es el registro privado de imágenes de contenedor en Azure, base para despliegues en AKS, App Service y Container Apps. Conoce sus tiers para seleccionar el adecuado según escenarios de desarrollo, producción y alta disponibilidad. Lee las señales: geo-replicación, Private Endpoint y digest suelen decidir más que el nombre del SKU.</div>
+  </div>
+  <div class="hero-icon">📦</div>
+</section>
+
+<!-- [C] PREGUNTA GUÍA -->
+<div class="guide">
+  <span class="guide-label">Pregunta guía</span>
+  <span class="guide-pill">¿Cuál tier de ACR es adecuado para producción con geo-replicación y private endpoints?</span>
+</div>
+
+<!-- [D] BLOQUE VISUAL SUPERIOR -->
+<div class="upper-visual">
+  <img class="visual-image" src="/assets/cloudbooks/ai-200/visual-atlas/pages/01/upper-visual.png" alt="Diagrama de arquitectura y tiers de Azure Container Registry" />
+</div>
+
+<!-- [E] BLOQUE INFERIOR -->
+<div class="lower-block">
+
+  <!-- Trampas -->
+  <div class="traps-panel">
+    <div class="panel-header">
+      <span class="panel-header-icon">⚠</span>
+      <span class="panel-header-label">Trampas del examen</span>
     </div>
-    <div class="main">
-        <div class="card card-basic">
-            <div class="card-header">Basic <span class="card-price">~$0.167/día</span></div>
-            <div class="card-body">
-                <div>💾 Storage: 10 GiB</div>
-                <div>🔗 Webhooks: 10</div>
-                <div>✅ Public access</div>
-                <div>❌ Geo-replication</div>
-                <div>❌ Private endpoints</div>
-                <div>❌ Content Trust</div>
-                <div>❌ Zone redundancy</div>
-            </div>
+    <div class="traps-list">
+      
+      <div class="trap-item">
+        <div class="trap-num">1</div>
+        <div class="trap-content">
+          <div class="trap-wrong">Basic es suficiente para producción</div>
+          <div class="trap-arrow">→</div>
+          <div class="trap-correction">Basic carece de Private Endpoints y geo-replicación. Para producción con seguridad de red y HA global se requiere Premium.</div>
         </div>
-        <div class="card card-standard">
-            <div class="card-header">Standard <span class="badge-highlight">Más común</span></div>
-            <div class="card-body">
-                <div>💾 Storage: 100 GiB</div>
-                <div>🔗 Webhooks: 10</div>
-                <div>✅ Public access</div>
-                <div>✅ Content Trust (Notary v2)</div>
-                <div>❌ Geo-replication</div>
-                <div>❌ Private endpoints</div>
-                <div>❌ Zone redundancy</div>
-            </div>
+      </div>
+      <div class="trap-item">
+        <div class="trap-num">2</div>
+        <div class="trap-content">
+          <div class="trap-wrong">La tag :latest siempre es segura e inmutable</div>
+          <div class="trap-arrow">→</div>
+          <div class="trap-correction">La tag :latest es mutable — puede apuntar a imágenes distintas en cada push. Usa el digest SHA256 para referencias inmutables.</div>
         </div>
-        <div class="card card-premium">
-            <div class="card-header">Premium <span class="badge-premium">⭐ Más preguntas AI-200</span></div>
-            <div class="card-body">
-                <div>💾 Storage: 500 GiB</div>
-                <div>🔗 Webhooks: 500</div>
-                <div>✅ Geo-replication (active-active)</div>
-                <div>✅ Private endpoints / Private Link</div>
-                <div>✅ Content Trust (Notary v2)</div>
-                <div>✅ Zone redundancy</div>
-                <div>✅ Customer-managed keys</div>
-                <div>✅ Dedicated data endpoints</div>
-            </div>
-            <div class="card-footer">Features exclusivos de Premium son los más evaluados</div>
+      </div>
+      <div class="trap-item">
+        <div class="trap-num">3</div>
+        <div class="trap-content">
+          <div class="trap-wrong">Geo-replication y zone redundancy son equivalentes</div>
+          <div class="trap-arrow">→</div>
+          <div class="trap-correction">Geo-replication replica entre regiones (latencia global). Zone redundancy protege contra fallas de zonas dentro de una región. Son independientes y complementarios.</div>
         </div>
-        <div class="card architecture-flow">
-            <div>
-                <div class="architecture-flow-title">Flujo de Arquitectura</div>
-                <div class="flow">
-                    <div>[Desarrollador]</div>
-                    <div class="flow-arrow">→</div>
-                    <div>git push / az acr build</div>
-                    <div class="flow-arrow">→</div>
-                    <div>[Azure Container Registry]</div>
-                    <div class="flow-arrow">→</div>
-                    <div>pull</div>
-                    <div class="flow-arrow">→</div>
-                    <div>[AKS] [ACI] [App Service]</div>
-                </div>
-                <div class="flow">
-                    <div>[Trigger: code commit / base image update / schedule]</div>
-                    <div class="flow-arrow">→</div>
-                    <div>[ACR Tasks: build multi-step]</div>
-                    <div class="flow-arrow">→</div>
-                    <div>[Push to ACR]</div>
-                </div>
-            </div>
-            <div class="auth-info">Auth: Azure AD + RBAC | Service Principal | Admin (disable in prod)</div>
-        </div>
-        <div class="card trap-card">
-            <div class="card-header">⚠ Trampas del Examen</div>
-            <ul>
-                <li>⚠ Geo-replication: SOLO disponible en Premium</li>
-                <li>⚠ Private endpoints: SOLO disponible en Premium</li>
-                <li>⚠ Content Trust (Notary v2): SOLO disponible en Premium</li>
-                <li>⚠ Zone redundancy: NO existe en Basic ni Standard</li>
-                <li>⚠ ACR Tasks: NO requiere Docker instalado localmente</li>
-                <li>⚠ Admin user: SIEMPRE desactivar en producción</li>
-            </ul>
-        </div>
-        <div class="card check-card">
-            <div class="card-header">✓ Autocheck</div>
-            <ul>
-                <li>□ ¿Conozco los 3 tiers y sus límites de almacenamiento?</li>
-                <li>□ ¿Qué 4 features son exclusivos de Premium?</li>
-                <li>□ ¿Cuándo usar Private Endpoints vs acceso público?</li>
-                <li>□ ¿Qué es geo-replication activa-activa?</li>
-                <li>□ ¿Para qué sirve ACR Tasks y cuándo reemplaza a Docker?</li>
-                <li>□ ¿Por qué desactivar el admin user en producción?</li>
-            </ul>
-        </div>
+      </div>
     </div>
+  </div>
+
+  <!-- Autocheck -->
+  <div class="autocheck-panel">
+    <div class="panel-header">
+      <span class="panel-header-icon">✓</span>
+      <span class="panel-header-label">Verificación autocheck</span>
+    </div>
+    <div class="autocheck-body">
+      <div class="autocheck-question">¿Qué tier de ACR permite geo-replication y private endpoints simultáneamente?</div>
+      <div class="autocheck-options">
+        
+        <div class="option-row wrong-opt">
+          <span class="option-badge">A</span>
+          <span>Basic</span>
+          
+        </div>
+        <div class="option-row wrong-opt">
+          <span class="option-badge">B</span>
+          <span>Standard</span>
+          
+        </div>
+        <div class="option-row correct">
+          <span class="option-badge">C</span>
+          <span>Premium</span>
+          <span style="margin-left:auto;font-size:10px;">✓</span>
+        </div>
+        <div class="option-row wrong-opt">
+          <span class="option-badge">D</span>
+          <span>Enterprise</span>
+          
+        </div>
+      </div>
+      <div class="autocheck-explanation">Premium es el único tier con geo-replication activa-activa y soporte de Private Endpoints/Private Link para acceso de red privado.</div>
+      <div class="discard-notes">
+        <div class="discard-note">• A descartada: Basic no tiene Private Endpoints ni geo-replication.</div><div class="discard-note">• B descartada: Standard tiene Content Trust pero no geo-replication.</div><div class="discard-note">• D descartada: No existe tier Enterprise en ACR.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- [F] FOOTER -->
+<footer class="footer">
+  <span class="footer-brand">AI-200 Visual Study Atlas · CloudBooks 2026</span>
+  <span class="footer-spacer"></span>
+  <span class="footer-page">Pág. 01 de 61 · Batch 01</span>
+  <span class="footer-contract">Contrato v24 · gpt-image-2 medium</span>
+</footer>
+
 </body>
 </html>

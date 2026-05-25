@@ -49,7 +49,7 @@ export default function StudioDashboard() {
             Visual Atlas AI-200
           </h1>
           <p className="text-[10px] text-white/30 mt-0.5">
-            61 infografías de certificación · gpt-4o + gpt-image-1 medium
+            61 infografías de certificación · gpt-4o-mini + gpt-image-2 medium
           </p>
         </div>
 
@@ -169,7 +169,7 @@ export default function StudioDashboard() {
               <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest mb-3">Flujo de producción</p>
               <div className="space-y-2">
                 {[
-                  { n: "1", label: "Generar página 01", sub: "GPT-4o genera HTML · gpt-image-1 medium genera preview", active: true },
+                  { n: "1", label: "Generar página 01", sub: "Plantilla golden master v24 · gpt-image-2 medium genera bloque visual", active: true },
                   { n: "2", label: "QA y Aprobación", sub: "Revisar score por 6 dimensiones · aprobar o solicitar corrección", active: false },
                   { n: "3", label: "Exportar", sub: "Descargar HTML, PNG o PDF de la página aprobada", active: false },
                 ].map(step => (

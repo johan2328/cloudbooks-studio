@@ -3,94 +3,124 @@ import Layout from "@/components/Layout";
 import {
   Sparkles, CheckCircle2, XCircle, Loader2, Key,
   ChevronRight, Clock, Code2, FileText, Shield, Eye,
-  ExternalLink,
+  ExternalLink, Lock, ImageIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
-type RealStep = "idle" | "validating_key" | "generating_html" | "running_qa" | "saving_outputs" | "done" | "error";
+type RunStep = "idle" | "generating_image" | "assembling_html" | "running_qa" | "saving" | "done" | "error";
+
+interface KeyStatus {
+  hasKey: boolean;
+  textModel: string;
+  imageModel: string;
+  imageQuality: string;
+  allowHighQuality: boolean;
+  blockLegacyImgModel: boolean;
+  costGuardrail: string;
+  templateVersion: string;
+  approach: string;
+}
 
 interface GenerationResult {
   pageId: string;
   durationMs: number;
-  outputs: { html: string; metadata: string; qaReport: string; previewPng: string };
-  previewGenerated: boolean;
-  previewMode?: "gpt-image-1" | "svg_fallback";
-  generationMode?: "openai" | "fallback_html";
+  templateVersion: string;
+  approach: string;
+  outputs: {
+    html: string;
+    metadata: string;
+    qaReport: string;
+    previewPng: string | null;
+  };
+  imageGenerated: boolean;
+  imageModel: string | null;
+  imageQuality: string;
   imageError: string | null;
-  qaVerdict: string;
-  tokens: { prompt: number; completion: number };
-  model: string;
+  costGuardrail: string;
+  qaStructural: {
+    passed: boolean;
+    score: number;
+    checks: { name: string; ok: boolean }[];
+  };
+  textModel: string;
 }
 
-const STEPS: { key: RealStep; label: string; sub: string }[] = [
-  { key: "validating_key",  label: "Verificando API key",  sub: "OPENAI_API_KEY desde Secrets" },
-  { key: "generating_html", label: "Generando HTML",       sub: "GPT-4o · Contrato Visual Atlas v24" },
-  { key: "running_qa",      label: "QA automático",        sub: "Análisis de 6 dimensiones" },
-  { key: "saving_outputs",  label: "Guardando outputs",    sub: "/public/assets/cloudbooks/…" },
-  { key: "done",            label: "Completado",           sub: "Assets disponibles en Replit static" },
+const STEPS: { key: RunStep; label: string; sub: string }[] = [
+  { key: "generating_image", label: "Imagen visual",     sub: "gpt-image-2 medium · bloque superior" },
+  { key: "assembling_html",  label: "Ensamblando HTML",  sub: "Plantilla golden master v24 — sin IA libre" },
+  { key: "running_qa",       label: "QA estructural",    sub: "10 checks de layout y contenido" },
+  { key: "saving",           label: "Guardando outputs", sub: "/public/assets/cloudbooks/…" },
+  { key: "done",             label: "Completado",        sub: "page.html listo · Replit static" },
 ];
 
 function getToken() { return localStorage.getItem("studio_token") ?? ""; }
+function authHdr() { return { Authorization: `Bearer ${getToken()}` }; }
 
 export default function Generacion() {
   const { toast } = useToast();
-  const [step, setStep]     = useState<RealStep>("idle");
-  const [error, setError]   = useState<string | null>(null);
-  const [result, setResult] = useState<GenerationResult | null>(null);
-  const [hasKey, setHasKey] = useState<boolean | null>(null);
+  const [step, setStep]         = useState<RunStep>("idle");
+  const [error, setError]       = useState<string | null>(null);
+  const [result, setResult]     = useState<GenerationResult | null>(null);
+  const [keyStatus, setKeyStatus] = useState<KeyStatus | null>(null);
   const [keyChecked, setKeyChecked] = useState(false);
-  const [previewKey, setPreviewKey] = useState(0);
 
   useEffect(() => {
-    fetch("/api/studio/key-status", { headers: { Authorization: `Bearer ${getToken()}` } })
+    fetch("/api/studio/key-status", { headers: authHdr() })
       .then(r => r.json())
-      .then((d: { hasKey: boolean }) => { setHasKey(d.hasKey); setKeyChecked(true); })
-      .catch(() => { setHasKey(false); setKeyChecked(true); });
+      .then((d: KeyStatus) => { setKeyStatus(d); setKeyChecked(true); })
+      .catch(() => { setKeyChecked(true); });
   }, []);
 
-  const isRunning = ["validating_key", "generating_html", "running_qa", "saving_outputs"].includes(step);
+  const isRunning = ["generating_image", "assembling_html", "running_qa", "saving"].includes(step);
+  const hasKey    = keyStatus?.hasKey ?? false;
 
   async function generate() {
-    setStep("validating_key");
+    setStep("generating_image");
     setError(null);
     setResult(null);
 
     try {
-      const keyRes = await fetch("/api/studio/key-status", {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      });
-      const keyData = await keyRes.json() as { hasKey: boolean };
+      // Re-verificar key
+      const keyRes  = await fetch("/api/studio/key-status", { headers: authHdr() });
+      const keyData = await keyRes.json() as KeyStatus;
       if (!keyData.hasKey) {
-        setError("OPENAI_API_KEY no configurada en Secrets. Ir a Replit → Secrets (ícono de candado) → agregar OPENAI_API_KEY.");
+        setError("OPENAI_API_KEY no configurada en Secrets. Ir a Replit → Secrets → agregar OPENAI_API_KEY.");
         setStep("error");
         return;
       }
-      setHasKey(true);
-      setStep("generating_html");
+      setKeyStatus(keyData);
 
+      // Lanzar generación
+      setStep("generating_image");
       const genRes = await fetch("/api/studio/generate-visual-atlas-page", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        headers: { "Content-Type": "application/json", ...authHdr() },
         body: JSON.stringify({ certificationId: "ai-200", pageId: "01" }),
       });
 
+      setStep("assembling_html");
+      await new Promise(r => setTimeout(r, 200));
       setStep("running_qa");
-      await new Promise(r => setTimeout(r, 300));
+      await new Promise(r => setTimeout(r, 200));
 
       if (!genRes.ok) {
         const err = await genRes.json() as { error: string };
         throw new Error(err.error ?? `HTTP ${genRes.status}`);
       }
 
-      setStep("saving_outputs");
+      setStep("saving");
       const data = await genRes.json() as GenerationResult;
-      await new Promise(r => setTimeout(r, 300));
+      await new Promise(r => setTimeout(r, 150));
 
       setResult(data);
       setStep("done");
-      setPreviewKey(k => k + 1);
-      toast({ title: "Generación completada", description: `Pág. 01 · ${(data.durationMs / 1000).toFixed(1)}s · ${data.model}` });
+
+      const qaLabel = data.qaStructural.passed ? "QA ✓" : `QA ${data.qaStructural.score}/10`;
+      toast({
+        title: "Generación completada",
+        description: `Pág. 01 · ${(data.durationMs / 1000).toFixed(1)}s · ${qaLabel}`,
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
@@ -103,21 +133,21 @@ export default function Generacion() {
     <Layout title="Generar página 01">
       <div className="h-full overflow-y-auto bg-[#0a1220]">
 
-        {/* Header */}
-        <div className="bg-[#0d1629] border-b border-white/[0.06] px-6 py-4 flex items-center gap-4">
+        {/* ── Header ── */}
+        <div className="bg-[#0d1629] border-b border-white/[0.06] px-6 py-4 flex items-center gap-3">
           <div className="flex-1">
-            <p className="text-[8px] font-bold text-teal-400/70 uppercase tracking-[0.2em] mb-0.5">
-              Generación real · OpenAI API
+            <p className="text-[8px] font-bold text-teal-400/60 uppercase tracking-[0.2em] mb-0.5">
+              Plantilla golden master · Layout cerrado
             </p>
             <h1 className="text-sm font-black text-white tracking-tight">
               Página 01 — Azure Container Registry
             </h1>
           </div>
 
-          {/* Key status */}
+          {/* Key badge */}
           {!keyChecked ? (
             <span className="flex items-center gap-1 text-[8px] text-white/25 border border-white/10 px-2 py-1 rounded-sm">
-              <Loader2 className="w-2.5 h-2.5 animate-spin" />Verificando key…
+              <Loader2 className="w-2.5 h-2.5 animate-spin" />Verificando…
             </span>
           ) : hasKey ? (
             <span className="flex items-center gap-1 text-[8px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-sm font-semibold">
@@ -125,20 +155,20 @@ export default function Generacion() {
             </span>
           ) : (
             <span className="flex items-center gap-1 text-[8px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-sm font-semibold">
-              <Key className="w-2.5 h-2.5" />Sin OPENAI_API_KEY
+              <Key className="w-2.5 h-2.5" />Sin API key
             </span>
           )}
 
-          {/* Botón primario único */}
+          {/* Único botón primario */}
           <button
             onClick={generate}
-            disabled={isRunning || !keyChecked}
+            disabled={isRunning || !keyChecked || !hasKey}
             className={cn(
               "flex items-center gap-2 h-9 px-5 rounded-sm text-[10px] font-bold transition-all",
               isRunning
                 ? "bg-teal-600/20 border border-teal-500/30 text-teal-300 cursor-not-allowed"
                 : !hasKey && keyChecked
-                ? "bg-white/5 border border-white/10 text-white/30 cursor-not-allowed"
+                ? "bg-white/5 border border-white/10 text-white/25 cursor-not-allowed"
                 : "bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 text-white shadow-lg"
             )}>
             {isRunning
@@ -147,17 +177,100 @@ export default function Generacion() {
           </button>
         </div>
 
-        {/* Guardrail info */}
-        <div className="bg-amber-500/5 border-b border-amber-500/12 px-6 py-2 flex items-center gap-2">
-          <span className="text-[8px] text-amber-400/60">
-            <span className="font-bold text-amber-400/80">Guardrail activo:</span>{" "}
-            gpt-image-1 medium únicamente · high/hd bloqueados · si imagen falla → fallback SVG sin escalar costo
+        {/* ── Guardrail banner ── */}
+        <div className="bg-[#0d1629] border-b border-white/[0.05] px-6 py-1.5 flex items-center gap-3">
+          <Lock className="w-2.5 h-2.5 text-teal-400/40 shrink-0" />
+          <span className="text-[8px] text-white/25">
+            <span className="text-teal-400/60 font-semibold">Layout bloqueado:</span>{" "}
+            formato libro 768×1152 · estructura editorial local v24 · la IA no redesigna la página
+          </span>
+          <span className="ml-auto text-[7px] font-mono text-teal-500/40">
+            {keyStatus?.costGuardrail ?? GUARDRAIL_LABEL_DISPLAY}
           </span>
         </div>
 
         <div className="p-6 max-w-3xl space-y-5">
 
-          {/* Pipeline steps — visible cuando hay actividad */}
+          {/* ── Config panel (solo en idle) ── */}
+          {step === "idle" && (
+            <div className="bg-[#0d1629] border border-white/[0.06] rounded-sm overflow-hidden">
+              <div className="px-4 py-3 border-b border-white/[0.05]">
+                <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">
+                  Configuración de generación
+                </p>
+              </div>
+              <div className="p-4 grid grid-cols-2 gap-3">
+                {([
+                  {
+                    label: "Layout",
+                    value: "Golden Master Visual Atlas v24",
+                    note:  "Plantilla fija — la IA no decide estructura",
+                    icon:  Lock,
+                    color: "text-teal-400",
+                  },
+                  {
+                    label: "Template",
+                    value: "locked",
+                    note:  "768×1152 px · 6 secciones editoriales fijas",
+                    icon:  Lock,
+                    color: "text-teal-400",
+                  },
+                  {
+                    label: "Modelo texto",
+                    value: keyStatus?.textModel ?? "gpt-4o-mini",
+                    note:  "Solo QA/json estructurado — no genera layout",
+                    icon:  FileText,
+                    color: "text-blue-400",
+                  },
+                  {
+                    label: "Modelo imagen",
+                    value: `${keyStatus?.imageModel ?? "gpt-image-2"} ${keyStatus?.imageQuality ?? "medium"}`,
+                    note:  "Solo bloque visual superior · gpt-image-1 bloqueado",
+                    icon:  ImageIcon,
+                    color: "text-violet-400",
+                  },
+                  {
+                    label: "High quality",
+                    value: "blocked",
+                    note:  "ALLOW_HIGH_QUALITY = false permanentemente",
+                    icon:  XCircle,
+                    color: "text-red-400/70",
+                  },
+                  {
+                    label: "Output path",
+                    value: "/pages/01/page.html",
+                    note:  "Replit static files · public/assets/cloudbooks/…",
+                    icon:  FileText,
+                    color: "text-white/30",
+                  },
+                ] as ConfigRow[]).map(c => (
+                  <div key={c.label} className="bg-white/[0.02] border border-white/[0.05] rounded-sm px-3 py-2.5 flex gap-2.5">
+                    <c.icon className={cn("w-3.5 h-3.5 shrink-0 mt-0.5", c.color)} />
+                    <div className="min-w-0">
+                      <p className="text-[7px] text-white/25 uppercase tracking-widest font-bold">{c.label}</p>
+                      <p className="text-[9.5px] font-semibold text-white/70 mt-0.5 font-mono leading-tight">{c.value}</p>
+                      <p className="text-[7px] text-white/20 mt-0.5 leading-snug">{c.note}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {!hasKey && keyChecked && (
+                <div className="mx-4 mb-4 flex items-start gap-2 px-3 py-2.5 bg-amber-500/8 border border-amber-500/20 rounded-sm">
+                  <Key className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[9px] font-bold text-amber-400">OPENAI_API_KEY no configurada</p>
+                    <p className="text-[8px] text-amber-400/50 mt-0.5 leading-snug">
+                      Replit → Secrets (ícono de candado) → agregar{" "}
+                      <span className="font-mono">OPENAI_API_KEY</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Pipeline steps ── */}
           {step !== "idle" && (
             <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4 space-y-3">
               <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Pipeline</p>
@@ -166,29 +279,29 @@ export default function Generacion() {
                   const activeIdx = STEPS.findIndex(x => x.key === step);
                   const isDone    = step === "done" ? true : i < activeIdx;
                   const isActive  = s.key === step && step !== "done";
-                  const isErr     = step === "error" && i === activeIdx;
                   return (
                     <div key={s.key} className="flex items-center gap-1.5">
                       <div className={cn(
                         "flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm text-[9px] font-medium border transition-all",
-                        isDone  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
+                        isDone   ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
                         isActive ? "bg-teal-500/15 border-teal-500/30 text-teal-300 animate-pulse" :
-                        isErr   ? "bg-red-500/10 border-red-500/20 text-red-400" :
-                                   "bg-white/[0.02] border-white/[0.06] text-white/20"
+                        step === "error" && i === activeIdx
+                                 ? "bg-red-500/10 border-red-500/20 text-red-400"
+                                 : "bg-white/[0.02] border-white/[0.06] text-white/20"
                       )}>
-                        {isDone  ? <CheckCircle2 className="w-3 h-3" /> :
+                        {isDone   ? <CheckCircle2 className="w-3 h-3" /> :
                          isActive ? <Loader2 className="w-3 h-3 animate-spin" /> :
-                         isErr   ? <XCircle className="w-3 h-3" /> :
-                                   <Clock className="w-3 h-3" />}
+                                    <Clock className="w-3 h-3" />}
                         {s.label}
                       </div>
-                      {i < STEPS.length - 1 && <ChevronRight className="w-3 h-3 text-white/10 shrink-0" />}
+                      {i < STEPS.length - 1 && (
+                        <ChevronRight className="w-3 h-3 text-white/10 shrink-0" />
+                      )}
                     </div>
                   );
                 })}
               </div>
 
-              {/* Error */}
               {step === "error" && error && (
                 <div className="flex items-start gap-2.5 bg-red-500/8 border border-red-500/20 rounded-sm px-3 py-3">
                   <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
@@ -196,7 +309,7 @@ export default function Generacion() {
                     <p className="text-[9px] font-bold text-red-400 mb-0.5">Error en generación</p>
                     <p className="text-[8px] text-red-300/60 leading-relaxed">{error}</p>
                   </div>
-                  <button onClick={() => setStep("idle")} className="text-white/20 hover:text-white/50 shrink-0 transition-colors">
+                  <button onClick={() => setStep("idle")} className="text-white/20 hover:text-white/50 shrink-0">
                     <XCircle className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -204,123 +317,112 @@ export default function Generacion() {
             </div>
           )}
 
-          {/* Resultado */}
+          {/* ── Resultado ── */}
           {step === "done" && result && (
             <div className="bg-[#0d1629] border border-emerald-500/15 rounded-sm overflow-hidden">
-              <div className="px-4 py-3 border-b border-emerald-500/10 flex items-center gap-3">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <p className="text-[9px] font-bold text-emerald-400 flex-1">
-                  Generación completada · {(result.durationMs / 1000).toFixed(1)}s · {result.model}
-                </p>
+
+              {/* Result header */}
+              <div className="px-4 py-3 border-b border-white/[0.06] flex items-center gap-3">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-[9px] font-bold text-emerald-400">
+                    Completado · {(result.durationMs / 1000).toFixed(1)}s
+                  </p>
+                  <p className="text-[7px] text-white/20 mt-0.5">
+                    Plantilla {result.templateVersion} · {result.textModel} + {result.imageModel ?? "placeholder"} medium
+                  </p>
+                </div>
                 <span className={cn(
                   "text-[7px] px-2 py-0.5 rounded-sm font-bold border",
-                  result.qaVerdict === "approved"
+                  result.qaStructural.passed
                     ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25"
                     : "bg-amber-500/15 text-amber-400 border-amber-500/25"
                 )}>
-                  QA: {result.qaVerdict === "approved" ? "Aprobado" : "Revisar"}
-                </span>
-                <span className="text-[7px] text-white/20 font-mono">
-                  {((result.tokens.prompt + result.tokens.completion) / 1000).toFixed(1)}k tokens
+                  QA {result.qaStructural.score}/10 {result.qaStructural.passed ? "✓" : "⚠"}
                 </span>
               </div>
 
               <div className="p-4 grid grid-cols-2 gap-4">
-                {/* Preview */}
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <p className="text-[7px] font-bold text-white/25 uppercase tracking-widest">Preview</p>
-                    <span className={cn(
-                      "text-[7px] px-1.5 py-0.5 rounded-sm border font-semibold",
-                      result.previewMode === "gpt-image-1"
-                        ? "bg-teal-500/15 text-teal-400 border-teal-500/20"
-                        : "bg-white/5 text-white/35 border-white/10"
-                    )}>
-                      {result.previewMode === "gpt-image-1" ? "gpt-image-1 medium" : "SVG fallback"}
-                    </span>
-                    {result.imageError && (
-                      <span className="text-[7px] text-amber-400/60 ml-auto">
-                        Imagen falló → SVG generado
-                      </span>
-                    )}
-                  </div>
-                  <div className="aspect-video bg-[#0a1220] border border-white/[0.07] rounded-sm overflow-hidden">
-                    <img key={previewKey}
-                      src={`${result.outputs.previewPng}?v=${previewKey}`}
-                      alt="Preview generado"
-                      className="w-full h-full object-contain" />
-                  </div>
-                </div>
 
-                {/* Archivos generados */}
+                {/* QA checks */}
                 <div>
-                  <p className="text-[7px] font-bold text-white/25 uppercase tracking-widest mb-2">Archivos generados</p>
-                  <div className="space-y-1.5">
-                    {([
-                      [result.outputs.html,      "page.html",      Code2,    "text-blue-400"],
-                      [result.outputs.metadata,  "metadata.json",  FileText, "text-teal-400"],
-                      [result.outputs.qaReport,  "qa-report.md",   Shield,   "text-sky-400"],
-                      [result.outputs.previewPng,
-                        result.outputs.previewPng.endsWith(".svg") ? "preview.svg (fallback)" : "preview.png",
-                        Eye, "text-violet-400"],
-                    ] as [string, string, typeof Code2, string][]).map(([url, label, Icon, color]) => (
-                      <a key={label} href={url} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-sm bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.05] transition-colors group">
-                        <Icon className={cn("w-3 h-3 shrink-0", color)} />
-                        <span className="text-[9px] text-white/50 group-hover:text-white/80 transition-colors flex-1 truncate">{label}</span>
-                        <ExternalLink className="w-2.5 h-2.5 text-white/15 group-hover:text-white/40 shrink-0 transition-colors" />
-                      </a>
+                  <p className="text-[7px] font-bold text-white/25 uppercase tracking-widest mb-2">
+                    Checks estructurales
+                  </p>
+                  <div className="space-y-1">
+                    {result.qaStructural.checks.map(c => (
+                      <div key={c.name} className="flex items-center gap-1.5">
+                        {c.ok
+                          ? <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                          : <XCircle className="w-2.5 h-2.5 text-red-400 shrink-0" />}
+                        <span className={cn(
+                          "text-[8px]",
+                          c.ok ? "text-white/40" : "text-red-400/80"
+                        )}>{c.name}</span>
+                      </div>
                     ))}
                   </div>
 
-                  {result.generationMode === "fallback_html" && (
-                    <div className="mt-3 px-2.5 py-2 bg-amber-500/8 border border-amber-500/20 rounded-sm">
-                      <p className="text-[8px] text-amber-400/80 font-semibold">FALLBACK HTML</p>
+                  {result.imageError && (
+                    <div className="mt-3 px-2 py-1.5 bg-amber-500/8 border border-amber-500/20 rounded-sm">
+                      <p className="text-[7.5px] text-amber-400/80 font-semibold">Imagen: placeholder activo</p>
                       <p className="text-[7px] text-amber-400/50 mt-0.5 leading-snug">
-                        El HTML fue generado pero no con el modelo de imagen premium.
-                        El contenido escrito es real. La imagen es SVG generado localmente.
+                        {result.imageError.slice(0, 120)}
                       </p>
                     </div>
                   )}
                 </div>
+
+                {/* Archivos generados */}
+                <div>
+                  <p className="text-[7px] font-bold text-white/25 uppercase tracking-widest mb-2">
+                    Archivos generados
+                  </p>
+                  <div className="space-y-1.5">
+                    {([
+                      [result.outputs.html,     "page.html",      Code2,    "text-blue-400"],
+                      [result.outputs.metadata, "metadata.json",  FileText, "text-teal-400"],
+                      [result.outputs.qaReport, "qa-report.md",   Shield,   "text-sky-400"],
+                      ...(result.outputs.previewPng
+                        ? [[result.outputs.previewPng, "upper-visual.png", Eye, "text-violet-400"] as const]
+                        : []),
+                    ] as [string | null, string, typeof Code2, string][])
+                      .filter(([url]) => !!url)
+                      .map(([url, label, Icon, color]) => (
+                        <a key={label} href={url!} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-sm bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.05] transition-colors group">
+                          <Icon className={cn("w-3 h-3 shrink-0", color)} />
+                          <span className="text-[9px] text-white/50 group-hover:text-white/80 transition-colors flex-1 truncate">{label}</span>
+                          <ExternalLink className="w-2.5 h-2.5 text-white/15 group-hover:text-white/40 shrink-0 transition-colors" />
+                        </a>
+                      ))}
+                  </div>
+
+                  <div className="mt-3 px-2 py-1.5 bg-teal-500/6 border border-teal-500/15 rounded-sm">
+                    <p className="text-[7px] text-teal-400/60 font-mono leading-relaxed">
+                      Layout: golden master v24<br />
+                      Estructura: plantilla TypeScript<br />
+                      Imagen: {result.imageGenerated ? `${result.imageModel} ${result.imageQuality}` : "placeholder"}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
-          {/* Estado inicial — sin actividad */}
-          {step === "idle" && (
-            <div className="bg-[#0d1629] border border-white/[0.06] rounded-sm p-5 space-y-4">
-              <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Configuración de generación</p>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "Modelo HTML",    value: "gpt-4o",         note: "Genera HTML completo de la infografía" },
-                  { label: "Modelo imagen",  value: "gpt-image-1",    note: "medium quality · fallback SVG si falla" },
-                  { label: "Contrato",       value: "Visual Atlas v24",note: "61 páginas · batch 01–10 activo" },
-                  { label: "Output path",    value: "/pages/01/",      note: "Replit static files" },
-                ].map(c => (
-                  <div key={c.label} className="bg-white/[0.02] border border-white/[0.05] rounded-sm px-3 py-2.5">
-                    <p className="text-[7px] text-white/25 uppercase tracking-widest font-bold">{c.label}</p>
-                    <p className="text-[10px] font-semibold text-white/70 mt-0.5 font-mono">{c.value}</p>
-                    <p className="text-[7px] text-white/20 mt-0.5">{c.note}</p>
-                  </div>
-                ))}
-              </div>
-              {!hasKey && keyChecked && (
-                <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-500/8 border border-amber-500/20 rounded-sm">
-                  <Key className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-[9px] font-bold text-amber-400">OPENAI_API_KEY no configurada</p>
-                    <p className="text-[8px] text-amber-400/50 mt-0.5 leading-snug">
-                      Ve a Replit → Secrets (ícono de candado en el panel izquierdo) → agrega{" "}
-                      <span className="font-mono">OPENAI_API_KEY</span> con tu API key de OpenAI.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </Layout>
   );
 }
+
+/* tipos internos */
+interface ConfigRow {
+  label: string;
+  value: string;
+  note: string;
+  icon: React.ElementType;
+  color: string;
+}
+
+const GUARDRAIL_LABEL_DISPLAY = "high_quality_blocked_gpt_image_2_medium_only";
