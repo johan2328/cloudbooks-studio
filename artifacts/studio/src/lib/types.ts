@@ -207,7 +207,7 @@ export type StudioAction =
   | { type: "START_GENERATION"; pageId: string; userId: string; userName: string; model?: string }
   | { type: "COMPLETE_GENERATION"; pageId: string; runId: string }
   | { type: "EXECUTE_QA"; pageId: string; userId: string; userName: string }
-  | { type: "APPROVE_PAGE"; pageId: string; userId: string; userName: string }
+  | { type: "APPROVE_PAGE"; pageId: string; userId: string; userName: string; approvedAt: string }
   | { type: "REQUEST_REVISION"; pageId: string; userId: string; userName: string; note: string }
   | { type: "REGENERATE_SELECTIVE"; pageId: string; userId: string; userName: string }
   | { type: "EXPORT_PAGE"; pageId: string; format: ExportAsset["format"]; userId: string; userName: string }

@@ -1,10 +1,9 @@
 import { Router, type IRouter } from "express";
-import { db, generationRunsTable, pagesTable } from "@workspace/db";
+import { db, generationRunsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import {
   ListRunsQueryParams,
   ListRunsResponse,
-  CreateRunBody,
   GetRunParams,
   GetRunResponse,
 } from "@workspace/api-zod";
@@ -37,39 +36,12 @@ router.get("/generation/runs", async (req, res): Promise<void> => {
   res.json(ListRunsResponse.parse(serializeDates(runs)));
 });
 
-router.post("/generation/runs", async (req, res): Promise<void> => {
-  const parsed = CreateRunBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-
-  const [page] = await db.select().from(pagesTable).where(eq(pagesTable.id, parsed.data.pageId));
-  if (!page) {
-    res.status(404).json({ error: "Página no encontrada" });
-    return;
-  }
-
-  await db
-    .update(pagesTable)
-    .set({ status: "generating" })
-    .where(eq(pagesTable.id, parsed.data.pageId));
-
-  const model = parsed.data.model ?? "gpt-4o";
-
-  const [run] = await db
-    .insert(generationRunsTable)
-    .values({
-      pageId: parsed.data.pageId,
-      batch: parsed.data.batch ?? page.batch,
-      status: "running",
-      model,
-    })
-    .returning();
-
-  simulateGeneration(run.id, page).catch(() => {});
-
-  res.status(201).json(serializeDates(run));
+router.post("/generation/runs", async (_req, res): Promise<void> => {
+  res.status(410).json({
+    error: "Legacy generation route disabled",
+    message:
+      "Use /api/studio/generate-visual-atlas-page. This route previously created simulated runs and is disabled to avoid mixing demo state with production output.",
+  });
 });
 
 router.get("/generation/runs/:id", async (req, res): Promise<void> => {
@@ -92,34 +64,5 @@ router.get("/generation/runs/:id", async (req, res): Promise<void> => {
 
   res.json(GetRunResponse.parse(serializeDates(run)));
 });
-
-async function simulateGeneration(
-  runId: number,
-  page: { id: number; title: string; domain: string }
-): Promise<void> {
-  const delay = 3000 + Math.random() * 2000;
-  await new Promise((resolve) => setTimeout(resolve, delay));
-
-  const hasApiKey = !!process.env.OPENAI_API_KEY;
-  const outputText = hasApiKey
-    ? "[OpenAI output would appear here in production]"
-    : `[DEMO] Infografía generada para "${page.title}" (${page.domain}). En producción, este output sería el HTML/SVG completo generado por GPT-4o con el Contrato Visual v1.4 activo.`;
-
-  await db
-    .update(generationRunsTable)
-    .set({
-      status: "completed",
-      promptTokens: Math.floor(800 + Math.random() * 400),
-      completionTokens: Math.floor(1200 + Math.random() * 800),
-      output: outputText,
-      finishedAt: new Date(),
-    })
-    .where(eq(generationRunsTable.id, runId));
-
-  await db
-    .update(pagesTable)
-    .set({ status: "review" })
-    .where(eq(pagesTable.id, page.id));
-}
 
 export default router;

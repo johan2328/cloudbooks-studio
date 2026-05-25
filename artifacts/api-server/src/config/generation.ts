@@ -10,7 +10,7 @@ export const IMAGE_QUALITY          = "medium"      as const;
 export const BLOCK_LEGACY_IMG_MODEL = true          as const;
 export const TEMPLATE_VERSION       = "v24"         as const;
 
-export type AllowedTextModel  = "gpt-4o-mini" | "gpt-4o";
+export type AllowedTextModel  = typeof TEXT_MODEL;
 export type AllowedImageModel = "gpt-image-2";
 export type AllowedQuality    = "low" | "medium";
 

@@ -127,7 +127,7 @@ export default function QAPage() {
       }
 
       const data = await res.json() as { approvedAt: string };
-      approvePage(pageNum);
+      approvePage(pageNum, data.approvedAt);
       toast({
         title: "Página aprobada ✓",
         description: `Pág. ${pageNum} aprobada · ${data.approvedAt.slice(0, 10)} · lista para exportación`,

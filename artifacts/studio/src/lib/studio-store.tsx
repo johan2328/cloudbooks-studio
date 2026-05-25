@@ -4,7 +4,7 @@ import { buildInitialState } from "./demo-data";
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 function uid(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-local-id`;
 }
 
 function nowISO(): string {
@@ -138,14 +138,14 @@ function reducer(state: StudioState, action: StudioAction): StudioState {
       const page = state.pages.find(p => p.id === action.pageId);
       if (!page) return state;
       const pages = state.pages.map(p =>
-        p.id === action.pageId ? { ...p, status: "approved" as const, lastRevision: now.slice(0,10) } : p
+        p.id === action.pageId ? { ...p, status: "approved" as const, lastRevision: action.approvedAt.slice(0,10) } : p
       );
       const log: UserActionLog = {
         id: uid(), actionType: "page_approved", pageId: action.pageId,
         pageTitle: page.title, pageNumber: page.pageNumber,
         userId: action.userId, userName: action.userName,
-        result: `Página aprobada — lista para exportación · Contrato ${page.contractVersion}`,
-        createdAt: now,
+        result: `Snapshot local actualizado tras aprobación del servidor · Contrato ${page.contractVersion}`,
+        createdAt: action.approvedAt,
       };
       return { ...state, pages, actionLog: [log, ...state.actionLog] };
     }
@@ -377,7 +377,7 @@ interface StudioContextValue {
   executeGrounding: (pageId: string) => void;
   startGeneration: (pageId: string, model?: string) => void;
   executeQA: (pageId: string) => void;
-  approvePage: (pageId: string) => void;
+  approvePage: (pageId: string, approvedAt: string) => void;
   requestRevision: (pageId: string, note: string) => void;
   regenerateSelective: (pageId: string) => void;
   exportPage: (pageId: string, format: ExportAsset["format"]) => void;
@@ -421,17 +421,14 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const startGeneration = useCallback((pageId: string, model = "gpt-4o-mini") => {
     dispatch({ type: "START_GENERATION", pageId, model, ...currentUser });
-    // Simulate async completion after 3.5s
-    const runId = uid();
-    setTimeout(() => dispatch({ type: "COMPLETE_GENERATION", pageId, runId }), 3500);
   }, []);
 
   const executeQA = useCallback((pageId: string) => {
     dispatch({ type: "EXECUTE_QA", pageId, ...currentUser });
   }, []);
 
-  const approvePage = useCallback((pageId: string) => {
-    dispatch({ type: "APPROVE_PAGE", pageId, ...currentUser });
+  const approvePage = useCallback((pageId: string, approvedAt: string) => {
+    dispatch({ type: "APPROVE_PAGE", pageId, approvedAt, ...currentUser });
   }, []);
 
   const requestRevision = useCallback((pageId: string, note: string) => {
