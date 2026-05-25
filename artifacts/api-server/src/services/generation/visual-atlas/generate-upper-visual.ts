@@ -51,7 +51,7 @@ export async function generateUpperVisual(
       model:   IMAGE_MODEL,
       prompt:  buildImagePrompt(seedData),
       n:       1,
-      size:    "1024x1024",
+      size:    "1536x1024",
       quality: IMAGE_QUALITY,
     });
 
