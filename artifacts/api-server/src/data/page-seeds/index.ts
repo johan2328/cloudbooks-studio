@@ -23,4 +23,10 @@ export function hasSeed(pageId: string): boolean {
   return pageId in PAGE_SEEDS;
 }
 
+export function listSeeds(): Array<{ pageId: string; data: VisualAtlasPageData }> {
+  return Object.entries(PAGE_SEEDS)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([pageId, data]) => ({ pageId, data }));
+}
+
 export { PAGE_SEEDS };

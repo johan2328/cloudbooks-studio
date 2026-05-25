@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ElementType } from "react";
 import Layout from "@/components/Layout";
 import {
   Sparkles, CheckCircle2, XCircle, Loader2, Key,
@@ -7,6 +7,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import {
+  fetchStudioCatalog,
+  getPageIdFromLocation,
+  type StudioCatalog,
+  type StudioCatalogPage,
+} from "@/lib/studio-api";
 
 type RunStep = "idle" | "generating_image" | "assembling_html" | "running_qa" | "saving" | "done" | "error";
 
@@ -64,18 +70,33 @@ export default function Generacion() {
   const [result, setResult]     = useState<GenerationResult | null>(null);
   const [keyStatus, setKeyStatus] = useState<KeyStatus | null>(null);
   const [keyChecked, setKeyChecked] = useState(false);
+  const [catalog, setCatalog] = useState<StudioCatalog | null>(null);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const pageId = getPageIdFromLocation("01");
+  const page: StudioCatalogPage | undefined = catalog?.pages.find((p) => p.pageId === pageId) ?? catalog?.pages[0];
 
   useEffect(() => {
     fetch("/api/studio/key-status", { headers: authHdr() })
       .then(r => r.json())
       .then((d: KeyStatus) => { setKeyStatus(d); setKeyChecked(true); })
       .catch(() => { setKeyChecked(true); });
+
+    fetchStudioCatalog()
+      .then(setCatalog)
+      .catch((err) => setCatalogError(err instanceof Error ? err.message : String(err)));
   }, []);
 
   const isRunning = ["generating_image", "assembling_html", "running_qa", "saving"].includes(step);
   const hasKey    = keyStatus?.hasKey ?? false;
+  const canGenerate = keyChecked && hasKey && !!page?.generationReady;
 
   async function generate() {
+    if (!page?.generationReady) {
+      setError("Seed productivo no disponible para esta pagina.");
+      setStep("error");
+      return;
+    }
+
     setStep("generating_image");
     setError(null);
     setResult(null);
@@ -96,7 +117,7 @@ export default function Generacion() {
       const genRes = await fetch("/api/studio/generate-visual-atlas-page", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHdr() },
-        body: JSON.stringify({ certificationId: "ai-200", pageId: "01" }),
+        body: JSON.stringify({ certificationId: "ai-200", pageId: page?.pageId ?? pageId }),
       });
 
       setStep("assembling_html");
@@ -119,7 +140,7 @@ export default function Generacion() {
       const qaLabel = data.qaStructural.passed ? "QA ✓" : `QA ${data.qaStructural.score}/10`;
       toast({
         title: "Generación completada",
-        description: `Pág. 01 · ${(data.durationMs / 1000).toFixed(1)}s · ${qaLabel}`,
+        description: `Pág. ${data.pageId} · ${(data.durationMs / 1000).toFixed(1)}s · ${qaLabel}`,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -130,7 +151,7 @@ export default function Generacion() {
   }
 
   return (
-    <Layout title="Generar página 01">
+    <Layout title={`Generar pagina ${page?.pageNumber ?? pageId}`}>
       <div className="h-full overflow-y-auto bg-[#0a1220]">
 
         {/* ── Header ── */}
@@ -140,8 +161,11 @@ export default function Generacion() {
               Plantilla golden master · Layout cerrado
             </p>
             <h1 className="text-sm font-black text-white tracking-tight">
-              Página 01 — Azure Container Registry
+              Pagina {page?.pageNumber ?? pageId} - {page?.title ?? "Seed no disponible"}
             </h1>
+            {page && (
+              <p className="text-[9px] text-white/30 mt-0.5 truncate">{page.domain}</p>
+            )}
           </div>
 
           {/* Key badge */}
@@ -162,18 +186,18 @@ export default function Generacion() {
           {/* Único botón primario */}
           <button
             onClick={generate}
-            disabled={isRunning || !keyChecked || !hasKey}
+            disabled={isRunning || !canGenerate}
             className={cn(
               "flex items-center gap-2 h-9 px-5 rounded-sm text-[10px] font-bold transition-all",
               isRunning
                 ? "bg-teal-600/20 border border-teal-500/30 text-teal-300 cursor-not-allowed"
-                : !hasKey && keyChecked
+                : !canGenerate
                 ? "bg-white/5 border border-white/10 text-white/25 cursor-not-allowed"
                 : "bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 text-white shadow-lg"
             )}>
             {isRunning
               ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Generando…</>
-              : <><Sparkles className="w-3.5 h-3.5" />Generar página 01</>}
+              : <><Sparkles className="w-3.5 h-3.5" />Generar pagina {page?.pageNumber ?? pageId}</>}
           </button>
         </div>
 
@@ -238,7 +262,7 @@ export default function Generacion() {
                   },
                   {
                     label: "Output path",
-                    value: "/pages/01/page.html",
+                    value: `/pages/${page?.pageId ?? pageId}/page.html`,
                     note:  "Replit static files · public/assets/cloudbooks/…",
                     icon:  FileText,
                     color: "text-white/30",
@@ -263,6 +287,26 @@ export default function Generacion() {
                     <p className="text-[8px] text-amber-400/50 mt-0.5 leading-snug">
                       Replit → Secrets (ícono de candado) → agregar{" "}
                       <span className="font-mono">OPENAI_API_KEY</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+              {catalogError && (
+                <div className="mx-4 mb-4 flex items-start gap-2 px-3 py-2.5 bg-red-500/8 border border-red-500/20 rounded-sm">
+                  <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[9px] font-bold text-red-300">Catalogo operativo no disponible</p>
+                    <p className="text-[8px] text-red-300/55 mt-0.5 leading-snug">{catalogError}</p>
+                  </div>
+                </div>
+              )}
+              {keyChecked && hasKey && !page?.generationReady && (
+                <div className="mx-4 mb-4 flex items-start gap-2 px-3 py-2.5 bg-amber-500/8 border border-amber-500/20 rounded-sm">
+                  <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[9px] font-bold text-amber-400">Seed no disponible para esta pagina</p>
+                    <p className="text-[8px] text-amber-400/50 mt-0.5 leading-snug">
+                      La generacion solo se habilita cuando el servidor expone seed productivo.
                     </p>
                   </div>
                 </div>
@@ -421,7 +465,7 @@ interface ConfigRow {
   label: string;
   value: string;
   note: string;
-  icon: React.ElementType;
+  icon: ElementType;
   color: string;
 }
 

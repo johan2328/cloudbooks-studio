@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { getSeed } from "../data/page-seeds";
+import { getSeed, listSeeds } from "../data/page-seeds";
 import { readOutputStatus } from "../services/export/output-status";
 import {
   TEXT_MODEL, IMAGE_MODEL, IMAGE_QUALITY,
@@ -20,6 +20,44 @@ router.get("/studio/output-status/:pageId", async (req, res): Promise<void> => {
   const { pageId } = req.params;
   const status = await readOutputStatus(pageId);
   res.json(status);
+});
+
+/**
+ * GET /api/studio/visual-atlas-pages
+ * Catalogo operativo del Visual Atlas. La fuente de verdad no es localStorage:
+ * sale de los seeds disponibles + filesystem de outputs.
+ */
+router.get("/studio/visual-atlas-pages", async (_req, res): Promise<void> => {
+  const seeds = listSeeds();
+  const pages = await Promise.all(
+    seeds.map(async ({ pageId, data }) => {
+      const outputStatus = await readOutputStatus(pageId);
+      return {
+        pageId,
+        pageNumber: data.pageNumber,
+        totalPages: data.totalPages,
+        title: `${data.title}: ${data.subtitle}`,
+        domain: data.domainLabel,
+        batch: data.batchLabel,
+        context: data.context,
+        guideQuestion: data.guideQuestion,
+        contractVersion: data.contractVersion,
+        groundingStatus: "seeded",
+        generationReady: true,
+        visualModules: data.visualModules,
+        traps: data.traps,
+        autocheck: data.autocheck,
+        outputStatus,
+      };
+    }),
+  );
+
+  res.json({
+    source: "server_seed_and_output_status",
+    totalExpected: pages[0]?.totalPages ?? 61,
+    availableSeeds: seeds.map((s) => s.pageId),
+    pages,
+  });
 });
 
 /**
