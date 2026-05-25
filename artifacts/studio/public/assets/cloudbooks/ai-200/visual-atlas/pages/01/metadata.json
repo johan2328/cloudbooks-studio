@@ -18,5 +18,6 @@
     "qa-report.md"
   ],
   "renderMode": "replit_static",
-  "staticPath": "/assets/cloudbooks/ai-200/visual-atlas/pages/01/"
+  "staticPath": "/assets/cloudbooks/ai-200/visual-atlas/pages/01/",
+  "generationMode": "fallback_html"
 }

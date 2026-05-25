@@ -526,7 +526,29 @@ function PageDetail({ed, effectiveStatus, onApprove, onRevision, onRegen, onExpo
   const [qaDone, setQaDone] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
+  const [outputStatus, setOutputStatus] = useState<{
+    hasOutput: boolean;
+    files: { html: boolean; metadata: boolean; qaReport: boolean; previewPng: boolean; previewSvg: boolean };
+    generationMode: "openai" | "fallback_html" | "none";
+    generatedAt: string | null;
+    previewPath: string | null;
+    htmlPath: string | null;
+  } | null>(null);
+  const [outputStatusLoading, setOutputStatusLoading] = useState(false);
   const { getOutputPackForPage, uploadAssetDemo, linkAsset, approveAsset, replaceAssetRequest } = useStudio();
+
+  /* ── Detectar output real en disco ── */
+  useEffect(() => {
+    if (tab !== "preview") return;
+    setOutputStatusLoading(true);
+    fetch(`/api/studio/output-status/${ed.num}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("studio_token") ?? ""}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setOutputStatus(d))
+      .catch(() => setOutputStatus(null))
+      .finally(() => setOutputStatusLoading(false));
+  }, [tab, ed.num]);
 
   useEffect(() => {
     function h(e: MouseEvent) {
@@ -821,52 +843,103 @@ function PageDetail({ed, effectiveStatus, onApprove, onRevision, onRegen, onExpo
           {/* ── Preview ── */}
           {tab==="preview" && (
             <div className="space-y-4">
-              {/* Banner: preview real pendiente */}
-              <div className="bg-amber-500/8 border border-amber-500/25 rounded-sm px-4 py-3 flex items-start gap-3">
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-bold text-amber-300">Preview real pendiente</p>
-                  <p className="text-[9px] text-white/40 mt-0.5 leading-relaxed">
-                    Lo que ves abajo es una simulación estructural — no es output generado por OpenAI.
-                    Ejecuta generación real para obtener el asset visual de producción.
-                  </p>
+              {outputStatusLoading ? (
+                <div className="flex items-center gap-2 px-4 py-3 bg-white/[0.02] border border-white/[0.06] rounded-sm">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-white/20" />
+                  <span className="text-[10px] text-white/30">Verificando output real…</span>
                 </div>
-                <button onClick={() => onGenerate()}
-                  className="shrink-0 flex items-center gap-1.5 h-7 px-3 bg-teal-600 hover:bg-teal-500 text-white text-[9px] font-bold rounded-sm transition-all">
-                  <Sparkles className="w-3 h-3" />Generar real
-                </button>
-              </div>
-
-              {/* Preview con watermark DEMO */}
-              <div className="max-w-xl mx-auto relative">
-                <div className="opacity-40 pointer-events-none">
-                  <AtlasPagePreview ed={ed} size="lg" />
-                </div>
-                {/* Watermark overlay */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
-                  <div style={{ transform: "rotate(-20deg)" }}
-                    className="border-2 border-white/40 px-5 py-2 rounded-sm">
-                    <span className="text-white/40 text-xl font-black tracking-[0.2em] uppercase">DEMO PREVIEW</span>
+              ) : outputStatus?.hasOutput ? (
+                <>
+                  {/* Banner: output real detectado */}
+                  <div className="bg-emerald-500/8 border border-emerald-500/20 rounded-sm px-4 py-3 flex items-start gap-3">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-bold text-emerald-300">
+                        {outputStatus.generationMode === "openai" ? "Output generado por OpenAI" : "Output con fallback local"}
+                      </p>
+                      <p className="text-[9px] text-white/40 mt-0.5 leading-relaxed">
+                        Generado el {outputStatus.generatedAt ? new Date(outputStatus.generatedAt).toLocaleDateString("es-ES") : "fecha desconocida"}.
+                        Archivos disponibles: HTML, metadata, QA report
+                        {outputStatus.files.previewSvg ? " y preview SVG" : ""}.
+                      </p>
+                    </div>
+                    {outputStatus.htmlPath && (
+                      <a href={outputStatus.htmlPath} target="_blank" rel="noreferrer"
+                        className="shrink-0 flex items-center gap-1.5 h-7 px-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-[9px] font-bold rounded-sm transition-all">
+                        <Eye className="w-3 h-3" />Ver HTML real
+                      </a>
+                    )}
                   </div>
-                </div>
-                {/* Badge esquina */}
-                <div className="absolute top-2 right-2">
-                  <span className="text-[7px] font-black bg-amber-500 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-wider">SIMULADO</span>
-                </div>
-              </div>
 
-              {/* Estados de los 3 outputs principales */}
+                  {/* Preview real (o fallback SVG) */}
+                  <div className="max-w-xl mx-auto relative rounded-sm border border-emerald-500/15 overflow-hidden">
+                    {outputStatus.files.previewPng && outputStatus.previewPath ? (
+                      <img src={outputStatus.previewPath} alt="Preview generado"
+                        className="w-full h-auto" style={{ aspectRatio: "8.5/11" }} />
+                    ) : outputStatus.files.previewSvg && outputStatus.previewPath ? (
+                      <img src={outputStatus.previewPath} alt="Preview SVG fallback"
+                        className="w-full h-auto" style={{ aspectRatio: "8.5/11" }} />
+                    ) : (
+                      <div className="flex items-center justify-center aspect-[8.5/11] bg-[#0a1220]">
+                        <p className="text-[10px] text-white/30">Preview no disponible</p>
+                      </div>
+                    )}
+                    {/* Badge de modo */}
+                    <div className="absolute top-2 right-2">
+                      <span className={cn(
+                        "text-[7px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-wider",
+                        outputStatus.generationMode === "openai"
+                          ? "bg-emerald-500 text-white"
+                          : "bg-blue-500 text-white"
+                      )}>
+                        {outputStatus.generationMode === "openai" ? "REAL OUTPUT" : "SVG FALLBACK"}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Banner: preview real pendiente */}
+                  <div className="bg-amber-500/8 border border-amber-500/25 rounded-sm px-4 py-3 flex items-start gap-3">
+                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-bold text-amber-300">Preview real pendiente</p>
+                      <p className="text-[9px] text-white/40 mt-0.5 leading-relaxed">
+                        Lo que ves abajo es una simulación estructural — no es output generado por OpenAI.
+                        Ejecuta generación real para obtener el asset visual de producción.
+                      </p>
+                    </div>
+                    <button onClick={() => onGenerate()}
+                      className="shrink-0 flex items-center gap-1.5 h-7 px-3 bg-teal-600 hover:bg-teal-500 text-white text-[9px] font-bold rounded-sm transition-all">
+                      <Sparkles className="w-3 h-3" />Generar real
+                    </button>
+                  </div>
+
+                  {/* Preview con watermark DEMO */}
+                  <div className="max-w-xl mx-auto relative">
+                    <div className="opacity-40 pointer-events-none">
+                      <AtlasPagePreview ed={ed} size="lg" />
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+                      <div style={{ transform: "rotate(-20deg)" }}
+                        className="border-2 border-white/40 px-5 py-2 rounded-sm">
+                        <span className="text-white/40 text-xl font-black tracking-[0.2em] uppercase">DEMO PREVIEW</span>
+                      </div>
+                    </div>
+                    <div className="absolute top-2 right-2">
+                      <span className="text-[7px] font-black bg-amber-500 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-wider">SIMULADO</span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Estados de los 3 outputs principales — siempre visibles */}
               <div className="flex gap-2 flex-wrap">
-                {[
-                  { label: "HTML", state: "Pendiente" },
-                  { label: "PNG", state: "Pendiente" },
-                  { label: "PDF", state: "Pendiente" },
-                ].map(o => (
-                  <div key={o.label} className="flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.07] rounded-sm px-2.5 py-1.5">
-                    <span className="text-[9px] font-bold text-white/40">{o.label}</span>
-                    <span className="text-[8px] text-white/20">{o.state}</span>
-                  </div>
-                ))}
+                <OutputChip label="HTML" ok={outputStatus?.files.html ?? false} />
+                <OutputChip label="Metadata" ok={outputStatus?.files.metadata ?? false} />
+                <OutputChip label="QA Report" ok={outputStatus?.files.qaReport ?? false} />
+                <OutputChip label="Preview SVG" ok={outputStatus?.files.previewSvg ?? false} />
+                <OutputChip label="Preview PNG" ok={outputStatus?.files.previewPng ?? false} />
                 <span className="text-[8px] text-white/20 self-center ml-1">
                   · Contrato {ed.contractVersion}
                 </span>
@@ -1308,6 +1381,21 @@ function ActBtn({icon:Icon, label, variant, disabled, onClick, loading, done}: {
       {loading ? <Loader2 className="w-3 h-3 animate-spin"/> : done ? <CheckCircle2 className="w-3 h-3 text-emerald-400"/> : <Icon className="w-3 h-3"/>}
       {label}
     </button>
+  );
+}
+
+/* ─── OutputChip helper ────────────────────────────────────────────────────── */
+function OutputChip({ label, ok }: { label: string; ok: boolean }) {
+  return (
+    <div className={cn(
+      "flex items-center gap-1.5 px-2 py-1 rounded-sm border text-[9px] font-semibold",
+      ok
+        ? "bg-emerald-500/8 border-emerald-500/20 text-emerald-400/70"
+        : "bg-white/[0.02] border-white/[0.06] text-white/20"
+    )}>
+      {ok ? <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400/60" /> : <span className="w-2.5 h-2.5 rounded-full bg-white/10" />}
+      {label}
+    </div>
   );
 }
 

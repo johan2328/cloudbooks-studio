@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { writeFile, mkdir } from "fs/promises";
+import { writeFile, mkdir, readFile, stat } from "fs/promises";
+import { existsSync } from "fs";
 import { join } from "path";
 import OpenAI from "openai";
 
@@ -555,6 +556,60 @@ ${defLines || "- Ninguno"}
       details: err instanceof Error ? err.message : String(err),
     });
   }
+});
+
+/* ── GET /api/studio/output-status/:pageId ────────────────────────────────
+   Revisa si hay archivos reales generados en disco para una página.
+   No consulta OpenAI — solo el filesystem.                               */
+router.get("/studio/output-status/:pageId", async (req, res): Promise<void> => {
+  const { pageId } = req.params;
+  const outDir = pageOutputDir(pageId);
+  const exists = (f: string) => existsSync(join(outDir, f));
+
+  const files = {
+    html:       exists("page.html"),
+    metadata:   exists("metadata.json"),
+    qaReport:   exists("qa-report.md"),
+    previewPng: exists("preview.png"),
+    previewSvg: exists("preview.svg"),
+  };
+
+  const hasAny = Object.values(files).some(Boolean);
+  let generationMode: "openai" | "fallback_html" | "none" = "none";
+  let generatedAt: string | null = null;
+  let tokens: { prompt: number; completion: number } | null = null;
+
+  if (files.metadata) {
+    try {
+      const raw = await readFile(join(outDir, "metadata.json"), "utf-8");
+      const m = JSON.parse(raw) as {
+        generationMode?: string;
+        generatedAt?: string;
+        tokens?: { prompt: number; completion: number };
+      };
+      if (m.generationMode === "openai" || m.generationMode === "fallback_html") {
+        generationMode = m.generationMode;
+      }
+      generatedAt = m.generatedAt ?? null;
+      tokens = m.tokens ?? null;
+    } catch {
+      /* metadata corrupto — lo reportamos como existe sin detalles */
+    }
+  }
+
+  res.json({
+    pageId,
+    hasOutput:    hasAny,
+    files,
+    generationMode,
+    generatedAt,
+    tokens,
+    previewIsImage: files.previewPng && !files.previewSvg,
+    previewPath: hasAny
+      ? (files.previewPng ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/preview.png` : `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/preview.svg`)
+      : null,
+    htmlPath:     files.html ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/page.html` : null,
+  });
 });
 
 /* ── GET /api/studio/key-status ─────────────────────────────────────────── */
