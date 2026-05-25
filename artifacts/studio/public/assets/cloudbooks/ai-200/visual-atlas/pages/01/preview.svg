@@ -78,5 +78,5 @@
 
   <!-- Footer -->
   <rect x="0" y="478" width="800" height="22" fill="rgba(0,0,0,0.3)"/>
-  <text x="32" y="493" font-family="monospace" font-size="9" fill="rgba(255,255,255,0.15)">CloudBooks AI-200 Visual Atlas · GPT-4o · Replit Static · preview auto-generado</text>
+  <text x="32" y="493" font-family="monospace" font-size="9" fill="rgba(255,255,255,0.15)">CloudBooks AI-200 Visual Atlas · GPT-4o · gpt-image-1 medium · fallback SVG · Guardrail: high_quality_blocked</text>
 </svg>

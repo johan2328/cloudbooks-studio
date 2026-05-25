@@ -1,249 +1,194 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
 import Layout from "@/components/Layout";
-import { cn, statusColorDark, statusLabel, scoreColorDark, formatDateTime } from "@/lib/utils";
+import { cn, scoreColorDark } from "@/lib/utils";
 import { useStudio } from "@/lib/studio-store";
 import {
   CheckCircle2, RotateCcw, AlertTriangle, ChevronLeft, ChevronRight,
-  ShieldCheck, Shield, Eye, Loader2, History, MoreHorizontal, Info,
+  Shield, Loader2, ExternalLink, XCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+interface RealQA {
+  verdict: string;
+  scores: Record<string, number>;
+  observations: string[];
+  redTeamLog: string[];
+  generatedAt: string | null;
+  generationMode: "openai" | "fallback_html" | "none";
+}
+
+interface OutputStatus {
+  hasOutput: boolean;
+  generationMode: "openai" | "fallback_html" | "none";
+  generatedAt: string | null;
+  files: { html: boolean; metadata: boolean; qaReport: boolean; previewPng: boolean; previewSvg: boolean };
+  htmlPath: string | null;
+  previewPath: string | null;
+}
+
 const QA_DIMS = [
-  { key: "artDirection",         label: "Dirección de Arte",      desc: "Composición, grid 8px, alineación, jerarquía visual" },
-  { key: "editorialConsistency", label: "Consistencia Editorial", desc: "Iconografía uniforme, paleta correcta, tipografía" },
-  { key: "readability",          label: "Legibilidad",            desc: "Tamaño de texto, contraste, claridad de lectura" },
-  { key: "technicalAccuracy",    label: "Precisión Técnica",      desc: "Correctitud de conceptos, terminología Microsoft" },
-  { key: "density",              label: "Densidad útil",          desc: "Relación información relevante / espacio utilizado" },
-  { key: "commercialRisk",       label: "Riesgo comercial",       desc: "Ausencia de copy comercial o lenguaje de venta" },
-  { key: "total",                label: "QA Total",               desc: "Score compuesto ponderado · Red team objetivo ≥ 9.5" },
+  { key: "art_direction",         label: "Dirección de arte",       desc: "Composición, grid, jerarquía visual" },
+  { key: "editorial_consistency", label: "Consistencia editorial",   desc: "Iconografía, paleta, tipografía" },
+  { key: "readability",           label: "Legibilidad",             desc: "Tamaño, contraste, claridad" },
+  { key: "technical_accuracy",    label: "Precisión técnica",       desc: "Correctitud de conceptos Microsoft" },
+  { key: "useful_density",        label: "Densidad útil",           desc: "Info relevante / espacio" },
+  { key: "commercial_risk",       label: "Riesgo comercial",        desc: "Sin copy de venta o lenguaje comercial" },
 ] as const;
 
-const DEFECT_TYPES = [
-  { id: "icon_variance",    label: "Varianza iconográfica",   desc: "Iconos de distinta familia en la misma página" },
-  { id: "type_drift",       label: "Alteración tipográfica",  desc: "Tamaños o pesos de fuente que rompen la jerarquía" },
-  { id: "label_dup",        label: "Duplicación de etiquetas",desc: "Mismo concepto aparece dos veces con nombres distintos" },
-  { id: "empty_gap",        label: "Huecos no informativos",  desc: "Espacio vacío sin propósito narrativo" },
-  { id: "title_conflict",   label: "Título compite con diagrama", desc: "El título visual eclipsa el diagrama o viceversa" },
-  { id: "crop",             label: "Recorte de elementos",   desc: "Texto o iconos cortados por borde de página" },
-  { id: "color_incoherence",label: "Incoherencia cromática",  desc: "Colores fuera del sistema de paleta del atlas" },
-  { id: "autocheck_repeat", label: "Autocheck repetido",      desc: "La respuesta correcta es idéntica a una opción incorrecta" },
+const DEFECTS = [
+  { id: "icon_variance",    label: "Varianza iconográfica" },
+  { id: "type_drift",       label: "Alteración tipográfica" },
+  { id: "label_dup",        label: "Duplicación de etiquetas" },
+  { id: "empty_gap",        label: "Huecos no informativos" },
+  { id: "title_conflict",   label: "Título compite con diagrama" },
+  { id: "crop",             label: "Recorte de elementos" },
+  { id: "color_incoherence",label: "Incoherencia cromática" },
 ];
+
+function getToken() { return localStorage.getItem("studio_token") ?? ""; }
 
 export default function QAPage() {
   const [, params] = useRoute("/qa/:id");
   const pageNum = params?.id ? String(parseInt(params.id, 10)).padStart(2, "0") : "01";
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-
-  const { state, executeQA, approvePage, requestRevision, regenerateSelective, getPage, getQAForPage, getRunsForPage } = useStudio();
-
-  const [revisionComment, setRevisionComment] = useState("");
-  const [showRevisionInput, setShowRevisionInput] = useState(false);
-  const [checkedDefects, setCheckedDefects] = useState<Set<string>>(new Set());
-  const [qaRunning, setQaRunning] = useState(false);
-  const [activeTab, setActiveTab] = useState<"qa" | "historial">("qa");
-  const [showMoreActions, setShowMoreActions] = useState(false);
-  const [showDemoRuns, setShowDemoRuns] = useState(false);
-  const moreActionsRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (moreActionsRef.current && !moreActionsRef.current.contains(e.target as Node))
-        setShowMoreActions(false);
-    }
-    if (showMoreActions) document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [showMoreActions]);
+  const { approvePage, requestRevision, getPage } = useStudio();
 
   const page = getPage(pageNum);
-  const qa   = getQAForPage(pageNum);
-  const runs = getRunsForPage(pageNum);
-  const currentPageNum = parseInt(pageNum, 10);
+  const currentNum = parseInt(pageNum, 10);
 
-  function handleRunQA() {
-    setQaRunning(true);
-    executeQA(pageNum);
-    setTimeout(() => setQaRunning(false), 2500);
-    toast({ title: "QA ejecutado", description: `Página ${pageNum} — análisis completado` });
-  }
+  const [outputStatus, setOutputStatus] = useState<OutputStatus | null>(null);
+  const [realQA, setRealQA] = useState<RealQA | null>(null);
+  const [loadingStatus, setLoadingStatus] = useState(true);
+  const [revisionComment, setRevisionComment] = useState("");
+  const [showRevision, setShowRevision] = useState(false);
+  const [checkedDefects, setCheckedDefects] = useState<Set<string>>(new Set());
+  const [approving, setApproving] = useState(false);
+
+  useEffect(() => {
+    setLoadingStatus(true);
+    setRealQA(null);
+    fetch(`/api/studio/output-status/${pageNum}`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then((d: OutputStatus | null) => {
+        setOutputStatus(d);
+        if (d?.hasOutput && d.files.qaReport) {
+          return fetch(`/api/studio/qa-report/${pageNum}`, {
+            headers: { Authorization: `Bearer ${getToken()}` },
+          }).then(r => r.ok ? r.json() : null).then(setRealQA);
+        }
+        return undefined;
+      })
+      .catch(() => setOutputStatus(null))
+      .finally(() => setLoadingStatus(false));
+  }, [pageNum]);
 
   function handleApprove() {
+    setApproving(true);
     approvePage(pageNum);
-    toast({ title: "Página aprobada", description: `Pág. ${pageNum} marcada como aprobada — lista para exportación` });
+    toast({ title: "Página aprobada", description: `Pág. ${pageNum} lista para exportación` });
+    setTimeout(() => setApproving(false), 800);
   }
 
   function handleRevision() {
     requestRevision(pageNum, revisionComment || "Corrección solicitada desde panel QA");
-    setShowRevisionInput(false);
+    setShowRevision(false);
     setRevisionComment("");
     toast({ title: "Corrección solicitada", description: `Pág. ${pageNum} devuelta para corrección` });
   }
 
-  function handleRegen() {
-    regenerateSelective(pageNum);
-    toast({ title: "Regeneración selectiva iniciada", description: `Pág. ${pageNum} — nueva versión en proceso` });
-  }
-
-  function toggleDefect(id: string) {
-    setCheckedDefects(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  const canApprove = page?.status === "qa_review";
-  const canRegen   = page?.status === "needs_revision" || page?.status === "qa_review" || page?.status === "qa_pending";
-
-  if (!page) {
-    return (
-      <Layout title="QA y Aprobación">
-        <div className="flex items-center justify-center h-full bg-[#0a1220]">
-          <p className="text-sm text-white/25">Página {pageNum} no encontrada en el store</p>
-        </div>
-      </Layout>
-    );
-  }
+  const hasOutput = outputStatus?.hasOutput === true;
 
   return (
-    <Layout title="QA y Aprobación">
+    <Layout title={`QA · Pág. ${pageNum}`}>
       <div className="flex flex-col h-full bg-[#0a1220] overflow-hidden">
 
-        {/* ── Topbar ── */}
+        {/* Topbar */}
         <div className="bg-[#0d1629] border-b border-white/[0.06] px-5 py-2.5 flex items-center gap-3 shrink-0">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <button onClick={() => setLocation("/biblioteca")}
-              className="text-white/20 hover:text-white/60 transition-colors shrink-0">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">QA · Pág. {pageNum}</span>
-                <span className={cn("text-[8px] font-bold px-1.5 py-0.5 rounded-sm border", statusColorDark(page.status))}>
-                  {statusLabel(page.status)}
-                </span>
-                <span className="text-[8px] text-white/15">Versión {page.currentVersion}</span>
-              </div>
-              <p className="text-xs font-bold text-white/75 truncate">{page.title}</p>
-            </div>
+          <button onClick={() => setLocation("/biblioteca")}
+            className="text-white/20 hover:text-white/60 transition-colors shrink-0">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-[9px] font-bold text-white/25 uppercase tracking-widest">
+              QA y Aprobación · Pág. {pageNum}
+            </p>
+            <p className="text-xs font-bold text-white/70 truncate">
+              {page?.title ?? `Página ${pageNum}`}
+            </p>
           </div>
-
-          {/* Nav pages */}
-          <div className="flex items-center gap-1 shrink-0">
-            {currentPageNum > 1 && (
-              <button onClick={() => setLocation(`/qa/${currentPageNum - 1}`)}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {currentNum > 1 && (
+              <button onClick={() => setLocation(`/qa/${currentNum - 1}`)}
                 className="text-[9px] text-white/25 hover:text-white/60 flex items-center gap-0.5 transition-colors">
                 <ChevronLeft className="w-3 h-3" />Ant.
               </button>
             )}
-            {currentPageNum < 10 && (
-              <button onClick={() => setLocation(`/qa/${currentPageNum + 1}`)}
+            {currentNum < 61 && (
+              <button onClick={() => setLocation(`/qa/${currentNum + 1}`)}
                 className="text-[9px] text-white/25 hover:text-white/60 flex items-center gap-0.5 transition-colors">
                 Sig.<ChevronRight className="w-3 h-3" />
               </button>
             )}
           </div>
-
-          {/* Score */}
-          {page.qaScore != null && (
-            <div className="text-center shrink-0">
-              <p className={cn("text-lg font-black tabular-nums leading-none", scoreColorDark(page.qaScore))}>
-                {page.qaScore.toFixed(1)}
-              </p>
-              <p className="text-[7px] text-white/20">Score QA</p>
-            </div>
-          )}
         </div>
 
-        {/* ── Tabs ── */}
-        <div className="flex border-b border-white/[0.06] bg-[#0d1629] shrink-0">
-          {([["qa", "QA y Aprobación"], ["historial", "Historial de ejecuciones"]] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setActiveTab(id)}
-              className={cn(
-                "px-4 py-2.5 text-[9px] font-bold uppercase tracking-wider transition-all",
-                activeTab === id ? "border-b-2 border-blue-400 text-blue-300 bg-blue-500/5" : "text-white/25 hover:text-white/50"
-              )}>
-              {label}
-            </button>
-          ))}
-        </div>
+        <div className="flex-1 overflow-y-auto p-5">
+          <div className="max-w-3xl mx-auto space-y-4">
 
-        <div className="flex-1 overflow-hidden">
-          {activeTab === "qa" && (
-            <div className="flex h-full overflow-hidden">
-              {/* ── Panel izquierdo: diagnóstico ── */}
-              <div className="flex-1 overflow-y-auto p-5 space-y-4 max-w-xl">
-
-                {/* Acciones — 1 primario + 1 secundario + kebab */}
+            {loadingStatus ? (
+              <div className="flex items-center gap-2 py-8">
+                <Loader2 className="w-4 h-4 animate-spin text-white/20" />
+                <span className="text-[10px] text-white/30">Verificando output real…</span>
+              </div>
+            ) : !hasOutput ? (
+              /* ── Sin output real ── */
+              <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-6 text-center space-y-3">
+                <Shield className="w-8 h-8 text-white/10 mx-auto" />
+                <div>
+                  <p className="text-sm font-bold text-white/40">Sin output real generado todavía</p>
+                  <p className="text-[10px] text-white/25 mt-1 leading-relaxed">
+                    El QA solo se puede hacer sobre output real. Genera la página primero.
+                  </p>
+                </div>
+                <button onClick={() => setLocation("/generacion")}
+                  className="inline-flex items-center gap-2 h-8 px-4 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 text-white text-[10px] font-bold rounded-sm transition-all">
+                  Ir a generar página {pageNum}
+                </button>
+              </div>
+            ) : (
+              /* ── Con output real ── */
+              <>
+                {/* Acción principal */}
                 <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
                   <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">Siguiente acción</p>
-                  <div className="flex items-center gap-2">
-
-                    {/* Primario: único por estado */}
-                    {!qa ? (
-                      <button onClick={handleRunQA} disabled={qaRunning}
-                        className="flex items-center gap-1.5 h-8 px-3 bg-blue-600 hover:bg-blue-500 rounded-sm text-[10px] font-bold text-white transition-all disabled:opacity-50">
-                        {qaRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3" />}
-                        {qaRunning ? "Ejecutando QA…" : "Ejecutar QA"}
-                      </button>
-                    ) : canApprove ? (
-                      <button onClick={handleApprove}
-                        className="flex items-center gap-1.5 h-8 px-3 bg-emerald-600 hover:bg-emerald-500 rounded-sm text-[10px] font-bold text-white transition-all">
-                        <CheckCircle2 className="w-3 h-3" />Aprobar página
-                      </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {page?.status === "approved" ? (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-sm">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-[10px] font-bold text-emerald-300">Página aprobada</span>
+                      </div>
                     ) : (
-                      <button onClick={() => setShowRevisionInput(v => !v)}
-                        className="flex items-center gap-1.5 h-8 px-3 bg-amber-600/80 hover:bg-amber-500/80 rounded-sm text-[10px] font-bold text-white transition-all">
-                        <AlertTriangle className="w-3 h-3" />Solicitar corrección
+                      <button onClick={handleApprove} disabled={approving}
+                        className="flex items-center gap-1.5 h-8 px-3 bg-emerald-600 hover:bg-emerald-500 rounded-sm text-[10px] font-bold text-white transition-all disabled:opacity-50">
+                        {approving ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                        Aprobar página
                       </button>
                     )}
-
-                    {/* Secundario: re-ejecutar si ya hay QA */}
-                    {qa && (
-                      <button onClick={handleRunQA} disabled={qaRunning}
-                        className="flex items-center gap-1.5 h-8 px-2.5 border border-white/10 rounded-sm text-[10px] text-white/40 hover:text-white/70 hover:border-white/20 transition-all disabled:opacity-40">
-                        <RotateCcw className="w-3 h-3" />Re-ejecutar QA
-                      </button>
-                    )}
-
-                    {/* Más acciones — kebab */}
-                    <div className="relative ml-auto" ref={moreActionsRef}>
-                      <button onClick={() => setShowMoreActions(v => !v)}
-                        className="flex items-center gap-1 h-8 px-2.5 border border-white/10 rounded-sm text-[9px] text-white/30 hover:text-white/60 hover:border-white/20 transition-all">
-                        <MoreHorizontal className="w-3.5 h-3.5" />
-                      </button>
-                      {showMoreActions && (
-                        <div className="absolute right-0 top-9 w-48 bg-[#0d1629] border border-white/10 rounded-sm shadow-xl z-50 py-1">
-                          {canRegen && (
-                            <button onClick={() => { handleRegen(); setShowMoreActions(false); }}
-                              className="w-full text-left px-3 py-2 text-[10px] text-white/50 hover:bg-white/5 hover:text-white/80 flex items-center gap-2">
-                              <RotateCcw className="w-3 h-3" />Regenerar selectivo
-                            </button>
-                          )}
-                          {!qa && canApprove && (
-                            <button onClick={() => { handleApprove(); setShowMoreActions(false); }}
-                              className="w-full text-left px-3 py-2 text-[10px] text-white/50 hover:bg-white/5 hover:text-white/80 flex items-center gap-2">
-                              <CheckCircle2 className="w-3 h-3" />Aprobar sin QA
-                            </button>
-                          )}
-                          <div className="border-t border-white/[0.06] my-1" />
-                          <button className="w-full text-left px-3 py-2 text-[10px] text-white/25 flex items-center gap-2 cursor-not-allowed">
-                            Marcar como excepción
-                          </button>
-                          <button className="w-full text-left px-3 py-2 text-[10px] text-white/25 flex items-center gap-2 cursor-not-allowed">
-                            Descargar reporte QA
-                          </button>
-                          <button className="w-full text-left px-3 py-2 text-[10px] text-white/25 flex items-center gap-2 cursor-not-allowed">
-                            Comparar versiones
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    <button onClick={() => setShowRevision(v => !v)}
+                      className="flex items-center gap-1.5 h-8 px-2.5 border border-white/10 rounded-sm text-[10px] text-white/40 hover:text-amber-400 hover:border-amber-500/30 transition-all">
+                      <AlertTriangle className="w-3 h-3" />Solicitar corrección
+                    </button>
+                    <button onClick={() => setLocation("/generacion")}
+                      className="flex items-center gap-1.5 h-8 px-2.5 border border-white/10 rounded-sm text-[10px] text-white/40 hover:text-white/70 hover:border-white/20 transition-all ml-auto">
+                      <RotateCcw className="w-3 h-3" />Regenerar
+                    </button>
                   </div>
 
-                  {showRevisionInput && (
+                  {showRevision && (
                     <div className="mt-3 space-y-2">
                       <textarea
                         value={revisionComment}
@@ -251,269 +196,134 @@ export default function QAPage() {
                         placeholder="Describe el problema a corregir…"
                         className="w-full bg-white/[0.03] border border-white/10 rounded-sm px-3 py-2 text-[10px] text-white/70 placeholder:text-white/20 resize-none h-16 focus:outline-none focus:border-amber-500/40"
                       />
-                      <button onClick={handleRevision}
-                        className="h-7 px-3 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 rounded-sm text-[9px] font-bold text-amber-300 transition-all">
-                        Confirmar corrección
-                      </button>
+                      <div className="flex gap-2">
+                        <button onClick={handleRevision}
+                          className="h-7 px-3 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 rounded-sm text-[9px] font-bold text-amber-300 transition-all">
+                          Confirmar corrección
+                        </button>
+                        <button onClick={() => setShowRevision(false)}
+                          className="h-7 px-3 border border-white/10 rounded-sm text-[9px] text-white/30 hover:text-white/60 transition-all">
+                          Cancelar
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
 
-                {/* QA Score dims */}
-                <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
-                  <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">Score por dimensión</p>
-                  <div className="space-y-2.5">
-                    {QA_DIMS.map(dim => {
-                      const val = qa?.dimensions?.[dim.key as keyof typeof qa.dimensions] ?? page.qaScore ?? 0;
-                      const pct = Math.min(100, (val / 100) * 100);
-                      return (
-                        <div key={dim.key}>
-                          <div className="flex justify-between mb-0.5">
-                            <span className="text-[9px] text-white/50 font-medium">{dim.label}</span>
-                            <span className={cn("text-[9px] font-bold tabular-nums", scoreColorDark(val))}>{val.toFixed(1)}</span>
-                          </div>
-                          <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
-                            <div className={cn("h-full rounded-full transition-all", val >= 95 ? "bg-emerald-500" : val >= 90 ? "bg-teal-500" : val >= 75 ? "bg-amber-400" : "bg-red-400")}
-                              style={{ width: `${pct}%` }} />
-                          </div>
-                          <p className="text-[7px] text-white/20 mt-0.5">{dim.desc}</p>
+                {/* Preview y links */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Preview real */}
+                  <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Preview real</p>
+                      <span className={cn(
+                        "text-[7px] px-1.5 py-px rounded-sm border font-bold",
+                        outputStatus.generationMode === "openai"
+                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                          : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                      )}>
+                        {outputStatus.generationMode === "openai" ? "REAL OUTPUT" : "SVG FALLBACK"}
+                      </span>
+                    </div>
+                    {outputStatus.previewPath ? (
+                      <img src={outputStatus.previewPath} alt="Preview real"
+                        className="w-full h-auto rounded-sm border border-white/[0.06]"
+                        style={{ aspectRatio: "8.5/11", objectFit: "contain" }} />
+                    ) : (
+                      <div className="aspect-video flex items-center justify-center bg-[#0a1220] border border-white/[0.05] rounded-sm">
+                        <p className="text-[9px] text-white/20">Sin preview disponible</p>
+                      </div>
+                    )}
+                    {outputStatus.htmlPath && (
+                      <a href={outputStatus.htmlPath} target="_blank" rel="noreferrer"
+                        className="mt-2 flex items-center gap-1.5 text-[8px] text-blue-400/60 hover:text-blue-400 transition-colors">
+                        <ExternalLink className="w-2.5 h-2.5" />Ver HTML completo
+                      </a>
+                    )}
+                  </div>
+
+                  {/* QA scores del reporte real */}
+                  <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                    <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">Score por dimensión</p>
+                    {realQA ? (
+                      <div className="space-y-2.5">
+                        {QA_DIMS.map(dim => {
+                          const val = (realQA.scores[dim.key] ?? 0) * 10;
+                          return (
+                            <div key={dim.key}>
+                              <div className="flex justify-between mb-0.5">
+                                <span className="text-[9px] text-white/50">{dim.label}</span>
+                                <span className={cn("text-[9px] font-bold", scoreColorDark(val))}>
+                                  {val.toFixed(1)}
+                                </span>
+                              </div>
+                              <div className="h-0.5 bg-white/[0.06] rounded-full overflow-hidden">
+                                <div className={cn("h-full rounded-full",
+                                  val >= 95 ? "bg-emerald-500" : val >= 90 ? "bg-teal-500" : val >= 75 ? "bg-amber-400" : "bg-red-400"
+                                )} style={{ width: `${Math.min(100, val)}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* Veredicto */}
+                        <div className={cn(
+                          "mt-3 px-3 py-2 rounded-sm border text-[10px] font-semibold",
+                          realQA.verdict === "approved"
+                            ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-300"
+                            : "bg-amber-500/10 border-amber-500/25 text-amber-300"
+                        )}>
+                          {realQA.verdict === "approved"
+                            ? "✓ Lista para aprobación editorial"
+                            : "⚠ Revisar antes de aprobar"}
                         </div>
-                      );
-                    })}
+                      </div>
+                    ) : (
+                      <div className="py-4 text-center">
+                        <XCircle className="w-5 h-5 text-white/10 mx-auto mb-2" />
+                        <p className="text-[9px] text-white/25">QA report no disponible desde API</p>
+                        <p className="text-[8px] text-white/15 mt-0.5">
+                          El archivo qa-report.md existe en disco pero no hay endpoint de parsing.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Defect checklist */}
+                {/* Checklist de defectos */}
                 <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
                   <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">
-                    Checklist de defectos
+                    Checklist de defectos visuales
                     {checkedDefects.size > 0 && (
-                      <span className="ml-2 text-amber-400">· {checkedDefects.size} marcados</span>
+                      <span className="ml-2 text-amber-400 normal-case font-normal">· {checkedDefects.size} marcados</span>
                     )}
                   </p>
-                  <div className="space-y-1.5">
-                    {DEFECT_TYPES.map(defect => {
-                      const fromQA = qa?.defectsFound?.includes(defect.id);
-                      const checked = checkedDefects.has(defect.id) || fromQA;
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {DEFECTS.map(d => {
+                      const checked = checkedDefects.has(d.id);
                       return (
-                        <label key={defect.id}
-                          className={cn(
-                            "flex items-start gap-2.5 px-3 py-2 rounded-sm border cursor-pointer transition-all",
-                            checked
-                              ? "bg-amber-500/8 border-amber-500/20"
-                              : "bg-white/[0.02] border-white/[0.05] hover:border-white/10"
-                          )}>
-                          <input type="checkbox" checked={checked} onChange={() => toggleDefect(defect.id)}
-                            className="mt-0.5 shrink-0 accent-amber-400" />
-                          <div className="flex-1 min-w-0">
-                            <p className={cn("text-[10px] font-semibold", checked ? "text-amber-300" : "text-white/50")}>{defect.label}</p>
-                            <p className="text-[8px] text-white/25 leading-snug">{defect.desc}</p>
-                          </div>
-                          {fromQA && <span className="text-[7px] text-amber-400/60 shrink-0">Auto</span>}
+                        <label key={d.id} className={cn(
+                          "flex items-center gap-2 px-2.5 py-2 rounded-sm border cursor-pointer transition-all",
+                          checked ? "bg-amber-500/8 border-amber-500/20" : "bg-white/[0.02] border-white/[0.05] hover:border-white/10"
+                        )}>
+                          <input type="checkbox" checked={checked}
+                            onChange={() => setCheckedDefects(prev => {
+                              const next = new Set(prev);
+                              if (next.has(d.id)) next.delete(d.id); else next.add(d.id);
+                              return next;
+                            })}
+                            className="shrink-0 accent-amber-400" />
+                          <span className={cn("text-[9px] font-medium", checked ? "text-amber-300" : "text-white/45")}>
+                            {d.label}
+                          </span>
                         </label>
                       );
                     })}
                   </div>
                 </div>
-              </div>
-
-              {/* ── Panel derecho: preview + observaciones ── */}
-              <div className="w-72 border-l border-white/[0.06] flex flex-col bg-[#0d1629] overflow-hidden shrink-0">
-                {/* Preview */}
-                <div className="p-4 border-b border-white/[0.06]">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Eye className="w-3 h-3 text-white/20" />
-                    <p className="text-[9px] font-bold text-white/25 uppercase tracking-widest">Preview editorial</p>
-                    <span className="ml-auto text-[7px] font-black bg-amber-500 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-wider">SIMULADO</span>
-                  </div>
-                  <div className="relative aspect-[4/3] bg-[#0a1220] rounded-sm border border-white/[0.06] flex items-center justify-center overflow-hidden opacity-40">
-                    <div className="w-full h-full p-2 flex flex-col text-[5px] text-white/30 space-y-1">
-                      <div className="h-3 rounded-sm flex items-center px-1.5 gap-1" style={{ backgroundColor: "#0078d420" }}>
-                        <span className="font-black text-[#0078d4]/70">ACR · #{pageNum}</span>
-                        <span className="ml-auto text-white/20">{page.contractVersion}</span>
-                      </div>
-                      <div className="font-bold text-[6px] text-white/50 line-clamp-1">{page.title}</div>
-                      {[70, 55, 85, 60, 45].map((w,i) => (
-                        <div key={i} className="h-px bg-white/10 rounded-full" style={{ width: `${w}%` }} />
-                      ))}
-                      <div className="flex gap-1 flex-1 mt-1">
-                        <div className="flex-1 bg-blue-500/10 rounded-sm" />
-                        <div className="flex-1 bg-teal-500/10 rounded-sm" />
-                      </div>
-                      <div className="h-3 bg-teal-500/10 rounded-sm border border-teal-500/20 flex items-center px-1 gap-1">
-                        <span className="text-teal-400/60 font-bold">Autocheck</span>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-[8px] text-amber-400/60 mt-2 leading-tight">
-                    Preview real pendiente · genera con OpenAI para ver el output real.
-                  </p>
-                </div>
-
-                {/* QA report observations */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {qa && (
-                    <>
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <ShieldCheck className="w-3 h-3 text-blue-400" />
-                          <p className="text-[9px] font-bold text-white/30">Veredicto</p>
-                        </div>
-                        <div className={cn("px-3 py-2 rounded-sm border text-[10px] font-semibold", qa.verdict === "approved" ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-300" : "bg-amber-500/10 border-amber-500/25 text-amber-300")}>
-                          {qa.verdict === "approved" ? "✓ Lista para aprobación editorial" : "⚠ Requiere corrección antes de aprobar"}
-                        </div>
-                      </div>
-
-                      {qa.observations.length > 0 && (
-                        <div>
-                          <p className="text-[9px] font-bold text-white/25 uppercase tracking-widest mb-2">Observaciones</p>
-                          <div className="space-y-1.5">
-                            {qa.observations.map((obs, i) => (
-                              <p key={i} className="text-[9px] text-white/45 leading-snug">· {obs}</p>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {qa.redTeamLog.length > 0 && (
-                        <div>
-                          <p className="text-[9px] font-bold text-white/25 uppercase tracking-widest mb-2">Red team log</p>
-                          <div className="space-y-1">
-                            {qa.redTeamLog.map((entry, i) => (
-                              <p key={i} className={cn("text-[8px] leading-snug font-mono", entry.startsWith("✓") ? "text-emerald-400/60" : "text-amber-400/60")}>
-                                {entry}
-                              </p>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {!qa && (
-                    <div className="text-center py-8">
-                      <Shield className="w-6 h-6 text-white/10 mx-auto mb-2" />
-                      <p className="text-[9px] text-white/20">Sin reporte QA todavía</p>
-                      <p className="text-[8px] text-white/15 mt-0.5">Ejecuta QA para ver el diagnóstico</p>
-                    </div>
-                  )}
-
-                  {/* Contract info */}
-                  <div className="border-t border-white/[0.05] pt-3">
-                    <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest mb-1.5">Contrato editorial</p>
-                    <div className="space-y-1 text-[8px] text-white/30">
-                      <p>Versión: <span className="text-white/50">{page.contractVersion}</span></p>
-                      <p>Score mínimo: <span className="text-amber-400">95/100</span></p>
-                      <p>Grounding: <span className={page.groundingStatus === "verified" ? "text-emerald-400" : "text-amber-400"}>{page.groundingStatus}</span></p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "historial" && (() => {
-            const realRuns = runs.filter(r => !r.id.startsWith("run-"));
-            const demoRuns = runs.filter(r => r.id.startsWith("run-"));
-            const visibleRuns = showDemoRuns ? [...realRuns, ...demoRuns] : realRuns;
-
-            return (
-              <div className="overflow-y-auto h-full p-5 max-w-2xl">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">
-                    Historial de ejecuciones · Pág. {pageNum}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    {demoRuns.length > 0 && (
-                      <button onClick={() => setShowDemoRuns(v => !v)}
-                        className="text-[8px] text-white/25 hover:text-white/50 border border-white/[0.08] hover:border-white/20 px-2 py-0.5 rounded-sm transition-all">
-                        {showDemoRuns ? "Ocultar demo" : `Mostrar demo (${demoRuns.length})`}
-                      </button>
-                    )}
-                    <span className="text-[7px] text-white/20 font-mono">
-                      {realRuns.length} real{realRuns.length !== 1 ? "es" : ""}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Estado cuando no hay runs reales */}
-                {realRuns.length === 0 && (
-                  <div className="mb-4 px-4 py-4 bg-[#0d1629] border border-white/[0.08] rounded-sm text-center">
-                    <History className="w-5 h-5 text-white/10 mx-auto mb-2" />
-                    <p className="text-[10px] font-semibold text-white/30 mb-0.5">
-                      Aún no hay ejecuciones reales desde Replit
-                    </p>
-                    <p className="text-[8px] text-white/20 leading-relaxed">
-                      Configuración activa: <span className="text-teal-400/60 font-mono">gpt-image-1 medium</span>
-                    </p>
-                    <p className="text-[8px] text-white/15 mt-0.5">
-                      Ve a <span className="text-amber-400/50">Generación → Generar pág. 01</span> para crear el primer run real.
-                    </p>
-                  </div>
-                )}
-
-                {runs.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-[9px] text-white/15">Sin runs registrados</p>
-                  </div>
-                ) : visibleRuns.length === 0 && !showDemoRuns ? (
-                  <div className="text-center py-6">
-                    <button onClick={() => setShowDemoRuns(true)}
-                      className="text-[9px] text-white/25 hover:text-white/50 underline underline-offset-2 transition-colors">
-                      Ver {demoRuns.length} runs demo ocultos
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {visibleRuns.sort((a, b) => {
-                      const aDemo = a.id.startsWith("run-");
-                      const bDemo = b.id.startsWith("run-");
-                      if (aDemo !== bDemo) return aDemo ? 1 : -1;
-                      return b.createdAt.localeCompare(a.createdAt);
-                    }).map(run => {
-                      const isDemo = run.id.startsWith("run-");
-                      return (
-                        <div key={run.id} className={cn("border rounded-sm p-4",
-                          isDemo ? "bg-[#0d1629] border-white/[0.06] opacity-50" : "bg-teal-500/5 border-teal-500/20")}>
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-[9px] font-bold text-white/25 font-mono">{run.version}</span>
-                              {isDemo ? (
-                                <span className="text-[7px] px-1.5 py-0.5 rounded-sm bg-amber-500/10 text-amber-400/60 border border-amber-500/20 font-black uppercase tracking-wide">
-                                  DEMO SEED
-                                </span>
-                              ) : (
-                                <span className="text-[7px] px-1.5 py-0.5 rounded-sm bg-teal-500/15 text-teal-400 border border-teal-500/25 font-semibold">
-                                  OpenAI real
-                                </span>
-                              )}
-                              <span className={cn("text-[7px] px-1.5 py-0.5 rounded-sm font-semibold",
-                                run.type === "selective_regeneration" ? "bg-sky-500/10 text-sky-400/70" : "bg-violet-500/10 text-violet-400/70")}>
-                                {run.type === "selective_regeneration" ? "Selectiva" : "Completa"}
-                              </span>
-                              <span className={cn("text-[7px] px-1.5 py-0.5 rounded-sm font-semibold",
-                                isDemo ? "bg-white/[0.04] text-white/20" : "bg-emerald-500/10 text-emerald-400/80")}>
-                                {isDemo ? "QA simulado" : "QA real"}
-                              </span>
-                            </div>
-                            <span className="text-[8px] text-white/20 shrink-0">{formatDateTime(run.createdAt)}</span>
-                          </div>
-                          {run.note && <p className="text-[9px] text-white/40 mb-2">{run.note}</p>}
-                          {run.promptTokens && (
-                            <div className="flex flex-wrap gap-3 text-[8px] text-white/20">
-                              <span>HTML: <span className="text-white/35 font-mono">{run.model}</span></span>
-                              {!isDemo && <span className="text-teal-400/50">Imagen: gpt-image-1 medium</span>}
-                              <span>{((run.promptTokens + (run.completionTokens ?? 0)) / 1000).toFixed(1)}k tokens</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </Layout>

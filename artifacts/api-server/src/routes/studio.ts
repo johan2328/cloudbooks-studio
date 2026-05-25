@@ -612,6 +612,76 @@ router.get("/studio/output-status/:pageId", async (req, res): Promise<void> => {
   });
 });
 
+/* ── GET /api/studio/qa-report/:pageId ───────────────────────────────────
+   Parsea qa-report.md en disco y retorna un objeto JSON con scores,
+   veredicto y observaciones. Solo funciona si existe el archivo.          */
+router.get("/studio/qa-report/:pageId", async (req, res): Promise<void> => {
+  const { pageId } = req.params;
+  const outDir  = pageOutputDir(pageId);
+  const qaPath  = join(outDir, "qa-report.md");
+
+  if (!existsSync(qaPath)) {
+    res.status(404).json({ error: "qa-report.md not found" });
+    return;
+  }
+
+  try {
+    const raw = await readFile(qaPath, "utf-8");
+
+    /* Extraer scores — soporta múltiples formatos del QA report:
+       "- Dirección de arte: **8/10**"
+       "- art_direction: 9.2"
+       "**Total**: 8.5/10"                                          */
+    const scores: Record<string, number> = {};
+
+    interface DimMap { key: string; patterns: RegExp[] }
+    const DIM_MAPS: DimMap[] = [
+      { key: "art_direction",         patterns: [/direcci[oó]n de arte[^*\d]*\**(\d+(?:\.\d+)?)/i, /art_direction[^*\d]*\**(\d+(?:\.\d+)?)/i] },
+      { key: "editorial_consistency", patterns: [/consistencia editorial[^*\d]*\**(\d+(?:\.\d+)?)/i, /editorial_consistency[^*\d]*\**(\d+(?:\.\d+)?)/i] },
+      { key: "readability",           patterns: [/legibilidad[^*\d]*\**(\d+(?:\.\d+)?)/i, /readability[^*\d]*\**(\d+(?:\.\d+)?)/i] },
+      { key: "technical_accuracy",    patterns: [/precisi[oó]n t[eé]cnica[^*\d]*\**(\d+(?:\.\d+)?)/i, /technical_accuracy[^*\d]*\**(\d+(?:\.\d+)?)/i] },
+      { key: "useful_density",        patterns: [/densidad [uú]til[^*\d]*\**(\d+(?:\.\d+)?)/i, /useful_density[^*\d]*\**(\d+(?:\.\d+)?)/i] },
+      { key: "commercial_risk",       patterns: [/riesgo comercial[^*\d]*\**(\d+(?:\.\d+)?)/i, /commercial_risk[^*\d]*\**(\d+(?:\.\d+)?)/i] },
+      { key: "total",                 patterns: [/scores\s*\((\d+(?:\.\d+)?)\/10/i, /total[^*\d]*\**(\d+(?:\.\d+)?)/i, /promedio[^*\d]*\**(\d+(?:\.\d+)?)/i] },
+    ];
+
+    for (const { key, patterns } of DIM_MAPS) {
+      for (const pat of patterns) {
+        const m = raw.match(pat);
+        if (m) {
+          /* Si el valor es N/10, usarlo directamente; si ≤10 ya es sobre-10 */
+          const v = parseFloat(m[1]);
+          scores[key] = v;
+          break;
+        }
+      }
+    }
+
+    /* Veredicto — soporta español e inglés */
+    const isApproved = /APROBADO|approved/i.test(raw);
+    const verdict = isApproved ? "approved" : "needs_revision";
+
+    /* Observaciones — líneas que empiezan con "- " o "· " */
+    const observations = raw
+      .split("\n")
+      .filter(l => /^[\-·•]\s+.{10,}/.test(l.trim()))
+      .map(l => l.replace(/^[\-·•]\s+/, "").trim())
+      .slice(0, 8);
+
+    /* Red team log — líneas con ✓ o ✗ o ⚠ */
+    const redTeamLog = raw
+      .split("\n")
+      .filter(l => /[✓✗⚠]/.test(l))
+      .map(l => l.trim())
+      .slice(0, 6);
+
+    res.json({ verdict, scores, observations, redTeamLog, raw });
+  } catch (err) {
+    req.log.error({ err }, "Error parsing qa-report.md");
+    res.status(500).json({ error: "Failed to parse QA report" });
+  }
+});
+
 /* ── GET /api/studio/key-status ─────────────────────────────────────────── */
 router.get("/studio/key-status", (_req, res): void => {
   res.json({

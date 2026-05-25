@@ -1,7 +1,7 @@
 # QA Report — Página 01
 ## Azure Container Registry (ACR) — Arquitectura y Tiers
 
-**Generado:** 2026-05-25T03:39:05.003Z
+**Generado:** 2026-05-25T04:51:31.183Z
 **Modelo:** gpt-4o
 **Veredicto:** ✅ APROBADO
 
@@ -14,8 +14,8 @@
 - Riesgo comercial: **9/10**
 
 ## Observaciones
-- Consistent use of brand colors and typography.
-- Clear section structure and layout.
+- Consistent use of color and typography.
+- Accurate representation of Azure ACR features.
 
 ## Defectos detectados
-- ⚠ Some text elements could use better contrast for improved readability.
+- ⚠ Some text elements could benefit from increased contrast for better readability.
