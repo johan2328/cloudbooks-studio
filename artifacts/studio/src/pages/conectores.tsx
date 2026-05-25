@@ -245,6 +245,85 @@ const CONNECTORS: Connector[] = [
     notes: "Requiere configuración del destino de distribución en variables de entorno (PUBLISH_DESTINATION, PUBLISH_TOKEN). La publicación es idempotente — re-publicar un asset ya publicado actualiza la versión sin duplicar.",
     mockAvailable: false,
   },
+  /* ── Asset source — acceso a GitHub privado ────────────────────────────── */
+  {
+    id: "syncGithubAssetsToStatic",
+    name: "syncGithubAssetsToStatic",
+    signature: "syncGithubAssetsToStatic(batchId: string, token: string): Promise<SyncStaticResult>",
+    description: "Descarga los assets del repositorio privado de GitHub (cloudbooks-assets) usando un token de acceso personal y los copia al directorio /public/assets/cloudbooks del Studio. Después del sync, el Studio sirve las imágenes y archivos desde Replit sin depender de raw.githubusercontent.com.",
+    category: "storage",
+    status: "planned",
+    inputs: [
+      { name: "batchId", type: "string", required: true  },
+      { name: "token",   type: "string", required: true  },
+    ],
+    outputs: [
+      { name: "copied",    type: "number"       },
+      { name: "skipped",   type: "number"       },
+      { name: "basePath",  type: "string"       },
+      { name: "manifest",  type: "SyncManifest" },
+    ],
+    notes: "Solución recomendada para repositorios privados: copiar assets una vez al entorno de Replit. Después del sync, actualizar las URLs de los slots para apuntar a /assets/cloudbooks/{page}/... en lugar de raw.githubusercontent.com. Requiere GITHUB_TOKEN en secretos del entorno. Alternativa más simple: hacer el repo público (solo assets, no código sensible).",
+    mockAvailable: false,
+  },
+  {
+    id: "fetchPrivateGithubAsset",
+    name: "fetchPrivateGithubAsset",
+    signature: "fetchPrivateGithubAsset(path: string, token: string): Promise<AssetBuffer>",
+    description: "Descarga un asset individual del repositorio privado de GitHub usando la API REST de GitHub (no raw URL). Útil para acceso puntual a un archivo sin necesidad de sincronización completa. Devuelve el buffer del archivo y sus metadatos.",
+    category: "storage",
+    status: "planned",
+    inputs: [
+      { name: "path",  type: "string", required: true },
+      { name: "token", type: "string", required: true },
+    ],
+    outputs: [
+      { name: "buffer",      type: "Buffer"  },
+      { name: "contentType", type: "string"  },
+      { name: "sizeKb",      type: "number"  },
+      { name: "sha",         type: "string"  },
+    ],
+    notes: "Usa el endpoint GET /repos/{owner}/{repo}/contents/{path} de la API de GitHub con el header Authorization: Bearer {token}. El contenido se devuelve codificado en base64 y debe decodificarse. Límite de la API: 100MB por archivo. Para imágenes y markdown del Visual Atlas el límite no es un problema.",
+    mockAvailable: false,
+  },
+  {
+    id: "serveAssetViaProxy",
+    name: "serveAssetViaProxy",
+    signature: "serveAssetViaProxy(path: string): Promise<Response>",
+    description: "Endpoint del servidor Express (GET /api/assets/proxy?path=...) que recupera el asset desde GitHub usando el token del servidor y lo sirve al browser del Studio. Permite que el frontend consuma assets de repos privados sin exponer el token. Cachea el resultado en memoria por 10 minutos.",
+    category: "storage",
+    status: "planned",
+    inputs: [
+      { name: "path", type: "string", required: true },
+    ],
+    outputs: [
+      { name: "stream",      type: "ReadableStream" },
+      { name: "contentType", type: "string"         },
+      { name: "cacheHit",    type: "boolean"        },
+    ],
+    notes: "Implementar en artifacts/api-server/src/routes/assets.ts. El browser llama a /api/assets/proxy?path=ai-200/visual-atlas/pages/01/preview.png y el servidor hace el fetch autenticado a la API de GitHub y devuelve el binario. Reemplazar las raw URLs del Studio por /api/assets/proxy?path=... una vez implementado.",
+    mockAvailable: false,
+  },
+  {
+    id: "validateAssetUrl",
+    name: "validateAssetUrl",
+    signature: "validateAssetUrl(url: string, mode: AssetSourceMode): Promise<ValidationResult>",
+    description: "Valida si una URL de asset es accesible desde el entorno actual según el modo de fuente configurado. Para public_raw verifica que raw.githubusercontent.com devuelva 200. Para replit_static verifica que el archivo exista en /public/assets/cloudbooks. Para private_proxy verifica que el endpoint /api/assets/proxy responda correctamente.",
+    category: "storage",
+    status: "planned",
+    inputs: [
+      { name: "url",  type: "string",          required: true },
+      { name: "mode", type: "AssetSourceMode", required: true },
+    ],
+    outputs: [
+      { name: "accessible",  type: "boolean"  },
+      { name: "statusCode",  type: "number"   },
+      { name: "latencyMs",   type: "number"   },
+      { name: "suggestion",  type: "string"   },
+    ],
+    notes: "AssetSourceMode: 'public_raw' | 'replit_static' | 'private_proxy'. Correr este conector en el diagnóstico de acceso del panel Assets y Outputs para detectar automáticamente qué modo funciona en el entorno actual. Útil en el onboarding del equipo para verificar configuración sin salir del Studio.",
+    mockAvailable: true,
+  },
 ];
 
 const CATEGORY_CFG = {
