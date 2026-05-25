@@ -44,6 +44,7 @@ export default function QAPage() {
   const [qaRunning, setQaRunning] = useState(false);
   const [activeTab, setActiveTab] = useState<"qa" | "historial">("qa");
   const [showMoreActions, setShowMoreActions] = useState(false);
+  const [showDemoRuns, setShowDemoRuns] = useState(false);
   const moreActionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -323,8 +324,9 @@ export default function QAPage() {
                   <div className="flex items-center gap-1.5 mb-2">
                     <Eye className="w-3 h-3 text-white/20" />
                     <p className="text-[9px] font-bold text-white/25 uppercase tracking-widest">Preview editorial</p>
+                    <span className="ml-auto text-[7px] font-black bg-amber-500 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-wider">SIMULADO</span>
                   </div>
-                  <div className="aspect-[4/3] bg-[#0a1220] rounded-sm border border-white/[0.06] flex items-center justify-center overflow-hidden">
+                  <div className="relative aspect-[4/3] bg-[#0a1220] rounded-sm border border-white/[0.06] flex items-center justify-center overflow-hidden opacity-40">
                     <div className="w-full h-full p-2 flex flex-col text-[5px] text-white/30 space-y-1">
                       <div className="h-3 rounded-sm flex items-center px-1.5 gap-1" style={{ backgroundColor: "#0078d420" }}>
                         <span className="font-black text-[#0078d4]/70">ACR · #{pageNum}</span>
@@ -343,6 +345,9 @@ export default function QAPage() {
                       </div>
                     </div>
                   </div>
+                  <p className="text-[8px] text-amber-400/60 mt-2 leading-tight">
+                    Preview real pendiente · genera con OpenAI para ver el output real.
+                  </p>
                 </div>
 
                 {/* QA report observations */}
@@ -407,83 +412,108 @@ export default function QAPage() {
             </div>
           )}
 
-          {activeTab === "historial" && (
-            <div className="overflow-y-auto h-full p-5 max-w-2xl">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Historial de ejecuciones · Pág. {pageNum}</p>
-                <span className="text-[7px] text-white/20 font-mono">{runs.length} run{runs.length !== 1 ? "s" : ""}</span>
-              </div>
+          {activeTab === "historial" && (() => {
+            const realRuns = runs.filter(r => !r.id.startsWith("run-"));
+            const demoRuns = runs.filter(r => r.id.startsWith("run-"));
+            const visibleRuns = showDemoRuns ? [...realRuns, ...demoRuns] : realRuns;
 
-              {/* Banner demo seed */}
-              {runs.length > 0 && runs.every(r => r.id.startsWith("run-")) && (
-                <div className="flex items-start gap-2 mb-4 px-3 py-2.5 bg-amber-500/5 border border-amber-500/15 rounded-sm">
-                  <Info className="w-3 h-3 text-amber-400/60 shrink-0 mt-0.5" />
-                  <p className="text-[9px] text-amber-400/70 leading-snug">
-                    Estos runs son <span className="font-semibold">datos de demostración</span> hasta ejecutar una generación real desde Replit.
-                    Ve a <span className="text-amber-400">Generación → Página 01 → Generar con OpenAI</span> para crear el primer run real.
+            return (
+              <div className="overflow-y-auto h-full p-5 max-w-2xl">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">
+                    Historial de ejecuciones · Pág. {pageNum}
                   </p>
+                  <div className="flex items-center gap-2">
+                    {demoRuns.length > 0 && (
+                      <button onClick={() => setShowDemoRuns(v => !v)}
+                        className="text-[8px] text-white/25 hover:text-white/50 border border-white/[0.08] hover:border-white/20 px-2 py-0.5 rounded-sm transition-all">
+                        {showDemoRuns ? "Ocultar demo" : `Mostrar demo (${demoRuns.length})`}
+                      </button>
+                    )}
+                    <span className="text-[7px] text-white/20 font-mono">
+                      {realRuns.length} real{realRuns.length !== 1 ? "es" : ""}
+                    </span>
+                  </div>
                 </div>
-              )}
 
-              {runs.length === 0 ? (
-                <div className="text-center py-12">
-                  <History className="w-6 h-6 text-white/10 mx-auto mb-2" />
-                  <p className="text-sm text-white/20">Sin runs de generación todavía</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {[...runs].sort((a, b) => {
-                    // real runs (non-seed) first, then by date desc
-                    const aDemo = a.id.startsWith("run-");
-                    const bDemo = b.id.startsWith("run-");
-                    if (aDemo !== bDemo) return aDemo ? 1 : -1;
-                    return b.createdAt.localeCompare(a.createdAt);
-                  }).map(run => {
-                    const isDemo = run.id.startsWith("run-");
-                    return (
-                      <div key={run.id} className={cn("border rounded-sm p-4",
-                        isDemo ? "bg-[#0d1629] border-white/[0.06]" : "bg-teal-500/5 border-teal-500/20")}>
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[9px] font-bold text-white/25 font-mono">{run.version}</span>
-                            {/* Origin badge */}
-                            {isDemo ? (
-                              <span className="text-[7px] px-1.5 py-0.5 rounded-sm bg-white/[0.05] text-white/30 border border-white/[0.08] font-semibold">
-                                Demo seed
+                {/* Estado cuando no hay runs reales */}
+                {realRuns.length === 0 && (
+                  <div className="mb-4 px-4 py-4 bg-[#0d1629] border border-white/[0.08] rounded-sm text-center">
+                    <History className="w-5 h-5 text-white/10 mx-auto mb-2" />
+                    <p className="text-[10px] font-semibold text-white/30 mb-0.5">
+                      Aún no hay ejecuciones reales desde Replit
+                    </p>
+                    <p className="text-[8px] text-white/20 leading-relaxed">
+                      Configuración activa: <span className="text-teal-400/60 font-mono">gpt-image-1 medium</span>
+                    </p>
+                    <p className="text-[8px] text-white/15 mt-0.5">
+                      Ve a <span className="text-amber-400/50">Generación → Generar pág. 01</span> para crear el primer run real.
+                    </p>
+                  </div>
+                )}
+
+                {runs.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-[9px] text-white/15">Sin runs registrados</p>
+                  </div>
+                ) : visibleRuns.length === 0 && !showDemoRuns ? (
+                  <div className="text-center py-6">
+                    <button onClick={() => setShowDemoRuns(true)}
+                      className="text-[9px] text-white/25 hover:text-white/50 underline underline-offset-2 transition-colors">
+                      Ver {demoRuns.length} runs demo ocultos
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {visibleRuns.sort((a, b) => {
+                      const aDemo = a.id.startsWith("run-");
+                      const bDemo = b.id.startsWith("run-");
+                      if (aDemo !== bDemo) return aDemo ? 1 : -1;
+                      return b.createdAt.localeCompare(a.createdAt);
+                    }).map(run => {
+                      const isDemo = run.id.startsWith("run-");
+                      return (
+                        <div key={run.id} className={cn("border rounded-sm p-4",
+                          isDemo ? "bg-[#0d1629] border-white/[0.06] opacity-50" : "bg-teal-500/5 border-teal-500/20")}>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[9px] font-bold text-white/25 font-mono">{run.version}</span>
+                              {isDemo ? (
+                                <span className="text-[7px] px-1.5 py-0.5 rounded-sm bg-amber-500/10 text-amber-400/60 border border-amber-500/20 font-black uppercase tracking-wide">
+                                  DEMO SEED
+                                </span>
+                              ) : (
+                                <span className="text-[7px] px-1.5 py-0.5 rounded-sm bg-teal-500/15 text-teal-400 border border-teal-500/25 font-semibold">
+                                  OpenAI real
+                                </span>
+                              )}
+                              <span className={cn("text-[7px] px-1.5 py-0.5 rounded-sm font-semibold",
+                                run.type === "selective_regeneration" ? "bg-sky-500/10 text-sky-400/70" : "bg-violet-500/10 text-violet-400/70")}>
+                                {run.type === "selective_regeneration" ? "Selectiva" : "Completa"}
                               </span>
-                            ) : (
-                              <span className="text-[7px] px-1.5 py-0.5 rounded-sm bg-teal-500/15 text-teal-400 border border-teal-500/25 font-semibold">
-                                OpenAI real
+                              <span className={cn("text-[7px] px-1.5 py-0.5 rounded-sm font-semibold",
+                                isDemo ? "bg-white/[0.04] text-white/20" : "bg-emerald-500/10 text-emerald-400/80")}>
+                                {isDemo ? "QA simulado" : "QA real"}
                               </span>
-                            )}
-                            {/* Type badge */}
-                            <span className={cn("text-[7px] px-1.5 py-0.5 rounded-sm font-semibold",
-                              run.type === "selective_regeneration" ? "bg-sky-500/10 text-sky-400/70" : "bg-violet-500/10 text-violet-400/70")}>
-                              {run.type === "selective_regeneration" ? "Selectiva" : "Completa"}
-                            </span>
-                            {/* QA badge */}
-                            <span className={cn("text-[7px] px-1.5 py-0.5 rounded-sm font-semibold",
-                              isDemo ? "bg-white/[0.04] text-white/25" : "bg-emerald-500/10 text-emerald-400/80")}>
-                              {isDemo ? "QA simulado" : "QA real"}
-                            </span>
+                            </div>
+                            <span className="text-[8px] text-white/20 shrink-0">{formatDateTime(run.createdAt)}</span>
                           </div>
-                          <span className="text-[8px] text-white/20 shrink-0">{formatDateTime(run.createdAt)}</span>
+                          {run.note && <p className="text-[9px] text-white/40 mb-2">{run.note}</p>}
+                          {run.promptTokens && (
+                            <div className="flex flex-wrap gap-3 text-[8px] text-white/20">
+                              <span>HTML: <span className="text-white/35 font-mono">{run.model}</span></span>
+                              {!isDemo && <span className="text-teal-400/50">Imagen: gpt-image-1 medium</span>}
+                              <span>{((run.promptTokens + (run.completionTokens ?? 0)) / 1000).toFixed(1)}k tokens</span>
+                            </div>
+                          )}
                         </div>
-                        {run.note && <p className="text-[9px] text-white/40 mb-2">{run.note}</p>}
-                        {run.promptTokens && (
-                          <div className="flex flex-wrap gap-3 text-[8px] text-white/20">
-                            <span>HTML: <span className="text-white/35 font-mono">{run.model}</span></span>
-                            {!isDemo && <span className="text-teal-400/50">Imagen: gpt-image-1 medium</span>}
-                            <span>{((run.promptTokens + (run.completionTokens ?? 0)) / 1000).toFixed(1)}k tokens</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
     </Layout>

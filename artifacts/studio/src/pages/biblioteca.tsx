@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { cn } from "@/lib/utils";
 import { useStudio } from "@/lib/studio-store";
@@ -9,6 +9,7 @@ import {
   Download, RefreshCw, MessageSquare, ThumbsUp, Shield,
   Activity, FileText, Package, ExternalLink, Zap, CheckCheck,
   FlaskConical, Database, Upload, Link2, Eye, Globe, Image,
+  MoreHorizontal, Sparkles,
 } from "lucide-react";
 
 /* ─── Tipos ─────────────────────────────────────────────────────────────── */
@@ -347,7 +348,7 @@ const DOMAIN_COLOR = "#0369a1";
 /* ─── Componente principal ───────────────────────────────────────────────── */
 export default function Biblioteca() {
   const [selectedNum, setSelectedNum] = useState("01");
-  const { state, executeGrounding, startGeneration, executeQA, approvePage, requestRevision, regenerateSelective, exportPage, getPage } = useStudio();
+  const { state, executeGrounding, startGeneration, executeQA, approvePage, requestRevision, regenerateSelective, exportPage, getPage, getOutputPackForPage } = useStudio();
 
   const selected   = EDITORIAL[selectedNum];
   // Status comes from the store; fallback to EDITORIAL's editorialStatus mapped to PageStatus
@@ -363,6 +364,13 @@ export default function Biblioteca() {
   const reviewCount   = batch10Pages.filter(p => p.status === "qa_review" || p.status === "needs_revision").length;
   const blockedCount  = batch10Pages.filter(p => p.status === "grounding_pending" || p.status === "draft" || p.status === "grounded").length;
 
+  // Output real counts for all 10 pages
+  const realOutputCount = Object.keys(EDITORIAL).filter(num => {
+    const pack = getOutputPackForPage(num);
+    if (!pack) return false;
+    return Object.values(pack.slots).some(s => s.status === "real_available" || s.status === "approved" || s.status === "exported");
+  }).length;
+
   return (
     <Layout title="Visual Atlas — Batch 01–10">
       <div className="flex h-full overflow-hidden bg-[#0a1220]">
@@ -375,6 +383,28 @@ export default function Biblioteca() {
               <Layers className="w-3.5 h-3.5 text-blue-400" />
               <span className="text-[9px] font-bold text-white/50 uppercase tracking-widest">Visual Atlas · Batch 01–10</span>
             </div>
+
+            {/* Output real summary — protagonista */}
+            <div className={cn(
+              "mb-2 px-2.5 py-2 rounded-sm border",
+              realOutputCount === 0
+                ? "bg-amber-500/5 border-amber-500/20"
+                : "bg-emerald-500/5 border-emerald-500/20"
+            )}>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Image className={cn("w-2.5 h-2.5 shrink-0", realOutputCount === 0 ? "text-amber-400/60" : "text-emerald-400")} />
+                <span className="text-[8px] font-bold text-white/40 uppercase tracking-widest">Outputs reales</span>
+                <span className={cn("ml-auto text-sm font-black tabular-nums", realOutputCount === 0 ? "text-amber-400" : "text-emerald-400")}>
+                  {realOutputCount}/10
+                </span>
+              </div>
+              {realOutputCount === 0 && (
+                <p className="text-[7px] text-amber-400/50 leading-tight">
+                  Sin output real. Próxima acción: Generar pág. 01.
+                </p>
+              )}
+            </div>
+
             <div className="grid grid-cols-3 gap-1 mb-2">
               {[
                 { label:"Aprobadas", value: approvedCount, color:"text-emerald-400" },
@@ -494,7 +524,17 @@ function PageDetail({ed, effectiveStatus, onApprove, onRevision, onRegen, onExpo
   const [groundingDone, setGroundingDone] = useState(false);
   const [qaRunning, setQaRunning] = useState(false);
   const [qaDone, setQaDone] = useState(false);
+  const [showMore, setShowMore] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
   const { getOutputPackForPage, uploadAssetDemo, linkAsset, approveAsset, replaceAssetRequest } = useStudio();
+
+  useEffect(() => {
+    function h(e: MouseEvent) {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setShowMore(false);
+    }
+    if (showMore) document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showMore]);
   const outputPack = getOutputPackForPage(ed.num);
 
   const cfg = STATUS_CFG[effectiveStatus];
@@ -583,15 +623,70 @@ function PageDetail({ed, effectiveStatus, onApprove, onRevision, onRegen, onExpo
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/[0.06] flex-wrap">
-            <ActBtn icon={FlaskConical} label="Ejecutar grounding" variant="ghost" onClick={runGrounding} loading={groundingRunning} done={groundingDone} />
-            <ActBtn icon={Zap} label="Generar" variant="ghost" onClick={() => { onGenerate(); setTab("preview"); }} />
-            <ActBtn icon={Shield} label="Ejecutar QA" variant="ghost" onClick={runQA} loading={qaRunning} done={qaDone} />
-            <ActBtn icon={ThumbsUp} label="Aprobar" variant="primary" disabled={!canApprove} onClick={onApprove} />
-            <ActBtn icon={MessageSquare} label="Corrección" variant="secondary" onClick={onRevision} />
-            <ActBtn icon={RefreshCw} label="Regenerar" variant="warning" onClick={onRegen} />
-            <ActBtn icon={Download} label="Exportar" variant="ghost" disabled={!canExport} onClick={onExport} />
+          {/* Actions — 1 primario + 1 secundario + kebab */}
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/[0.06]">
+
+            {/* Primario — determinado por estado */}
+            {(effectiveStatus === "draft" || effectiveStatus === "grounding_pending") && (
+              <ActBtn icon={FlaskConical} label="Ejecutar grounding" variant="primary" onClick={runGrounding} loading={groundingRunning} done={groundingDone} />
+            )}
+            {effectiveStatus === "grounded" && (
+              <ActBtn icon={Sparkles} label={`Generar pág. ${ed.num}`} variant="primary" onClick={() => { onGenerate(); setTab("preview"); }} />
+            )}
+            {(effectiveStatus === "qa_review" || effectiveStatus === "needs_revision") && (
+              <ActBtn icon={ThumbsUp} label="Aprobar" variant="primary" onClick={onApprove} />
+            )}
+            {(effectiveStatus === "approved" || effectiveStatus === "exported") && (
+              <ActBtn icon={Download} label="Exportar" variant="primary" onClick={onExport} />
+            )}
+
+            {/* Secundario fijo: Ver contenido */}
+            <ActBtn icon={BookOpen} label="Ver contenido" variant="ghost" onClick={() => setTab("contenido")} />
+
+            {/* Kebab: más acciones raras */}
+            <div className="relative ml-auto" ref={moreRef}>
+              <button onClick={() => setShowMore(v => !v)}
+                className="h-7 px-2 border border-white/10 rounded-sm text-white/25 hover:text-white/50 hover:border-white/20 transition-all">
+                <MoreHorizontal className="w-3.5 h-3.5" />
+              </button>
+              {showMore && (
+                <div className="absolute right-0 top-8 w-52 bg-[#0d1629] border border-white/10 rounded-sm shadow-xl z-50 py-1">
+                  <div className="px-3 py-1.5 text-[7px] font-bold text-white/20 uppercase tracking-widest border-b border-white/[0.06]">
+                    Más acciones
+                  </div>
+                  <button onClick={() => { runQA(); setShowMore(false); }}
+                    className="w-full text-left px-3 py-2 text-[10px] text-white/50 hover:text-white/80 hover:bg-white/[0.04] flex items-center gap-2 transition-colors">
+                    <Shield className="w-3 h-3" />Ejecutar QA
+                  </button>
+                  <button onClick={() => { onRegen(); setShowMore(false); }}
+                    className="w-full text-left px-3 py-2 text-[10px] text-white/50 hover:text-white/80 hover:bg-white/[0.04] flex items-center gap-2 transition-colors">
+                    <RefreshCw className="w-3 h-3" />Regenerar selectivo
+                  </button>
+                  <button onClick={() => { runGrounding(); setShowMore(false); }}
+                    className="w-full text-left px-3 py-2 text-[10px] text-white/50 hover:text-white/80 hover:bg-white/[0.04] flex items-center gap-2 transition-colors">
+                    <FlaskConical className="w-3 h-3" />Re-ejecutar grounding
+                  </button>
+                  <div className="border-t border-white/[0.06] my-1" />
+                  <button onClick={() => { setTab("assets"); setShowMore(false); }}
+                    className="w-full text-left px-3 py-2 text-[10px] text-white/50 hover:text-white/80 hover:bg-white/[0.04] flex items-center gap-2 transition-colors">
+                    <Database className="w-3 h-3" />Ver assets y outputs
+                  </button>
+                  <button onClick={() => { onRevision(); setShowMore(false); }}
+                    className="w-full text-left px-3 py-2 text-[10px] text-white/50 hover:text-white/80 hover:bg-white/[0.04] flex items-center gap-2 transition-colors">
+                    <MessageSquare className="w-3 h-3" />Solicitar corrección
+                  </button>
+                  <button className="w-full text-left px-3 py-2 text-[10px] text-white/25 flex items-center gap-2 cursor-not-allowed">
+                    <ExternalLink className="w-3 h-3" />Abrir en GitHub
+                  </button>
+                  <button className="w-full text-left px-3 py-2 text-[10px] text-white/25 flex items-center gap-2 cursor-not-allowed">
+                    <Target className="w-3 h-3" />Validar rutas de assets
+                  </button>
+                  <button className="w-full text-left px-3 py-2 text-[10px] text-white/25 flex items-center gap-2 cursor-not-allowed">
+                    Ver logs técnicos
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -725,13 +820,56 @@ function PageDetail({ed, effectiveStatus, onApprove, onRevision, onRegen, onExpo
 
           {/* ── Preview ── */}
           {tab==="preview" && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Preview editorial — simulado</p>
-                <span className="text-[8px] text-white/20 bg-white/5 border border-white/10 px-2 py-0.5 rounded-sm">Contrato {ed.contractVersion}</span>
+            <div className="space-y-4">
+              {/* Banner: preview real pendiente */}
+              <div className="bg-amber-500/8 border border-amber-500/25 rounded-sm px-4 py-3 flex items-start gap-3">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-bold text-amber-300">Preview real pendiente</p>
+                  <p className="text-[9px] text-white/40 mt-0.5 leading-relaxed">
+                    Lo que ves abajo es una simulación estructural — no es output generado por OpenAI.
+                    Ejecuta generación real para obtener el asset visual de producción.
+                  </p>
+                </div>
+                <button onClick={() => onGenerate()}
+                  className="shrink-0 flex items-center gap-1.5 h-7 px-3 bg-teal-600 hover:bg-teal-500 text-white text-[9px] font-bold rounded-sm transition-all">
+                  <Sparkles className="w-3 h-3" />Generar real
+                </button>
               </div>
-              <div className="max-w-xl mx-auto">
-                <AtlasPagePreview ed={ed} size="lg" />
+
+              {/* Preview con watermark DEMO */}
+              <div className="max-w-xl mx-auto relative">
+                <div className="opacity-40 pointer-events-none">
+                  <AtlasPagePreview ed={ed} size="lg" />
+                </div>
+                {/* Watermark overlay */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+                  <div style={{ transform: "rotate(-20deg)" }}
+                    className="border-2 border-white/40 px-5 py-2 rounded-sm">
+                    <span className="text-white/40 text-xl font-black tracking-[0.2em] uppercase">DEMO PREVIEW</span>
+                  </div>
+                </div>
+                {/* Badge esquina */}
+                <div className="absolute top-2 right-2">
+                  <span className="text-[7px] font-black bg-amber-500 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-wider">SIMULADO</span>
+                </div>
+              </div>
+
+              {/* Estados de los 3 outputs principales */}
+              <div className="flex gap-2 flex-wrap">
+                {[
+                  { label: "HTML", state: "Pendiente" },
+                  { label: "PNG", state: "Pendiente" },
+                  { label: "PDF", state: "Pendiente" },
+                ].map(o => (
+                  <div key={o.label} className="flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.07] rounded-sm px-2.5 py-1.5">
+                    <span className="text-[9px] font-bold text-white/40">{o.label}</span>
+                    <span className="text-[8px] text-white/20">{o.state}</span>
+                  </div>
+                ))}
+                <span className="text-[8px] text-white/20 self-center ml-1">
+                  · Contrato {ed.contractVersion}
+                </span>
               </div>
             </div>
           )}

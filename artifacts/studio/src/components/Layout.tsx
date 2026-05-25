@@ -238,6 +238,14 @@ export default function Layout({ children, title }: LayoutProps) {
 
           {/* ── Live stats ─────────────────────────────────────────────── */}
           <div className="mx-2 mt-2 bg-white/[0.02] border border-white/[0.05] rounded-sm p-2.5 space-y-1">
+            {/* Modo del Studio */}
+            <div className="flex items-center gap-1.5 mb-1.5 pb-1.5 border-b border-white/[0.05]">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+              <span className="text-[7px] font-black text-amber-400 uppercase tracking-widest">Modo MIXED</span>
+            </div>
+            <p className="text-[7px] text-white/20 leading-tight mb-1.5">
+              Contenido real · outputs visuales simulados
+            </p>
             <p className="text-[7px] text-white/15 uppercase tracking-widest font-bold">Estado del atlas</p>
             <div className="flex justify-between">
               <span className="text-[8px] text-white/25">Aprobadas</span>

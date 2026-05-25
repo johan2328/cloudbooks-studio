@@ -5,7 +5,7 @@ import {
   BookOpen, FileText, Target, HelpCircle, Table2, Zap,
   AlertTriangle, CheckCircle2, Clock, ArrowRight, ChevronRight,
   Activity, Layers, Shield, Package, BarChart3, FileCheck,
-  TrendingUp, Calendar, Users, Edit3,
+  TrendingUp, Calendar, Users, Edit3, Sparkles, Image, Eye,
 } from "lucide-react";
 
 /* ─── Tipos ────────────────────────────────────────────────────────────── */
@@ -86,13 +86,28 @@ export default function StudioDashboard() {
           </div>
         </div>
 
+        {/* ── Banner MIXED mode ─────────────────────────────────────── */}
+        <div className="bg-amber-500/5 border-b border-amber-500/15 px-6 py-2 flex items-center gap-3">
+          <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+          <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Modo MIXED</span>
+          <span className="text-[9px] text-white/30 ml-1">
+            Contenido y estructura reales preparados · outputs visuales simulados hasta ejecutar generación real o sincronizar assets.
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <button onClick={() => setLocation("/generacion")}
+              className="flex items-center gap-1.5 h-6 px-2.5 bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/30 text-teal-300 text-[9px] font-bold rounded-sm transition-all">
+              <Sparkles className="w-2.5 h-2.5" />Generar pág. 01
+            </button>
+          </div>
+        </div>
+
         {/* ── Stats bar ───────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/[0.04] border-b border-white/[0.04]">
           {[
-            { label: "Páginas en producción", value: "61", sub: "Visual Atlas · AI-200", icon: Layers, color: "#2563eb" },
+            { label: "Outputs reales Visual Atlas", value: "0 / 10", sub: "Pendiente · generar con OpenAI", icon: Image, color: "#d97706" },
             { label: "QA promedio batch 01–10", value: "9.24", sub: "Objetivo ≥ 9.5", icon: BarChart3, color: "#0d9488" },
-            { label: "Aprobadas", value: "6 / 10", sub: "Batch 01–10", icon: CheckCircle2, color: "#059669" },
-            { label: "Riesgos abiertos", value: `${highRisks} altos · ${medRisks} medios`, sub: "Requieren atención", icon: AlertTriangle, color: "#d97706" },
+            { label: "Aprobadas (contenido+QA)", value: "6 / 10", sub: "Batch 01–10", icon: CheckCircle2, color: "#059669" },
+            { label: "Runs reales desde Replit", value: "0", sub: "Próxima acción: Generar pág. 01", icon: Sparkles, color: "#d97706" },
           ].map(s => {
             const Icon = s.icon;
             return (
