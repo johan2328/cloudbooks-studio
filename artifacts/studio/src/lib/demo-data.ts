@@ -2,13 +2,20 @@ import type { AtlasPage, GenerationRun, QAReport, UserActionLog, ContractVersion
 
 /* ─── GitHub cloudbooks-assets ───────────────────────────────────────────── */
 export const GITHUB_REPO    = "johan2328/cloudbooks-assets";
-export const GITHUB_BLOB    = `https://github.com/${GITHUB_REPO}/blob/main`;
 export const GITHUB_RAW     = `https://raw.githubusercontent.com/${GITHUB_REPO}/main`;
-export const GITHUB_MANIFEST= `${GITHUB_BLOB}/MANIFEST.json`;
-export const GITHUB_VA_BASE = `${GITHUB_BLOB}/ai-200/visual-atlas/pages`;
+export const GITHUB_MANIFEST= `${GITHUB_RAW}/MANIFEST.json`;
 export const GITHUB_VA_RAW  = `${GITHUB_RAW}/ai-200/visual-atlas/pages`;
-export const GITHUB_CONTRACT= `${GITHUB_BLOB}/ai-200/visual-atlas/contracts/visual-atlas-v24.md`;
-export const GITHUB_QA_BATCH= `${GITHUB_BLOB}/ai-200/visual-atlas/qa/qa_visual_batch_v23d_final_01_10.md`;
+export const GITHUB_CONTRACT_RAW = `${GITHUB_RAW}/ai-200/visual-atlas/contracts/visual-atlas-v24.md`;
+export const GITHUB_QA_BATCH_RAW = `${GITHUB_RAW}/ai-200/visual-atlas/qa/qa_visual_batch_v23d_final_01_10.md`;
+
+/** URL raw para fetch/imagen — sin redirigir a GitHub */
+export function getRawAssetUrl(path: string) {
+  return `${GITHUB_RAW}/${path}`;
+}
+/** URL blob para abrir en GitHub como fuente secundaria */
+export function getGithubBlobUrl(path: string) {
+  return `https://github.com/${GITHUB_REPO}/blob/main/${path}`;
+}
 
 /* ─── Helpers para OutputPack ────────────────────────────────────────────── */
 function makeSlot(type: AssetType, status: AssetSlotStatus, isDemo: boolean, extra?: Partial<AssetSlot>): AssetSlot {
@@ -17,9 +24,9 @@ function makeSlot(type: AssetType, status: AssetSlotStatus, isDemo: boolean, ext
 
 /* Packs reales versionados en GitHub — Visual Atlas 01-10 */
 function makeGithubOutputPack(page: AtlasPage): OutputPack {
-  const pid      = page.id;
-  const blobPath = `${GITHUB_VA_BASE}/${pid}`;
-  const rawPath  = `${GITHUB_VA_RAW}/${pid}`;
+  const pid     = page.id;
+  const rawBase = `${GITHUB_VA_RAW}/${pid}`;
+  const vaPath  = `ai-200/visual-atlas/pages/${pid}`;
   return {
     pageId: page.id,
     pageNumber: page.pageNumber,
@@ -29,27 +36,32 @@ function makeGithubOutputPack(page: AtlasPage): OutputPack {
     lastGenerationVersion: page.currentVersion,
     slots: {
       preview:   makeSlot("preview",   "real_available", false, {
-        filename:"preview.png", url:`${rawPath}/preview.png`,
-        note:"Preview real · GitHub cloudbooks-assets",
+        filename:"preview.png",
+        url:`${rawBase}/preview.png`,
+        note:`${vaPath}/preview.png`,
       }),
       html:      makeSlot("html",      "real_available", false, {
-        filename:"page.html", url:`${blobPath}/page.html`,
-        note:"HTML real · GitHub cloudbooks-assets",
+        filename:"page.html",
+        url:`${rawBase}/page.html`,
+        note:`${vaPath}/page.html`,
       }),
       png:       makeSlot("png",       "real_available", false, {
-        filename:"upper-art.png", url:`${rawPath}/upper-art.png`,
-        note:"Upper-art PNG real · GitHub cloudbooks-assets",
+        filename:"upper-art.png",
+        url:`${rawBase}/upper-art.png`,
+        note:`${vaPath}/upper-art.png`,
       }),
       pdf:       makeSlot("pdf",       "pending",        false, {
         note:"PDF no existe en el repositorio — pendiente de exportación print-ready",
       }),
       qa_report: makeSlot("qa_report", "real_available", false, {
-        filename:"qa-report.md", url:`${blobPath}/qa-report.md`,
-        note:"QA Report real · GitHub cloudbooks-assets",
+        filename:"qa-report.md",
+        url:`${rawBase}/qa-report.md`,
+        note:`${vaPath}/qa-report.md`,
       }),
       contract:  makeSlot("contract",  "approved",       false, {
-        filename:"visual-atlas-v24.md", url:GITHUB_CONTRACT,
-        note:"Contrato Visual Atlas v24 · GitHub cloudbooks-assets",
+        filename:"visual-atlas-v24.md",
+        url:GITHUB_CONTRACT_RAW,
+        note:"ai-200/visual-atlas/contracts/visual-atlas-v24.md",
       }),
     },
   };
