@@ -46,9 +46,10 @@ function reducer(state: StudioState, action: StudioAction): StudioState {
       const page = state.pages.find(p => p.id === action.pageId);
       if (!page) return state;
       const newVersion = nextVersion(page.currentVersion);
+      const activeModel = action.model ?? "gpt-4o-mini";
       const run: GenerationRun = {
         id: uid(), pageId: action.pageId, type: "full_generation",
-        status: "running", model: action.model ?? "gpt-4o-mini",
+        status: "running", model: activeModel,
         version: newVersion, note: `Generación ${newVersion}`,
         createdAt: now,
       };
@@ -61,7 +62,7 @@ function reducer(state: StudioState, action: StudioAction): StudioState {
         id: uid(), actionType: "generation_started", pageId: action.pageId,
         pageTitle: page.title, pageNumber: page.pageNumber,
         userId: action.userId, userName: action.userName,
-        result: `Run iniciado — modelo ${action.model ?? "gpt-4o-mini"} · ${newVersion}`,
+        result: `Run iniciado — modelo ${activeModel} · ${newVersion}`,
         createdAt: now,
       };
       // Auto-complete after 3s via COMPLETE_GENERATION (caller is responsible)
@@ -72,7 +73,7 @@ function reducer(state: StudioState, action: StudioAction): StudioState {
       const now = nowISO();
       const runs = state.runs.map(r =>
         r.id === action.runId
-          ? { ...r, status: "completed" as const, completedAt: now, promptTokens: Math.floor(Math.random()*2000)+1000, completionTokens: Math.floor(Math.random()*1200)+600 }
+          ? { ...r, status: "completed" as const, completedAt: now, promptTokens: 2100, completionTokens: 950 }
           : r
       );
       const pages = state.pages.map(p =>
@@ -93,15 +94,15 @@ function reducer(state: StudioState, action: StudioAction): StudioState {
       const now = nowISO();
       const page = state.pages.find(p => p.id === action.pageId);
       if (!page) return state;
-      // Simulate QA scores based on page's current state
-      const base = page.qaScore ?? (Math.random() * 10 + 85);
+      // Scores deterministas basados en qaScore conocido — sin Math.random
+      const base = page.qaScore ?? 90;
       const dims = {
-        artDirection: Math.min(100, base + (Math.random()*4-2)),
-        editorialConsistency: Math.min(100, base + (Math.random()*4-2)),
-        readability: Math.min(100, base + (Math.random()*4-2)),
-        technicalAccuracy: Math.min(100, base + (Math.random()*4-2)),
-        density: Math.min(100, base + (Math.random()*4-2)),
-        commercialRisk: Math.min(100, base + (Math.random()*4-2)),
+        artDirection:         Math.round(Math.min(100, base * 1.02) * 10) / 10,
+        editorialConsistency: Math.round(Math.min(100, base * 0.99) * 10) / 10,
+        readability:          Math.round(Math.min(100, base * 1.01) * 10) / 10,
+        technicalAccuracy:    Math.round(Math.min(100, base * 1.03) * 10) / 10,
+        density:              Math.round(Math.min(100, base * 0.98) * 10) / 10,
+        commercialRisk:       Math.round(Math.min(100, base * 1.01) * 10) / 10,
         total: 0,
       };
       dims.total = (dims.artDirection + dims.editorialConsistency + dims.readability + dims.technicalAccuracy + dims.density + dims.commercialRisk) / 6;
@@ -173,11 +174,11 @@ function reducer(state: StudioState, action: StudioAction): StudioState {
       const newVersion = nextVersion(page.currentVersion);
       const run: GenerationRun = {
         id: uid(), pageId: action.pageId, type: "selective_regeneration",
-        status: "completed", model: "gpt-4o", version: newVersion,
+        status: "completed", model: "gpt-4o-mini", version: newVersion,
         note: `Regeneración selectiva ${newVersion}`,
         createdAt: now, completedAt: now,
-        promptTokens: Math.floor(Math.random()*800)+400,
-        completionTokens: Math.floor(Math.random()*500)+300,
+        promptTokens: 650,
+        completionTokens: 420,
       };
       const pages = state.pages.map(p =>
         p.id === action.pageId ? { ...p, status: "qa_pending" as const, currentVersion: newVersion } : p
@@ -418,7 +419,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "EXECUTE_GROUNDING", pageId, ...currentUser });
   }, []);
 
-  const startGeneration = useCallback((pageId: string, model = "gpt-4o") => {
+  const startGeneration = useCallback((pageId: string, model = "gpt-4o-mini") => {
     dispatch({ type: "START_GENERATION", pageId, model, ...currentUser });
     // Simulate async completion after 3.5s
     const runId = uid();

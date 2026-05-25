@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -45,6 +45,13 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+/* Paths que pertenecen al Production Studio (requieren StudioProvider) */
+const STUDIO_PREFIXES = [
+  "/studio", "/biblioteca", "/generacion", "/qa", "/exportacion",
+  "/contrato", "/estandares", "/actividad", "/conectores", "/assets",
+  "/contenido", "/contenido-base", "/catalogo", "/azure", "/ai-200",
+];
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -141,21 +148,43 @@ function Router() {
   );
 }
 
+/**
+ * Monta StudioProvider para rutas del Production Studio,
+ * CartProvider + CartPanel para el portal comercial.
+ * Los dos contextos no se mezclan.
+ */
+function SectionProviders() {
+  const [location] = useLocation();
+  const isStudio = STUDIO_PREFIXES.some(
+    p => location === p || location.startsWith(p + "/"),
+  );
+
+  if (isStudio) {
+    return (
+      <StudioProvider>
+        <Router />
+      </StudioProvider>
+    );
+  }
+
+  return (
+    <CartProvider>
+      <Router />
+      <CartPanel />
+    </CartProvider>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <StudioProvider>
-          <CartProvider>
-            <TooltipProvider>
-              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                <Router />
-              </WouterRouter>
-              <Toaster />
-              <CartPanel />
-            </TooltipProvider>
-          </CartProvider>
-        </StudioProvider>
+        <TooltipProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <SectionProviders />
+          </WouterRouter>
+          <Toaster />
+        </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

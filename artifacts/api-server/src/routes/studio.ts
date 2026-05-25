@@ -4,19 +4,17 @@ import { existsSync } from "fs";
 import { join } from "path";
 import OpenAI from "openai";
 
-const router = Router();
-
-/* ══════════════════════════════════════════════════════════════════════════
-   MODEL CONFIG — centralizado en config/generation.ts
-   Estándares Editoriales · Políticas de generación
-   ══════════════════════════════════════════════════════════════════════════ */
+import type { VisualAtlasPageData } from "../lib/visual-atlas-types";
+import { getSeed } from "../data/page-seeds";
 import {
   TEXT_MODEL, IMAGE_MODEL, IMAGE_QUALITY,
   BLOCK_LEGACY_IMG_MODEL, TEMPLATE_VERSION,
 } from "../config/generation";
+
+const router = Router();
+
 const ALLOW_HIGH_QUALITY = false as const;
 const GUARDRAIL_LABEL    = "high_quality_blocked_gpt_image_2_medium_only" as const;
-/* ══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Rutas de salida ──────────────────────────────────────────────────────*/
 function studioPublicDir(): string {
@@ -27,81 +25,16 @@ function pageOutputDir(pageId: string): string {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   TIPO: VisualAtlasPageData
-   Estructura de datos del golden master — la plantilla NO recibe texto libre.
+   PROMPT IMAGEN — parametrizado desde VisualAtlasPageData
+   Sin strings hardcodeados por página. Cada seed define sus módulos.
    ══════════════════════════════════════════════════════════════════════════ */
-interface TrapItem {
-  wrong: string;       // la creencia incorrecta
-  correction: string;  // la corrección real
-}
-interface AutocheckData {
-  question: string;
-  options: string[];   // 4 opciones A-D
-  correctOption: number; // índice 0-based
-  explanation: string;
-  discardNotes: string[];
-}
-interface VisualAtlasPageData {
-  domainLabel:        string;
-  pageNumber:         string;   // "01"
-  totalPages:         number;   // 61
-  batchLabel:         string;   // "Batch 01"
-  title:              string;
-  subtitle:           string;
-  context:            string;
-  guideQuestion:      string;
-  upperVisualSrc:     string;   // ruta relativa a la imagen o "placeholder"
-  upperVisualAlt:     string;
-  traps:              TrapItem[];
-  autocheck:          AutocheckData;
-  contractVersion:    string;
-}
+function buildImagePrompt(data: VisualAtlasPageData): string {
+  const modulesText = data.visualModules
+    .map(m => `Module ${m.num}: ${m.title} — ${m.description}`)
+    .join(". ");
 
-/* ══════════════════════════════════════════════════════════════════════════
-   SEED DATA — página 01 (golden master content)
-   ══════════════════════════════════════════════════════════════════════════ */
-const PAGE_01_DATA: VisualAtlasPageData = {
-  domainLabel:     "Dominio 1 — Soluciones contenerizadas en Azure",
-  pageNumber:      "01",
-  totalPages:      61,
-  batchLabel:      "Batch 01",
-  title:           "Azure Container Registry",
-  subtitle:        "Arquitectura y Tiers",
-  context:         "Azure Container Registry (ACR) es el registro privado de imágenes de contenedor en Azure, base para despliegues en AKS, App Service y Container Apps. Conoce sus tiers para seleccionar el adecuado según escenarios de desarrollo, producción y alta disponibilidad. Lee las señales: geo-replicación, Private Endpoint y digest suelen decidir más que el nombre del SKU.",
-  guideQuestion:   "¿Cuál tier de ACR es adecuado para producción con geo-replicación y private endpoints?",
-  upperVisualSrc:  "placeholder",
-  upperVisualAlt:  "Diagrama de arquitectura y tiers de Azure Container Registry",
-  traps: [
-    {
-      wrong:      "Basic es suficiente para producción",
-      correction: "Basic carece de Private Endpoints y geo-replicación. Para producción con seguridad de red y HA global se requiere Premium.",
-    },
-    {
-      wrong:      "La tag :latest siempre es segura e inmutable",
-      correction: "La tag :latest es mutable — puede apuntar a imágenes distintas en cada push. Usa el digest SHA256 para referencias inmutables.",
-    },
-    {
-      wrong:      "Geo-replication y zone redundancy son equivalentes",
-      correction: "Geo-replication replica entre regiones (latencia global). Zone redundancy protege contra fallas de zonas dentro de una región. Son independientes y complementarios.",
-    },
-  ],
-  autocheck: {
-    question:      "¿Qué tier de ACR permite geo-replication y private endpoints simultáneamente?",
-    options:       ["A. Basic", "B. Standard", "C. Premium", "D. Enterprise"],
-    correctOption: 2,
-    explanation:   "Premium es el único tier con geo-replication activa-activa y soporte de Private Endpoints/Private Link para acceso de red privado.",
-    discardNotes:  [
-      "A descartada: Basic no tiene Private Endpoints ni geo-replication.",
-      "B descartada: Standard tiene Content Trust pero no geo-replication.",
-      "D descartada: No existe tier Enterprise en ACR.",
-    ],
-  },
-  contractVersion: TEMPLATE_VERSION,
-};
-
-const PAGE_SEEDS: Record<string, VisualAtlasPageData> = {
-  "01": PAGE_01_DATA,
-};
+  return `Light editorial Azure certification atlas upper block, white background, professional technical infographic, ${data.visualModules.length} numbered modules, fits 728x494 landscape area, ${data.domainLabel} theme. ${modulesText}. Clean Azure-like vector iconography, navy/blue/teal/orange accents, sparse readable Spanish labels, premium book infographic style. No dark background, no dashboard UI, no tiny dense tables, no traps section, no autocheck section, no footer, no full page, no marketing hero.`;
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    GOLDEN MASTER v24 — renderVisualAtlasPage(data)
@@ -545,16 +478,9 @@ function runStructuralQa(html: string, data: VisualAtlasPageData): StructuralQaR
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   PROMPT IMAGEN — solo para el bloque visual superior (gpt-image-2 medium)
-   ══════════════════════════════════════════════════════════════════════════ */
-function buildImagePrompt(): string {
-  return `Light editorial Azure certification atlas upper block, white background, professional technical infographic, four numbered modules 01-04, fits 728x494 landscape area, Azure Container Registry theme. Module 01: Que es ACR with developer pipeline to Azure Container Registry and AKS/App Service/Container Apps. Module 02: Tiers ACR comparison Basic Standard Premium with storage/security/geo/private endpoint cues. Module 03: Arquitectura interna with registry, repository, image, digest SHA256 immutable, tag mutable. Module 04: Geo-replicacion with map/regions and zone redundancy cue. Clean Azure-like vector iconography, navy/blue/teal/orange accents, sparse readable Spanish labels, premium book infographic style. No dark background, no dashboard UI, no tiny dense tables, no traps section, no autocheck section, no footer, no full page, no marketing hero.`;
-}
-
-/* ══════════════════════════════════════════════════════════════════════════
    POST /api/studio/generate-visual-atlas-page
    Flujo:
-   1. Cargar seed data del golden master
+   1. Resolver seed data desde data/page-seeds/
    2. Intentar generar imagen con gpt-image-2 medium (guardrail activo)
    3. Ensamblar HTML con renderVisualAtlasPage() — plantilla cerrada
    4. QA estructural (sin IA)
@@ -568,13 +494,19 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
   }
 
   const { pageId } = body;
-  const seedData = PAGE_SEEDS[pageId];
-  if (!seedData) {
+  const seedResult = getSeed(pageId);
+
+  if (!seedResult.found) {
     res.status(404).json({
-      error: `Seed data no encontrado para pageId '${pageId}'. Páginas disponibles: ${Object.keys(PAGE_SEEDS).join(", ")}`,
+      error: `Seed no disponible para pageId '${pageId}'. Esta página aún no está lista para generación.`,
+      code: "seed_missing",
+      availableSeeds: seedResult.availableSeeds,
+      message: "Contenido no migrado — agrega el seed en data/page-seeds/${pageId}.ts",
     });
     return;
   }
+
+  const seedData = seedResult.data;
 
   const hasKey = !!process.env.OPENAI_API_KEY;
   if (!hasKey) {
@@ -589,17 +521,17 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
     req.log.info({ pageId }, "Legacy image model check: gpt-image-1 bloqueado — usando gpt-image-2");
   }
 
-  const startedAt  = Date.now();
-  const openai     = new OpenAI();
-  const outDir     = pageOutputDir(pageId);
+  const startedAt = Date.now();
+  const openai    = new OpenAI();
+  const outDir    = pageOutputDir(pageId);
   await mkdir(outDir, { recursive: true });
 
   req.log.info({ pageId, textModel: TEXT_MODEL, imageModel: IMAGE_MODEL }, "Starting Visual Atlas generation — golden master template");
 
   /* ── STEP 1: Generar imagen del bloque visual superior ─────────────────── */
-  let imageGenerated  = false;
-  let imagePath       = "placeholder";
-  let imageError      = "";
+  let imageGenerated = false;
+  let imagePath      = "placeholder";
+  let imageError     = "";
 
   if (ALLOW_HIGH_QUALITY) {
     req.log.error({ pageId }, "GUARDRAIL VIOLATION: ALLOW_HIGH_QUALITY is true — abortando");
@@ -609,7 +541,7 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
 
       const imgResponse = await openai.images.generate({
         model:   IMAGE_MODEL,
-        prompt:  buildImagePrompt(),
+        prompt:  buildImagePrompt(seedData),
         n:       1,
         size:    "1024x1024",
         quality: IMAGE_QUALITY,
@@ -639,10 +571,7 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
   }
 
   /* ── STEP 2: Ensamblar HTML con plantilla cerrada ────────────────────── */
-  const pageData: VisualAtlasPageData = {
-    ...seedData,
-    upperVisualSrc: imagePath,
-  };
+  const pageData: VisualAtlasPageData = { ...seedData, upperVisualSrc: imagePath };
 
   req.log.info({ pageId, hasImage: imageGenerated }, "Assembling HTML from golden master template");
   const pageHtml = renderVisualAtlasPage(pageData);
@@ -655,45 +584,39 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
   const durationMs  = Date.now() - startedAt;
 
   /* ── STEP 4: Guardar outputs ─────────────────────────────────────────── */
-  // page.html — layout golden master ensamblado
   await writeFile(join(outDir, "page.html"), pageHtml, "utf-8");
 
-  // metadata.json
   const metadata = {
     pageId,
-    title:           `${pageData.title} — ${pageData.subtitle}`,
-    domain:          pageData.domainLabel,
-    batch:           pageData.batchLabel,
-    certificationId: "ai-200",
-    contractVersion: TEMPLATE_VERSION,
+    title:            `${pageData.title} — ${pageData.subtitle}`,
+    domain:           pageData.domainLabel,
+    batch:            pageData.batchLabel,
+    certificationId:  "ai-200",
+    contractVersion:  TEMPLATE_VERSION,
     generatedAt,
     templateApproach: "golden_master_v24",
-    textModel:       TEXT_MODEL,
-    imageModel:      imageGenerated ? IMAGE_MODEL : "none",
-    imageQuality:    IMAGE_QUALITY,
+    textModel:        TEXT_MODEL,
+    imageModel:       imageGenerated ? IMAGE_MODEL : "none",
+    imageQuality:     IMAGE_QUALITY,
     imageGenerated,
-    costGuardrail:   GUARDRAIL_LABEL,
-    generationMode:  imageGenerated ? "openai_image" : "placeholder_image",
-    imageError:      imageError || null,
-    qaStructural:    qa,
+    costGuardrail:    GUARDRAIL_LABEL,
+    generationMode:   imageGenerated ? "openai_image" : "placeholder_image",
+    imageError:       imageError || null,
+    qaStructural:     qa,
     durationMs,
   };
   await writeFile(join(outDir, "metadata.json"), JSON.stringify(metadata, null, 2), "utf-8");
 
-  // qa-report.md en formato legible
-  const qaLines = qa.checks.map(c => `- ${c.ok ? "✓" : "✗"} ${c.name}`).join("\n");
-
-  // Scores honestos diferenciados según si hay imagen real o placeholder
-  const artScore       = imageGenerated ? 7 : 5;
-  const editScore      = imageGenerated ? 7 : 5;
-  const readScore      = imageGenerated ? 8 : 8;
-  const techScore      = 10;
-  const densityScore   = imageGenerated ? 7 : 4;
-  const riskScore      = 10;
-  const avgScore       = Math.round((artScore + editScore + readScore + techScore + densityScore + riskScore) / 6);
-
-  const qaVerdict      = imageGenerated ? "needs_visual_review" : "needs_revision";
-  const verdictLabel   = imageGenerated
+  const qaLines    = qa.checks.map(c => `- ${c.ok ? "✓" : "✗"} ${c.name}`).join("\n");
+  const artScore   = imageGenerated ? 7 : 5;
+  const editScore  = imageGenerated ? 7 : 5;
+  const readScore  = imageGenerated ? 8 : 8;
+  const techScore  = 10;
+  const densScore  = imageGenerated ? 7 : 4;
+  const riskScore  = 10;
+  const avgScore   = Math.round((artScore + editScore + readScore + techScore + densScore + riskScore) / 6);
+  const qaVerdict  = imageGenerated ? "needs_visual_review" : "needs_revision";
+  const verdictLbl = imageGenerated
     ? "⚠ Requiere revisión visual humana"
     : "🔴 BLOQUEADO: upper visual no premium";
 
@@ -704,14 +627,14 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
 **Template:** Golden Master Visual Atlas ${TEMPLATE_VERSION}
 **Modelo imagen:** ${imageGenerated ? IMAGE_MODEL + " " + IMAGE_QUALITY : "placeholder"}
 **Upper visual:** ${imageGenerated ? "upper_visual_real" : "upper_visual_placeholder"}
-**Veredicto:** ${verdictLabel}
+**Veredicto:** ${verdictLbl}
 
 ## Scores (${avgScore}/10 promedio)
 - Dirección de arte: **${artScore}/10**
 - Consistencia editorial: **${editScore}/10**
 - Legibilidad: **${readScore}/10**
 - Precisión técnica: **${techScore}/10**
-- Densidad útil: **${densityScore}/10**
+- Densidad útil: **${densScore}/10**
 - Riesgo comercial: **${riskScore}/10**
 
 ## Checks estructurales
@@ -719,7 +642,7 @@ ${qaLines}
 
 ## Observaciones
 - Layout golden master v24 ensamblado deterministicamente
-- Contenido editorial validado manualmente para página 01
+- Contenido editorial validado manualmente para página ${pageId}
 - Upper visual: ${imageGenerated ? "generada con " + IMAGE_MODEL + " medium — requiere revisión visual humana para aprobación" : "placeholder — BLOQUEADO para aprobación editorial"}
 ${!imageGenerated ? "- Acción requerida: Generar upper visual premium con gpt-image-2 medium" : "- Acción requerida: Revisar calidad del upper visual antes de aprobar"}
 `;
@@ -729,7 +652,7 @@ ${!imageGenerated ? "- Acción requerida: Generar upper visual premium con gpt-i
   req.log.info({ pageId, durationMs, imageGenerated, qaScore: qa.score }, "Generation complete");
 
   res.status(201).json({
-    success: true,
+    success:         true,
     pageId,
     durationMs,
     templateVersion: TEMPLATE_VERSION,
@@ -752,6 +675,60 @@ ${!imageGenerated ? "- Acción requerida: Generar upper visual premium con gpt-i
   });
 });
 
+/* ── POST /api/studio/approve-page/:pageId ───────────────────────────────
+   Aprobación real persistida en filesystem (approval.json).
+   Bloquea si el output es placeholder (no es imagen real de gpt-image-2).
+   ─────────────────────────────────────────────────────────────────────── */
+router.post("/studio/approve-page/:pageId", async (req, res): Promise<void> => {
+  const { pageId } = req.params;
+  const outDir     = pageOutputDir(pageId);
+  const metaPath   = join(outDir, "metadata.json");
+
+  if (!existsSync(metaPath)) {
+    res.status(400).json({
+      error: "Sin output generado para esta página. Genera primero.",
+      code:  "no_output",
+    });
+    return;
+  }
+
+  let generationMode: string | null = null;
+  try {
+    const raw      = await readFile(metaPath, "utf-8");
+    const m        = JSON.parse(raw) as { generationMode?: string };
+    generationMode = m.generationMode ?? null;
+  } catch {
+    res.status(500).json({ error: "metadata.json corrupto o ilegible" });
+    return;
+  }
+
+  if (generationMode !== "openai_image") {
+    res.status(400).json({
+      error:          "Aprobación bloqueada: el upper visual no es una imagen real de gpt-image-2 medium.",
+      code:           "approval_blocked_placeholder",
+      generationMode: generationMode ?? "unknown",
+    });
+    return;
+  }
+
+  const approval = {
+    pageId,
+    approvedAt: new Date().toISOString(),
+    generationMode,
+    approvedByClient: (req.headers["x-user-id"] as string | undefined) ?? "unknown",
+  };
+
+  await writeFile(join(outDir, "approval.json"), JSON.stringify(approval, null, 2), "utf-8");
+
+  req.log.info({ pageId, approvedAt: approval.approvedAt }, "Page approved — approval.json written");
+
+  res.status(200).json({
+    success:    true,
+    pageId,
+    approvedAt: approval.approvedAt,
+  });
+});
+
 /* ── GET /api/studio/output-status/:pageId ───────────────────────────────*/
 router.get("/studio/output-status/:pageId", async (req, res): Promise<void> => {
   const { pageId } = req.params;
@@ -765,12 +742,14 @@ router.get("/studio/output-status/:pageId", async (req, res): Promise<void> => {
     upperVisual:  exists("upper-art.png"),
     previewSvg:   exists("preview.svg"),
     previewPng:   exists("preview.png"),
+    approved:     exists("approval.json"),
   };
 
   const hasAny = Object.values(files).some(Boolean);
   let generationMode: "openai_image" | "placeholder_image" | "fallback_html" | "none" = "none";
   let generatedAt: string | null = null;
   let templateApproach: string | null = null;
+  let approvedAt: string | null = null;
 
   if (files.metadata) {
     try {
@@ -789,6 +768,14 @@ router.get("/studio/output-status/:pageId", async (req, res): Promise<void> => {
     } catch { /* metadata corrupto */ }
   }
 
+  if (files.approved) {
+    try {
+      const raw = await readFile(join(outDir, "approval.json"), "utf-8");
+      const a = JSON.parse(raw) as { approvedAt?: string };
+      approvedAt = a.approvedAt ?? null;
+    } catch { /* approval.json corrupto */ }
+  }
+
   const imagePath = files.upperVisual
     ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/upper-art.png`
     : files.previewPng
@@ -804,6 +791,7 @@ router.get("/studio/output-status/:pageId", async (req, res): Promise<void> => {
     generationMode,
     templateApproach,
     generatedAt,
+    approvedAt,
     htmlPath:        files.html ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/page.html` : null,
     previewPath:     imagePath,
   });
@@ -840,15 +828,13 @@ router.get("/studio/qa-report/:pageId", async (req, res): Promise<void> => {
       }
     }
 
-    const isApproved = /APROBADO|approved/i.test(raw);
-    const verdict    = isApproved ? "approved" : "needs_revision";
-
+    const isApproved  = /APROBADO|approved/i.test(raw);
+    const verdict     = isApproved ? "approved" : "needs_revision";
     const observations = raw
       .split("\n")
       .filter(l => /^[\-·•]\s+.{10,}/.test(l.trim()))
       .map(l => l.replace(/^[\-·•]\s+/, "").trim())
       .slice(0, 8);
-
     const redTeamLog = raw
       .split("\n")
       .filter(l => /[✓✗⚠]/.test(l))
@@ -859,6 +845,29 @@ router.get("/studio/qa-report/:pageId", async (req, res): Promise<void> => {
   } catch (err) {
     req.log.error({ err }, "Error parsing qa-report.md");
     res.status(500).json({ error: "Failed to parse QA report" });
+  }
+});
+
+/* ── GET /api/studio/seed-status/:pageId ────────────────────────────────
+   Informa si una página tiene seed disponible para generación.
+   ─────────────────────────────────────────────────────────────────────── */
+router.get("/studio/seed-status/:pageId", (req, res): void => {
+  const { pageId } = req.params;
+  const result = getSeed(pageId);
+  if (result.found) {
+    res.json({
+      pageId,
+      ready:          true,
+      title:          result.data.title,
+      availableSeeds: [pageId],
+    });
+  } else {
+    res.json({
+      pageId,
+      ready:          false,
+      reason:         result.reason,
+      availableSeeds: result.availableSeeds,
+    });
   }
 });
 

@@ -23,9 +23,11 @@ interface OutputStatus {
   hasOutput: boolean;
   generationMode: GenerationMode;
   generatedAt: string | null;
+  approvedAt: string | null;
   files: {
     html: boolean; metadata: boolean; qaReport: boolean;
     upperVisual: boolean; previewPng: boolean; previewSvg: boolean;
+    approved: boolean;
   };
   htmlPath: string | null;
   previewPath: string | null;
@@ -51,6 +53,7 @@ const DEFECTS = [
 ];
 
 function getToken() { return localStorage.getItem("studio_token") ?? ""; }
+function authHdr() { return { Authorization: `Bearer ${getToken()}` }; }
 
 export default function QAPage() {
   const [, params] = useRoute("/qa/:id");
@@ -74,14 +77,14 @@ export default function QAPage() {
     setLoadingStatus(true);
     setRealQA(null);
     fetch(`/api/studio/output-status/${pageNum}`, {
-      headers: { Authorization: `Bearer ${getToken()}` },
+      headers: authHdr(),
     })
       .then(r => r.ok ? r.json() : null)
       .then((d: OutputStatus | null) => {
         setOutputStatus(d);
         if (d?.hasOutput && d.files.qaReport) {
           return fetch(`/api/studio/qa-report/${pageNum}`, {
-            headers: { Authorization: `Bearer ${getToken()}` },
+            headers: authHdr(),
           }).then(r => r.ok ? r.json() : null).then(setRealQA);
         }
         return undefined;
@@ -90,11 +93,55 @@ export default function QAPage() {
       .finally(() => setLoadingStatus(false));
   }, [pageNum]);
 
-  function handleApprove() {
+  /**
+   * Aprobación real: primero valida contra el servidor (que chequea
+   * generationMode === "openai_image" y escribe approval.json).
+   * Solo actualiza el estado local después de confirmación del servidor.
+   * El gate approvalBlocked también se verifica aquí — no solo en la UI.
+   */
+  async function handleApprove() {
+    if (approvalBlocked) {
+      toast({
+        title: "Aprobación bloqueada",
+        description: "El upper visual es un placeholder. Genera imagen real con gpt-image-2 medium primero.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setApproving(true);
-    approvePage(pageNum);
-    toast({ title: "Página aprobada", description: `Pág. ${pageNum} lista para exportación` });
-    setTimeout(() => setApproving(false), 800);
+    try {
+      const res = await fetch(`/api/studio/approve-page/${pageNum}`, {
+        method: "POST",
+        headers: authHdr(),
+      });
+
+      if (!res.ok) {
+        const err = await res.json() as { error: string };
+        toast({
+          title: "Aprobación rechazada por el servidor",
+          description: err.error ?? `Error ${res.status}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const data = await res.json() as { approvedAt: string };
+      approvePage(pageNum);
+      toast({
+        title: "Página aprobada ✓",
+        description: `Pág. ${pageNum} aprobada · ${data.approvedAt.slice(0, 10)} · lista para exportación`,
+      });
+      setOutputStatus(prev => prev ? { ...prev, files: { ...prev.files, approved: true }, approvedAt: data.approvedAt } : prev);
+    } catch {
+      toast({
+        title: "Error de conexión",
+        description: "No se pudo conectar al servidor de aprobación.",
+        variant: "destructive",
+      });
+    } finally {
+      setApproving(false);
+    }
   }
 
   function handleRevision() {
@@ -104,10 +151,11 @@ export default function QAPage() {
     toast({ title: "Corrección solicitada", description: `Pág. ${pageNum} devuelta para corrección` });
   }
 
-  const hasOutput = outputStatus?.hasOutput === true;
-  const isRealVisual = outputStatus?.generationMode === "openai_image";
-  const isPlaceholder = !isRealVisual && hasOutput;
+  const hasOutput      = outputStatus?.hasOutput === true;
+  const isRealVisual   = outputStatus?.generationMode === "openai_image";
+  const isPlaceholder  = !isRealVisual && hasOutput;
   const approvalBlocked = !isRealVisual;
+  const serverApproved = outputStatus?.files.approved === true;
 
   return (
     <Layout title={`QA · Pág. ${pageNum}`}>
@@ -169,14 +217,14 @@ export default function QAPage() {
             ) : (
               /* ── Con output real ── */
               <>
-                {/* Bloque de bloqueo — visible cuando hay fallback */}
+                {/* Bloque de bloqueo — visible cuando hay placeholder */}
                 {isPlaceholder && (
                   <div className="bg-red-950/30 border border-red-500/30 rounded-sm px-4 py-3 flex items-start gap-3">
                     <XCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-[10px] font-bold text-red-300">Bloqueado: upper visual no premium</p>
                       <p className="text-[9px] text-red-400/70 mt-0.5">
-                        El upper visual actual es un placeholder. Aprobación bloqueada hasta generar imagen real con gpt-image-2 medium.
+                        El upper visual es un placeholder. Aprobación bloqueada hasta generar imagen real con gpt-image-2 medium.
                       </p>
                     </div>
                     <button onClick={() => setLocation("/generacion")}
@@ -190,10 +238,15 @@ export default function QAPage() {
                 <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
                   <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">Siguiente acción</p>
                   <div className="flex items-center gap-2 flex-wrap">
-                    {page?.status === "approved" ? (
+                    {serverApproved ? (
                       <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-sm">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-[10px] font-bold text-emerald-300">Página aprobada</span>
+                        <div>
+                          <span className="text-[10px] font-bold text-emerald-300">Página aprobada</span>
+                          {outputStatus.approvedAt && (
+                            <span className="text-[8px] text-emerald-400/50 ml-2">{outputStatus.approvedAt.slice(0, 10)}</span>
+                          )}
+                        </div>
                       </div>
                     ) : approvalBlocked ? (
                       <div className="flex items-center gap-2">
@@ -263,7 +316,7 @@ export default function QAPage() {
                   </div>
                   {outputStatus.htmlPath ? (
                     <div className="relative w-full overflow-hidden rounded-sm border border-white/[0.06] bg-white"
-                      style={{ paddingBottom: "150%" /* 768:1152 = 2:3 */ }}>
+                      style={{ paddingBottom: "150%" }}>
                       <iframe
                         src={outputStatus.htmlPath}
                         className="absolute inset-0 w-full h-full border-0 origin-top-left"
@@ -310,14 +363,21 @@ export default function QAPage() {
                   )}
                   {!isRealVisual && (
                     <p className="mt-2 text-[8px] text-red-400/60">
-                      Dimensiones incorrectas o asset no generado. Regenerar con gpt-image-2 medium para obtener upper visual premium.
+                      Upper visual es placeholder. Regenerar con gpt-image-2 medium para obtener imagen premium.
                     </p>
                   )}
                 </div>
 
-                {/* QA scores del reporte real */}
+                {/* QA scores del reporte real del servidor */}
                 <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
-                  <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">Score por dimensión</p>
+                  <div className="flex items-center gap-2 mb-3">
+                    <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Score por dimensión</p>
+                    {realQA && (
+                      <span className="text-[7px] px-1.5 py-px rounded-sm border border-teal-500/20 bg-teal-500/8 text-teal-400/70 font-bold">
+                        QA SERVIDOR
+                      </span>
+                    )}
+                  </div>
                   {realQA ? (
                     <div className="space-y-2.5">
                       {QA_DIMS.map(dim => {
@@ -358,7 +418,7 @@ export default function QAPage() {
                   ) : (
                     <div className="py-4 text-center">
                       <XCircle className="w-5 h-5 text-white/10 mx-auto mb-2" />
-                      <p className="text-[9px] text-white/25">QA report no disponible desde API</p>
+                      <p className="text-[9px] text-white/25">QA report no disponible — genera la página primero</p>
                     </div>
                   )}
                 </div>

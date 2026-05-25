@@ -185,7 +185,7 @@ export default function Generacion() {
             formato libro 768×1152 · estructura editorial local v24 · la IA no redesigna la página
           </span>
           <span className="ml-auto text-[7px] font-mono text-teal-500/40">
-            {keyStatus?.costGuardrail ?? GUARDRAIL_LABEL_DISPLAY}
+            {keyStatus?.costGuardrail ?? "high_quality_blocked"}
           </span>
         </div>
 
@@ -425,4 +425,3 @@ interface ConfigRow {
   color: string;
 }
 
-const GUARDRAIL_LABEL_DISPLAY = "high_quality_blocked_gpt_image_2_medium_only";
