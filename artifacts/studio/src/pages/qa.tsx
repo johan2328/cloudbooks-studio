@@ -5,7 +5,7 @@ import { cn, scoreColorDark } from "@/lib/utils";
 import { useStudio } from "@/lib/studio-store";
 import {
   CheckCircle2, RotateCcw, AlertTriangle, ChevronLeft, ChevronRight,
-  Shield, Loader2, ExternalLink, XCircle,
+  Shield, Loader2, ExternalLink, XCircle, Download, FileText,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -236,7 +236,7 @@ export default function QAPage() {
 
                 {/* Acción principal */}
                 <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
-                  <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">Siguiente acción</p>
+                  <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">Decisión editorial</p>
                   <div className="flex items-center gap-2 flex-wrap">
                     {serverApproved ? (
                       <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-sm">
@@ -267,10 +267,6 @@ export default function QAPage() {
                       className="flex items-center gap-1.5 h-8 px-2.5 border border-white/10 rounded-sm text-[10px] text-white/40 hover:text-amber-400 hover:border-amber-500/30 transition-all">
                       <AlertTriangle className="w-3 h-3" />Solicitar corrección
                     </button>
-                    <button onClick={() => setLocation("/generacion")}
-                      className="flex items-center gap-1.5 h-8 px-2.5 border border-white/10 rounded-sm text-[10px] text-white/40 hover:text-white/70 hover:border-white/20 transition-all ml-auto">
-                      <RotateCcw className="w-3 h-3" />Regenerar completa
-                    </button>
                   </div>
 
                   {showRevision && (
@@ -295,6 +291,30 @@ export default function QAPage() {
                   )}
                 </div>
 
+                {/* Acciones de output — T6 */}
+                {outputStatus.htmlPath && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <a href={outputStatus.htmlPath} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-2 h-9 px-4 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 text-white text-[10px] font-bold rounded-sm transition-all shadow-sm">
+                      <ExternalLink className="w-3.5 h-3.5" />Abrir tamaño real
+                    </a>
+                    <a href={outputStatus.htmlPath} download={`page-${pageNum}.html`}
+                      className="flex items-center gap-1.5 h-9 px-3 bg-white/[0.05] hover:bg-white/[0.10] border border-white/[0.12] text-white/60 hover:text-white/90 text-[9px] font-bold rounded-sm transition-all">
+                      <Download className="w-3 h-3" />Descargar HTML
+                    </a>
+                    {outputStatus.files.qaReport && (
+                      <a href={`/api/studio/qa-report/${pageNum}`} target="_blank" rel="noreferrer"
+                        className="flex items-center gap-1.5 h-9 px-3 border border-white/[0.08] text-white/35 hover:text-white/60 text-[9px] font-medium rounded-sm transition-all">
+                        <FileText className="w-3 h-3" />QA Report
+                      </a>
+                    )}
+                    <button onClick={() => setLocation("/generacion")}
+                      className="flex items-center gap-1.5 h-9 px-3 border border-white/[0.07] text-white/20 hover:text-amber-400/60 hover:border-amber-500/20 text-[9px] font-medium rounded-sm transition-all ml-auto">
+                      <RotateCcw className="w-3 h-3" />Regenerar
+                    </button>
+                  </div>
+                )}
+
                 {/* Preview página completa */}
                 <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
                   <div className="flex items-center gap-2 mb-3">
@@ -307,12 +327,6 @@ export default function QAPage() {
                     )}>
                       {isRealVisual ? "UPPER VISUAL REAL" : "UPPER VISUAL PLACEHOLDER"}
                     </span>
-                    {outputStatus.htmlPath && (
-                      <a href={outputStatus.htmlPath} target="_blank" rel="noreferrer"
-                        className="ml-auto flex items-center gap-1 text-[8px] text-blue-400/60 hover:text-blue-400 transition-colors">
-                        <ExternalLink className="w-2.5 h-2.5" />Abrir tamaño real
-                      </a>
-                    )}
                   </div>
                   {outputStatus.htmlPath ? (
                     <div className="relative w-full overflow-hidden rounded-sm border border-white/[0.06] bg-white"

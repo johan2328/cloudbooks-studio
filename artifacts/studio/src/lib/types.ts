@@ -114,6 +114,7 @@ export interface GenerationRun {
   completedAt?: string;
   promptTokens?: number;
   completionTokens?: number;
+  demoSeed?: boolean;  // true = run de inicialización (configuración obsoleta), se oculta por defecto
 }
 
 export interface QADimensions {

@@ -2,7 +2,7 @@ import { useState } from "react";
 import Layout from "@/components/Layout";
 import { cn, statusColorDark, statusLabel, formatDateTime } from "@/lib/utils";
 import { useStudio } from "@/lib/studio-store";
-import { Download, FileText, Image, BookOpen, Globe, Package, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Download, FileText, Image, BookOpen, Globe, Package, AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { ExportAsset } from "@/lib/types";
 
@@ -116,6 +116,16 @@ export default function Exportacion() {
               <Package className="w-3 h-3" />Book Pack ({all.length})
             </button>
           </div>
+        </div>
+
+        {/* Banner datos demo */}
+        <div className="bg-amber-500/[0.06] border-b border-amber-500/20 px-6 py-2 flex items-center gap-2 shrink-0">
+          <AlertTriangle className="w-3 h-3 text-amber-400/60 shrink-0" />
+          <span className="text-[8px] text-amber-400/50 leading-relaxed">
+            <span className="font-bold text-amber-400/70">Estados demo:</span> Los estados de aprobación vienen del store local (localStorage).
+            Solo páginas con <span className="font-mono">approval.json</span> en disco son aprobaciones reales del servidor.
+            Página 01 es la única con output real actualmente disponible.
+          </span>
         </div>
 
         <div className="flex-1 overflow-y-auto">

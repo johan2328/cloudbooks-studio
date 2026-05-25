@@ -389,7 +389,7 @@ interface StudioContextValue {
   replaceAssetRequest: (pageId: string, assetType: AssetType) => void;
   /* Queries */
   getPage: (pageId: string) => AtlasPage | undefined;
-  getRunsForPage: (pageId: string) => GenerationRun[];
+  getRunsForPage: (pageId: string, includeDemo?: boolean) => GenerationRun[];
   getQAForPage: (pageId: string) => QAReport | undefined;
   getExportsForPage: (pageId: string) => ExportAsset[];
   getOutputPackForPage: (pageId: string) => OutputPack | undefined;
@@ -467,7 +467,11 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const getPage = useCallback((pageId: string) => state.pages.find(p => p.id === pageId), [state.pages]);
-  const getRunsForPage = useCallback((pageId: string) => state.runs.filter(r => r.pageId === pageId), [state.runs]);
+  const getRunsForPage = useCallback(
+    (pageId: string, includeDemo = false) =>
+      state.runs.filter(r => r.pageId === pageId && (includeDemo || !r.demoSeed)),
+    [state.runs],
+  );
   const getQAForPage = useCallback((pageId: string) => state.qaReports.find(r => r.pageId === pageId), [state.qaReports]);
   const getExportsForPage = useCallback((pageId: string) => state.exports.filter(e => e.pageId === pageId), [state.exports]);
   const getOutputPackForPage = useCallback((pageId: string) => state.outputPacks?.find(p => p.pageId === pageId), [state.outputPacks]);

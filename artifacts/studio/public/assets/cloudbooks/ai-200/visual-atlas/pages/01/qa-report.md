@@ -1,7 +1,7 @@
 # QA Report — Página 01
 ## Azure Container Registry — Arquitectura y Tiers
 
-**Generado:** 2026-05-25T05:55:13.140Z
+**Generado:** 2026-05-25T06:28:43.577Z
 **Template:** Golden Master Visual Atlas v24
 **Modelo imagen:** gpt-image-2 medium
 **Upper visual:** upper_visual_real
