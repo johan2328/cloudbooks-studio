@@ -1,0 +1,80 @@
+{
+  "pageId": "01",
+  "title": "Azure Container Registry — Arquitectura y Tiers",
+  "domain": "Dominio 1 — Soluciones contenerizadas en Azure",
+  "batch": "Batch 01",
+  "certificationId": "ai-200",
+  "contractVersion": "v24",
+  "generatedAt": "2026-05-25T05:42:52.856Z",
+  "templateApproach": "golden_master_v24",
+  "textModel": "gpt-4o-mini",
+  "imageModel": "gpt-image-2",
+  "imageQuality": "medium",
+  "imageGenerated": true,
+  "costGuardrail": "high_quality_blocked_gpt_image_2_medium_only",
+  "generationMode": "openai_image",
+  "imageError": null,
+  "qaStructural": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "Dimensiones 768×1152",
+        "ok": true
+      },
+      {
+        "name": "Grid rows 34-198-48-838-34",
+        "ok": true
+      },
+      {
+        "name": "Fondo editorial #edf2f8",
+        "ok": true
+      },
+      {
+        "name": "Topbar/footer navy #061B49",
+        "ok": true
+      },
+      {
+        "name": "Título presente en h1",
+        "ok": true
+      },
+      {
+        "name": "Deck/contexto presente",
+        "ok": true
+      },
+      {
+        "name": "Pregunta guía presente",
+        "ok": true
+      },
+      {
+        "name": "Bloque .upper existe",
+        "ok": true
+      },
+      {
+        "name": "Trampas: 3 items",
+        "ok": true
+      },
+      {
+        "name": "Header trampas rojo #D92D20",
+        "ok": true
+      },
+      {
+        "name": "Guide border #0969DA",
+        "ok": true
+      },
+      {
+        "name": "Footer AI-200 Visual Study Atlas",
+        "ok": true
+      },
+      {
+        "name": "Sin CDN externos",
+        "ok": true
+      },
+      {
+        "name": "Sin dark body #0d1629",
+        "ok": true
+      }
+    ],
+    "score": 10
+  },
+  "durationMs": 67390
+}

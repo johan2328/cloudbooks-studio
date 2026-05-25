@@ -412,7 +412,7 @@ export default function Biblioteca() {
                           </a>
                         )}
                         {outputStatus!.files.upperVisual ? (
-                          <a href={`/assets/cloudbooks/ai-200/visual-atlas/pages/${page.num}/upper-visual.png`}
+                          <a href={`/assets/cloudbooks/ai-200/visual-atlas/pages/${page.num}/upper-art.png`}
                             target="_blank" rel="noreferrer"
                             className="flex items-center gap-1.5 h-8 px-3 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white/50 hover:text-white/80 text-[9px] font-bold rounded-sm transition-all">
                             <Image className="w-3 h-3" />Visual PNG

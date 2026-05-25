@@ -61,13 +61,13 @@ interface VisualAtlasPageData {
    SEED DATA — página 01 (golden master content)
    ══════════════════════════════════════════════════════════════════════════ */
 const PAGE_01_DATA: VisualAtlasPageData = {
-  domainLabel:     "Gestión de Contenedores",
+  domainLabel:     "Dominio 1 — Soluciones contenerizadas en Azure",
   pageNumber:      "01",
   totalPages:      61,
   batchLabel:      "Batch 01",
   title:           "Azure Container Registry",
   subtitle:        "Arquitectura y Tiers",
-  context:         "ACR es el registro privado de imágenes de contenedor en Azure, base para despliegues en AKS, App Service y Container Apps. Conoce sus tiers para seleccionar el adecuado según escenarios de desarrollo, producción y alta disponibilidad. Lee las señales: geo-replicación, Private Endpoint y digest suelen decidir más que el nombre del SKU.",
+  context:         "Azure Container Registry (ACR) es el registro privado de imágenes de contenedor en Azure, base para despliegues en AKS, App Service y Container Apps. Conoce sus tiers para seleccionar el adecuado según escenarios de desarrollo, producción y alta disponibilidad. Lee las señales: geo-replicación, Private Endpoint y digest suelen decidir más que el nombre del SKU.",
   guideQuestion:   "¿Cuál tier de ACR es adecuado para producción con geo-replicación y private endpoints?",
   upperVisualSrc:  "placeholder",
   upperVisualAlt:  "Diagrama de arquitectura y tiers de Azure Container Registry",
@@ -104,295 +104,274 @@ const PAGE_SEEDS: Record<string, VisualAtlasPageData> = {
 };
 
 /* ══════════════════════════════════════════════════════════════════════════
-   PLANTILLA CERRADA — renderVisualAtlasPage(data)
-   Layout golden master v24: 768×1152 px portrait, estructura editorial fija.
-   La IA NO decide estructura. Solo aporta la imagen del bloque visual superior.
+   GOLDEN MASTER v24 — renderVisualAtlasPage(data)
+   Plantilla cerrada 768×1152 · light editorial · estructura fija bloqueada.
+   La IA NO diseña layout. Solo aporta la imagen del bloque visual superior.
+   DOM: main.page > topbar / hero / guide / body(upper+exam) / footer
    ══════════════════════════════════════════════════════════════════════════ */
 function renderVisualAtlasPage(data: VisualAtlasPageData): string {
   const optionLetters = ["A", "B", "C", "D", "E", "F"];
 
+  /* ── Icono de título ─────────────────────────────────────────────────── */
+  const titleIconSvg = `<svg width="86" height="86" viewBox="0 0 86 86" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="43" cy="18" rx="18" ry="10" fill="#0078D4" opacity="0.12"/>
+    <ellipse cx="30" cy="21" rx="11" ry="7" fill="#0078D4" opacity="0.09"/>
+    <ellipse cx="56" cy="21" rx="11" ry="7" fill="#0078D4" opacity="0.09"/>
+    <rect x="12" y="27" width="62" height="48" rx="5" fill="#EBF4FF" stroke="#3B82F6" stroke-width="1.5"/>
+    <rect x="12" y="27" width="62" height="16" rx="5" fill="#0078D4" opacity="0.20"/>
+    <circle cx="64" cy="35" r="3" fill="#0D9488" opacity="0.50"/>
+    <circle cx="55" cy="35" r="3" fill="#0D9488" opacity="0.30"/>
+    <rect x="18" y="50" width="16" height="11" rx="2" fill="#0078D4" opacity="0.25"/>
+    <rect x="36" y="50" width="16" height="11" rx="2" fill="#0D9488" opacity="0.25"/>
+    <rect x="54" y="50" width="16" height="11" rx="2" fill="#0078D4" opacity="0.25"/>
+    <rect x="18" y="63" width="16" height="8" rx="2" fill="#0D9488" opacity="0.18"/>
+    <rect x="36" y="63" width="16" height="8" rx="2" fill="#0078D4" opacity="0.18"/>
+    <rect x="54" y="63" width="16" height="8" rx="2" fill="#0D9488" opacity="0.18"/>
+  </svg>`;
+
+  /* ── Upper visual — imagen real o placeholder claro ──────────────────── */
   const upperVisualHtml = data.upperVisualSrc === "placeholder"
-    ? `<div class="visual-placeholder">
-        <div class="placeholder-inner">
-          <div class="placeholder-icon">📦</div>
-          <div class="placeholder-label">Visual pendiente</div>
-          <div class="placeholder-sub">Se generará con gpt-image-2 medium · fondo blanco</div>
-          <div class="placeholder-grid">
-            <div class="pg-cell"><span class="pg-num">01</span><span>Qué es ACR</span><span class="pg-sub">Registro privado Azure</span></div>
-            <div class="pg-cell"><span class="pg-num">02</span><span>Tiers ACR</span><span class="pg-sub">Basic · Standard · Premium</span></div>
-            <div class="pg-cell"><span class="pg-num">03</span><span>Arquitectura</span><span class="pg-sub">Registry → AKS / ACI</span></div>
-            <div class="pg-cell"><span class="pg-num">04</span><span>Geo-replicación</span><span class="pg-sub">Solo Premium · active-active</span></div>
-          </div>
-        </div>
+    ? `<div class="upper-placeholder">
+        <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+          <rect x="4" y="12" width="36" height="26" rx="3" fill="#E2E8F0"/>
+          <rect x="4" y="12" width="36" height="9" rx="3" fill="#CBD5E1"/>
+          <rect x="8" y="25" width="8" height="5" rx="1" fill="#94A3B8"/>
+          <rect x="18" y="25" width="8" height="5" rx="1" fill="#94A3B8"/>
+          <rect x="28" y="25" width="8" height="5" rx="1" fill="#94A3B8"/>
+        </svg>
+        <div class="upper-placeholder-label">Visual superior pendiente</div>
+        <div class="upper-placeholder-sub">Se insertará upper-art generado con gpt-image-2 medium</div>
       </div>`
-    : `<img class="visual-image" src="${data.upperVisualSrc}" alt="${data.upperVisualAlt}" />`;
+    : `<img src="${data.upperVisualSrc}" alt="${data.upperVisualAlt}">`;
 
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=768">
-<title>Pág. ${data.pageNumber} — ${data.title} · AI-200 Visual Study Atlas</title>
+<title>Pág. ${data.pageNumber}/${data.totalPages} — ${data.title} · AI-200 Visual Study Atlas</title>
 <style>
-/* ── GOLDEN MASTER v24 · LIGHT EDITORIAL THEME · LOCKED ─────────────────── */
+/* ── GOLDEN MASTER v24 · LIGHT EDITORIAL · LOCKED ─────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
+  background: #edf2f8;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+}
+
+/* ── .page — contenedor libro 768×1152 ──────────────────────────────────── */
+.page {
   width: 768px;
   height: 1152px;
+  background: #ffffff;
+  display: grid;
+  grid-template-rows: 34px 198px 48px 838px 34px;
   overflow: hidden;
-  font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
-  background: #f4f6f9;
-  color: #0d1629;
-  display: flex;
-  flex-direction: column;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.12);
 }
 
-/* ── [A] TOPBAR — navy delgado ───────────────────────────────────────────── */
+/* ── TOPBAR ─────────────────────────────────────────────────────────────── */
 .topbar {
-  flex: 0 0 44px;
-  background: #0d1629;
+  background: #061B49;
+  color: rgba(255,255,255,0.60);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
   display: flex;
   align-items: center;
-  padding: 0 18px;
+  padding: 0 20px;
   gap: 10px;
 }
-.topbar-page {
-  background: #0d9488;
-  color: #fff;
-  font-size: 9.5px;
-  font-weight: 800;
-  padding: 3px 8px;
-  border-radius: 2px;
-  letter-spacing: 0.06em;
+.topbar::before {
+  content: '';
+  width: 7px; height: 7px;
+  background: #0D9488;
+  border-radius: 50%;
   flex-shrink: 0;
 }
-.topbar-domain {
-  font-size: 9.5px;
-  color: rgba(255,255,255,0.45);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  font-weight: 600;
-}
-.topbar-spacer { flex: 1; }
-.topbar-badge-domain {
-  font-size: 8px;
-  color: #0d9488;
-  border: 1px solid rgba(13,148,136,0.45);
-  padding: 2px 7px;
+.tb-spacer { flex: 1; }
+.tb-badge {
+  font-size: 7px;
+  color: rgba(255,255,255,0.35);
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 1px 7px;
   border-radius: 2px;
-  font-weight: 700;
-}
-.topbar-badge-cert {
-  font-size: 8px;
-  color: #fff;
-  background: #0078d4;
-  padding: 2px 7px;
-  border-radius: 2px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.10em;
 }
 
-/* ── [B] HERO — blanco, título navy grande ───────────────────────────────── */
+/* ── HERO ───────────────────────────────────────────────────────────────── */
 .hero {
-  flex: 0 0 130px;
   background: #ffffff;
-  border-bottom: 1px solid #dde1e9;
-  display: flex;
-  align-items: stretch;
-  padding: 0 24px;
+  border-bottom: 1px solid #dde3ed;
+  display: grid;
+  grid-template-columns: 1fr 108px;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "title icon"
+    "deck  icon";
+  padding: 16px 20px 16px 22px;
+  gap: 6px 14px;
+  overflow: hidden;
 }
-.hero-text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-  padding-right: 12px;
-}
-.hero-subtitle {
-  font-size: 8.5px;
-  color: #6b7a99;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-.hero-title {
-  font-size: 25px;
+h1 {
+  grid-area: title;
+  font-size: 35px;
   font-weight: 900;
-  color: #0d1629;
-  line-height: 1.08;
-  letter-spacing: -0.02em;
+  color: #06133E;
+  line-height: 1.01;
+  letter-spacing: -0.022em;
+  align-self: end;
 }
-.hero-context {
-  font-size: 9.5px;
-  color: #3d4f70;
-  line-height: 1.55;
-  max-width: 590px;
+.deck {
+  grid-area: deck;
+  font-size: 13.55px;
+  color: #2d3a5c;
+  line-height: 1.25;
+  align-self: start;
 }
-.hero-icon {
-  flex: 0 0 68px;
+.icon-slot {
+  grid-area: icon;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
-  opacity: 0.22;
+  opacity: 0.72;
 }
 
-/* ── [C] PREGUNTA GUÍA — cápsula azul clara ──────────────────────────────── */
+/* ── GUIDE ──────────────────────────────────────────────────────────────── */
 .guide {
-  flex: 0 0 38px;
-  background: #eef4ff;
-  border-bottom: 1px solid #c3d6f7;
+  background: #f0f7ff;
+  border-bottom: 2px solid #0969DA;
   display: flex;
   align-items: center;
   padding: 0 22px;
   gap: 10px;
+  overflow: hidden;
 }
-.guide-label {
-  font-size: 7.5px;
-  color: #1d4ed8;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+.guide-mark {
+  width: 22px; height: 22px;
+  background: #0969DA;
+  color: #ffffff;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
-.guide-pill {
-  background: #dbeafe;
-  border: 1px solid #93c5fd;
-  border-radius: 20px;
-  padding: 3px 12px;
-  font-size: 9.5px;
-  color: #1e3a8a;
-  font-style: italic;
-  font-weight: 600;
+.guide > span {
+  font-size: 11px;
+  color: #0d2260;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.guide strong {
+  font-weight: 800;
+  color: #0969DA;
+  letter-spacing: 0.06em;
+  margin-right: 5px;
 }
 
-/* ── [D] UPPER VISUAL — fondo blanco, imagen clara ───────────────────────── */
-.upper-visual {
-  flex: 0 0 408px;
-  background: #ffffff;
-  border-bottom: 2px solid #dde1e9;
+/* ── BODY (main content area) ───────────────────────────────────────────── */
+section.body {
+  display: grid;
+  grid-template-rows: 494px 1fr;
   overflow: hidden;
-  position: relative;
 }
-.visual-image {
+
+/* ── UPPER VISUAL ───────────────────────────────────────────────────────── */
+.upper {
+  background: #ffffff;
+  border-bottom: 1px solid #dde3ed;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.upper img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   display: block;
 }
-.visual-placeholder {
-  width: 100%;
-  height: 100%;
+.upper-placeholder {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #f8fafc;
-}
-.placeholder-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   gap: 10px;
-  width: 100%;
-  padding: 20px 32px;
+  width: calc(100% - 40px);
+  height: calc(100% - 40px);
+  border: 2px dashed #c8d6e8;
+  border-radius: 8px;
+  background: #f8fafd;
 }
-.placeholder-icon { font-size: 32px; opacity: 0.35; }
-.placeholder-label {
-  font-size: 11px;
+.upper-placeholder-label {
+  font-size: 12px;
   font-weight: 700;
   color: #6b7a99;
-  letter-spacing: 0.08em;
 }
-.placeholder-sub { font-size: 9px; color: #9ca3af; }
-.placeholder-grid {
+.upper-placeholder-sub { font-size: 10px; color: #9ca3af; }
+
+/* ── EXAM (trampas + autocheck) ─────────────────────────────────────────── */
+.exam {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 12px;
-  width: 100%;
-  max-width: 560px;
-}
-.pg-cell {
-  background: #ffffff;
-  border: 1px solid #dde1e9;
-  border-radius: 4px;
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  font-size: 11px;
-  color: #0d1629;
-  font-weight: 700;
-}
-.pg-num {
-  font-size: 9px;
-  font-weight: 800;
-  color: #0d9488;
-  letter-spacing: 0.06em;
-  margin-bottom: 2px;
-}
-.pg-sub { font-size: 9px; color: #6b7a99; font-weight: 400; }
-
-/* ── [E] LOWER BLOCK ─────────────────────────────────────────────────────── */
-.lower-block {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  min-height: 0;
+  gap: 0;
+  overflow: hidden;
 }
 
-/* Trampas — panel blanco, header rojo */
-.traps-panel {
+/* ── MODULE ─────────────────────────────────────────────────────────────── */
+.mod {
   background: #ffffff;
-  border-right: 1px solid #dde1e9;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
-.panel-header {
-  padding: 9px 16px;
+.mod.traps { border-right: 1px solid #dde3ed; }
+.mod-header {
+  padding: 8px 16px;
   display: flex;
   align-items: center;
   gap: 7px;
   flex-shrink: 0;
 }
-.traps-panel .panel-header {
-  background: #dc2626;
-  border-bottom: none;
-}
-.panel-header-icon { font-size: 11px; }
-.panel-header-label {
-  font-size: 9px;
+.mod.traps .mod-header { background: #D92D20; }
+.mod.check .mod-header { background: #061B49; }
+.mod-header-label {
+  font-size: 8.5px;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
+  color: #ffffff;
 }
-.traps-panel .panel-header-icon { color: rgba(255,255,255,0.8); }
-.traps-panel .panel-header-label { color: #fff; }
-.traps-list {
+.mod-body {
   flex: 1;
-  padding: 10px 16px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  overflow: hidden;
-  background: #fff9f9;
-}
-.trap-item {
-  display: flex;
   gap: 9px;
-  align-items: flex-start;
+  overflow: hidden;
 }
+.mod.traps .mod-body { background: #fff9f9; }
+.mod.check .mod-body { background: #f8faff; }
+
+/* Trap items */
+.trap-item { display: flex; gap: 8px; align-items: flex-start; }
 .trap-num {
   flex-shrink: 0;
-  width: 18px;
-  height: 18px;
+  width: 17px; height: 17px;
   background: #fee2e2;
   border: 1px solid #fca5a5;
   border-radius: 50%;
-  font-size: 8.5px;
+  font-size: 8px;
   font-weight: 800;
   color: #dc2626;
   display: flex;
@@ -408,40 +387,10 @@ body {
   text-decoration-color: #f87171;
 }
 .trap-arrow { font-size: 8px; color: #9ca3af; }
-.trap-correction {
-  font-size: 9px;
-  color: #1f2937;
-  line-height: 1.45;
-}
+.trap-correction { font-size: 9px; color: #1f2937; line-height: 1.45; }
 
-/* Autocheck — panel blanco, header navy */
-.autocheck-panel {
-  background: #ffffff;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.autocheck-panel .panel-header {
-  background: #0d1629;
-  border-bottom: none;
-}
-.autocheck-panel .panel-header-icon { color: rgba(255,255,255,0.7); }
-.autocheck-panel .panel-header-label { color: #fff; }
-.autocheck-body {
-  flex: 1;
-  padding: 10px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  overflow: hidden;
-  background: #f8faff;
-}
-.autocheck-question {
-  font-size: 10px;
-  font-weight: 700;
-  color: #0d1629;
-  line-height: 1.4;
-}
+/* Autocheck items */
+.autocheck-question { font-size: 10px; font-weight: 700; color: #06133E; line-height: 1.4; }
 .autocheck-options { display: flex; flex-direction: column; gap: 4px; }
 .option-row {
   display: flex;
@@ -452,26 +401,14 @@ body {
   border: 1px solid #e5e7eb;
   font-size: 9.5px;
 }
-.option-row.correct {
-  background: #d1fae5;
-  border-color: #6ee7b7;
-  color: #065f46;
-  font-weight: 700;
-}
-.option-row.wrong-opt {
-  background: #f9fafb;
-  color: #6b7280;
-}
+.option-row.correct { background: #d1fae5; border-color: #6ee7b7; color: #065f46; font-weight: 700; }
+.option-row.wrong-opt { background: #f9fafb; color: #6b7280; }
 .option-badge {
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  width: 16px; height: 16px;
   border-radius: 50%;
-  font-size: 8px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 8px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
 }
 .option-row.correct .option-badge { background: #a7f3d0; color: #065f46; }
 .option-row.wrong-opt .option-badge { background: #e5e7eb; color: #6b7280; }
@@ -487,121 +424,91 @@ body {
 .discard-notes { display: flex; flex-direction: column; gap: 2px; }
 .discard-note { font-size: 8px; color: #9ca3af; line-height: 1.4; }
 
-/* ── [F] FOOTER — navy ───────────────────────────────────────────────────── */
+/* ── FOOTER ─────────────────────────────────────────────────────────────── */
 .footer {
-  flex: 0 0 30px;
-  background: #0d1629;
+  background: #061B49;
+  color: rgba(255,255,255,0.45);
+  font-size: 8px;
   display: flex;
   align-items: center;
-  padding: 0 18px;
-  gap: 16px;
+  padding: 0 20px;
+  justify-content: space-between;
 }
-.footer-brand {
-  font-size: 8px;
-  font-family: monospace;
-  color: rgba(255,255,255,0.25);
-  font-weight: 600;
-}
-.footer-spacer { flex: 1; }
-.footer-page {
-  font-size: 7.5px;
-  font-family: monospace;
-  color: rgba(255,255,255,0.2);
-}
-.footer-contract {
-  font-size: 7px;
-  font-family: monospace;
-  color: rgba(13,148,136,0.5);
-}
+.page-no { font-family: monospace; font-size: 7.5px; }
 </style>
 </head>
 <body>
 
-<!-- [A] TOPBAR -->
-<header class="topbar">
-  <span class="topbar-page">${data.pageNumber}</span>
-  <span class="topbar-domain">${data.domainLabel}</span>
-  <span class="topbar-spacer"></span>
-  <span class="topbar-badge-domain">${data.domainLabel}</span>
-  <span class="topbar-badge-cert">AI-200</span>
-</header>
+<main class="page">
 
-<!-- [B] HERO EDITORIAL -->
-<section class="hero">
-  <div class="hero-text">
-    <div class="hero-subtitle">${data.subtitle}</div>
-    <div class="hero-title">${data.title}</div>
-    <div class="hero-context">${data.context}</div>
+  <div class="topbar">
+    ${data.domainLabel}
+    <span class="tb-spacer"></span>
+    <span class="tb-badge">AI-200</span>
   </div>
-  <div class="hero-icon">📦</div>
-</section>
 
-<!-- [C] PREGUNTA GUÍA -->
-<div class="guide">
-  <span class="guide-label">Pregunta guía</span>
-  <span class="guide-pill">${data.guideQuestion}</span>
-</div>
+  <section class="hero">
+    <h1>${data.title} — ${data.subtitle}</h1>
+    <div class="deck">${data.context}</div>
+    <div class="icon-slot">${titleIconSvg}</div>
+  </section>
 
-<!-- [D] BLOQUE VISUAL SUPERIOR -->
-<div class="upper-visual">
-  ${upperVisualHtml}
-</div>
+  <section class="guide">
+    <span class="guide-mark">?</span>
+    <span><strong>PREGUNTA GUÍA:</strong>${data.guideQuestion}</span>
+  </section>
 
-<!-- [E] BLOQUE INFERIOR -->
-<div class="lower-block">
-
-  <!-- Trampas -->
-  <div class="traps-panel">
-    <div class="panel-header">
-      <span class="panel-header-icon">⚠</span>
-      <span class="panel-header-label">Trampas del examen</span>
+  <section class="body">
+    <div class="upper">
+      ${upperVisualHtml}
     </div>
-    <div class="traps-list">
-      ${data.traps.map((t, i) => `
-      <div class="trap-item">
-        <div class="trap-num">${i + 1}</div>
-        <div class="trap-content">
-          <div class="trap-wrong">${t.wrong}</div>
-          <div class="trap-arrow">→</div>
-          <div class="trap-correction">${t.correction}</div>
+    <div class="exam">
+
+      <section class="mod traps">
+        <div class="mod-header">
+          <span class="mod-header-label">⚠ Trampas del examen</span>
         </div>
-      </div>`).join("")}
+        <div class="mod-body">
+          ${data.traps.map((t, i) => `<div class="trap-item">
+            <div class="trap-num">${i + 1}</div>
+            <div class="trap-content">
+              <div class="trap-wrong">${t.wrong}</div>
+              <div class="trap-arrow">→</div>
+              <div class="trap-correction">${t.correction}</div>
+            </div>
+          </div>`).join("\n          ")}
+        </div>
+      </section>
+
+      <section class="mod check">
+        <div class="mod-header">
+          <span class="mod-header-label">✓ Verificación autocheck</span>
+        </div>
+        <div class="mod-body">
+          <div class="autocheck-question">${data.autocheck.question}</div>
+          <div class="autocheck-options">
+            ${data.autocheck.options.map((opt, i) => `<div class="option-row ${i === data.autocheck.correctOption ? "correct" : "wrong-opt"}">
+              <span class="option-badge">${optionLetters[i]}</span>
+              <span>${opt.replace(/^[A-D]\.\s*/, "")}</span>
+              ${i === data.autocheck.correctOption ? '<span style="margin-left:auto;font-size:10px;">✓</span>' : ""}
+            </div>`).join("\n            ")}
+          </div>
+          <div class="autocheck-explanation">${data.autocheck.explanation}</div>
+          <div class="discard-notes">
+            ${data.autocheck.discardNotes.map(n => `<div class="discard-note">• ${n}</div>`).join("\n            ")}
+          </div>
+        </div>
+      </section>
+
     </div>
-  </div>
+  </section>
 
-  <!-- Autocheck -->
-  <div class="autocheck-panel">
-    <div class="panel-header">
-      <span class="panel-header-icon">✓</span>
-      <span class="panel-header-label">Verificación autocheck</span>
-    </div>
-    <div class="autocheck-body">
-      <div class="autocheck-question">${data.autocheck.question}</div>
-      <div class="autocheck-options">
-        ${data.autocheck.options.map((opt, i) => `
-        <div class="option-row ${i === data.autocheck.correctOption ? "correct" : "wrong-opt"}">
-          <span class="option-badge">${optionLetters[i]}</span>
-          <span>${opt.replace(/^[A-D]\.\s*/, "")}</span>
-          ${i === data.autocheck.correctOption ? '<span style="margin-left:auto;font-size:10px;">✓</span>' : ""}
-        </div>`).join("")}
-      </div>
-      <div class="autocheck-explanation">${data.autocheck.explanation}</div>
-      <div class="discard-notes">
-        ${data.autocheck.discardNotes.map(n => `<div class="discard-note">• ${n}</div>`).join("")}
-      </div>
-    </div>
-  </div>
+  <footer class="footer">
+    <span>AI-200 Visual Study Atlas</span>
+    <span class="page-no">${data.pageNumber}/${data.totalPages}</span>
+  </footer>
 
-</div>
-
-<!-- [F] FOOTER -->
-<footer class="footer">
-  <span class="footer-brand">AI-200 Visual Study Atlas · CloudBooks 2026</span>
-  <span class="footer-spacer"></span>
-  <span class="footer-page">Pág. ${data.pageNumber} de ${data.totalPages} · ${data.batchLabel}</span>
-  <span class="footer-contract">Contrato ${data.contractVersion} · gpt-image-2 medium</span>
-</footer>
-
+</main>
 </body>
 </html>`;
 }
@@ -617,17 +524,20 @@ interface StructuralQaResult {
 
 function runStructuralQa(html: string, data: VisualAtlasPageData): StructuralQaResult {
   const checks = [
-    { name: "Dimensiones 768×1152",       ok: html.includes("width: 768px") && html.includes("height: 1152px") },
-    { name: "Topbar existe",               ok: html.includes("class=\"topbar\"") },
-    { name: "Título presente",             ok: html.includes(data.title) },
-    { name: "Pregunta guía presente",      ok: html.includes(data.guideQuestion.slice(0, 30)) },
-    { name: "Bloque visual presente",      ok: html.includes("upper-visual") },
-    { name: "Trampas: 3 items",            ok: data.traps.length === 3 },
-    { name: "Autocheck con opciones",      ok: data.autocheck.options.length >= 3 },
-    { name: "Respuesta correcta definida", ok: data.autocheck.correctOption >= 0 },
-    { name: "Footer presente",             ok: html.includes("class=\"footer\"") },
-    { name: "Sin CDN externos",            ok: !html.includes("googleapis.com") && !html.includes("cloudflare.com") },
-    { name: "Tema claro (no dark body)",   ok: html.includes("background: #f4f6f9") && !html.includes("background: #0d1629;\n  color: rgba(255,255,255") },
+    { name: "Dimensiones 768×1152",              ok: html.includes("width: 768px") && html.includes("height: 1152px") },
+    { name: "Grid rows 34-198-48-838-34",         ok: html.includes("34px 198px 48px 838px 34px") },
+    { name: "Fondo editorial #edf2f8",            ok: html.includes("background: #edf2f8") },
+    { name: "Topbar/footer navy #061B49",         ok: html.includes("#061B49") },
+    { name: "Título presente en h1",              ok: html.includes(data.title) },
+    { name: "Deck/contexto presente",             ok: html.includes(data.context.slice(0, 40)) },
+    { name: "Pregunta guía presente",             ok: html.includes(data.guideQuestion.slice(0, 30)) },
+    { name: "Bloque .upper existe",               ok: html.includes('class="upper"') },
+    { name: "Trampas: 3 items",                   ok: data.traps.length === 3 },
+    { name: "Header trampas rojo #D92D20",        ok: html.includes("#D92D20") },
+    { name: "Guide border #0969DA",               ok: html.includes("#0969DA") },
+    { name: "Footer AI-200 Visual Study Atlas",   ok: html.includes("AI-200 Visual Study Atlas") },
+    { name: "Sin CDN externos",                   ok: !html.includes("googleapis.com") && !html.includes("cloudflare.com") },
+    { name: "Sin dark body #0d1629",              ok: !html.includes("background: #0d1629") },
   ];
   const passed = checks.filter(c => c.ok).length;
   const total  = checks.length;
@@ -724,10 +634,10 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
       }
 
       if (imgBuf) {
-        await writeFile(join(outDir, "upper-visual.png"), imgBuf);
+        await writeFile(join(outDir, "upper-art.png"), imgBuf);
         imageGenerated = true;
-        imagePath      = `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/upper-visual.png`;
-        req.log.info({ pageId, bytes: imgBuf.length }, "Upper visual saved");
+        imagePath      = `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/upper-art.png`;
+        req.log.info({ pageId, bytes: imgBuf.length }, "Upper visual saved (upper-art.png)");
       }
     } catch (imgErr) {
       imageError = String(imgErr).slice(0, 300);
@@ -820,7 +730,7 @@ ${qaLines}
       metadata:   `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/metadata.json`,
       qaReport:   `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/qa-report.md`,
       previewPng: imageGenerated
-        ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/upper-visual.png`
+        ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/upper-art.png`
         : null,
     },
     imageGenerated,
@@ -843,7 +753,7 @@ router.get("/studio/output-status/:pageId", async (req, res): Promise<void> => {
     html:         exists("page.html"),
     metadata:     exists("metadata.json"),
     qaReport:     exists("qa-report.md"),
-    upperVisual:  exists("upper-visual.png"),
+    upperVisual:  exists("upper-art.png"),
     previewSvg:   exists("preview.svg"),
     previewPng:   exists("preview.png"),
   };
@@ -871,7 +781,7 @@ router.get("/studio/output-status/:pageId", async (req, res): Promise<void> => {
   }
 
   const imagePath = files.upperVisual
-    ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/upper-visual.png`
+    ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/upper-art.png`
     : files.previewPng
     ? `/assets/cloudbooks/ai-200/visual-atlas/pages/${pageId}/preview.png`
     : files.previewSvg
@@ -955,6 +865,10 @@ router.get("/studio/key-status", (_req, res): void => {
     costGuardrail:       GUARDRAIL_LABEL,
     templateVersion:     TEMPLATE_VERSION,
     approach:            "golden_master_fixed_template",
+    layout:              "Golden Master Visual Atlas v24",
+    template:            "locked",
+    renderer:            "deterministic HTML",
+    svgFallback:         "disabled",
   });
 });
 
