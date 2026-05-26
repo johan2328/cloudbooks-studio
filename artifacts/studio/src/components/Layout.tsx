@@ -4,8 +4,12 @@ import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Map, FileText, Shield, Download, LogOut,
-  ChevronRight, Sparkles, Activity, BookOpen,
+  ChevronRight, Sparkles, Activity, BookOpen, Layers,
 } from "lucide-react";
+
+const NAV_COLLECTION = [
+  { href: "/ai-200", label: "AI-200 Collection", icon: Layers, segment: "ai-200" },
+];
 
 const NAV_PRODUCTION = [
   { href: "/biblioteca",    label: "Visual Atlas",      icon: Map,       segment: "biblioteca" },
@@ -41,7 +45,7 @@ export default function Layout({ children, title }: LayoutProps) {
           <div className="mt-1.5 flex items-center gap-1.5">
             <span className="text-[7px] font-bold text-teal-400/60 uppercase tracking-[0.2em]">Studio</span>
             <span className="text-white/10">·</span>
-            <span className="text-[7px] text-white/20">AI-200 Visual Atlas</span>
+            <span className="text-[7px] text-white/20">AI-200 Collection</span>
           </div>
         </div>
 
@@ -63,9 +67,34 @@ export default function Layout({ children, title }: LayoutProps) {
 
           <div className="mx-3 h-px bg-white/[0.05] my-1.5" />
 
-          {/* AI-200 · Producción */}
+          {/* Colección */}
           <div className="px-5 py-1">
-            <span className="text-[7px] font-bold text-white/15 uppercase tracking-[0.18em]">AI-200 · Producción</span>
+            <span className="text-[7px] font-bold text-white/15 uppercase tracking-[0.18em]">Colección</span>
+          </div>
+
+          <div className="px-2 space-y-px">
+            {NAV_COLLECTION.map(({ href, label, icon: Icon, segment }) => {
+              const active = location.startsWith(`/${segment}`);
+              return (
+                <Link key={href} href={href}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 rounded-sm text-[10px] font-medium transition-all",
+                    active
+                      ? "bg-violet-600/15 text-white border-l-2 border-violet-400 pl-[10px]"
+                      : "text-white/35 hover:text-white/70 hover:bg-white/5"
+                  )}>
+                  <Icon className={cn("w-3 h-3 shrink-0", active ? "text-violet-300" : "text-white/20")} />
+                  <span>{label}</span>
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="mx-3 h-px bg-white/[0.05] my-2" />
+
+          {/* Visual Atlas */}
+          <div className="px-5 py-1">
+            <span className="text-[7px] font-bold text-white/15 uppercase tracking-[0.18em]">Visual Atlas</span>
           </div>
 
           <div className="px-2 space-y-px">
@@ -154,7 +183,7 @@ export default function Layout({ children, title }: LayoutProps) {
           <header className="bg-[#0d1629] border-b border-white/[0.06] px-5 py-2 shrink-0 flex items-center gap-1.5">
             <Link href="/studio" className="text-[9px] text-white/20 hover:text-white/50 transition-colors">Studio</Link>
             <ChevronRight className="w-2.5 h-2.5 text-white/10" />
-            <Link href="/biblioteca" className="text-[9px] text-[#0078d4]/50 hover:text-[#0078d4]/80 transition-colors">Visual Atlas AI-200</Link>
+            <Link href="/ai-200" className="text-[9px] text-[#0078d4]/50 hover:text-[#0078d4]/80 transition-colors">AI-200 Collection</Link>
             <ChevronRight className="w-2.5 h-2.5 text-white/10" />
             <span className="text-[9px] font-semibold text-white/60">{title}</span>
           </header>

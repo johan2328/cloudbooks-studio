@@ -1,205 +1,227 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import Layout from "@/components/Layout";
 import {
-  Sparkles, CheckCircle2, AlertTriangle, Loader2, FileText,
-  ArrowRight, Clock, ExternalLink,
+  Activity,
+  ArrowRight,
+  BookOpen,
+  CheckCircle2,
+  FileText,
+  HelpCircle,
+  Layers,
+  Loader2,
+  Map,
+  PackageCheck,
+  Shield,
+  Table2,
+  Target,
+  Zap,
 } from "lucide-react";
+
+import Layout from "@/components/Layout";
 import { cn } from "@/lib/utils";
+import { fetchStudioCatalog, type StudioCatalog } from "@/lib/studio-api";
 
-interface OutputStatus {
-  hasOutput: boolean;
-  generationMode: "openai" | "fallback_html" | "none";
-  generatedAt: string | null;
-  files: { html: boolean; metadata: boolean; qaReport: boolean; previewPng: boolean; previewSvg: boolean };
-  htmlPath: string | null;
-  previewPath: string | null;
-}
-
-function getToken() { return localStorage.getItem("studio_token") ?? ""; }
+const FORMATS = [
+  {
+    id: "master-book",
+    name: "Master Book",
+    label: "Aprendizaje profundo",
+    icon: BookOpen,
+    status: "Planificacion",
+    progress: 0,
+    route: "/ai-200",
+    color: "#7c3aed",
+  },
+  {
+    id: "visual-atlas",
+    name: "Visual Atlas",
+    label: "Estudio visual acelerado",
+    icon: Map,
+    status: "Produccion activa",
+    progress: 10,
+    route: "/biblioteca",
+    color: "#2563eb",
+  },
+  {
+    id: "exam-traps",
+    name: "Exam Traps Guide",
+    label: "Trampas y distractores",
+    icon: Target,
+    status: "Pendiente de extraccion",
+    progress: 0,
+    route: "/ai-200",
+    color: "#dc2626",
+  },
+  {
+    id: "question-bank",
+    name: "Question Bank",
+    label: "Practica exhaustiva",
+    icon: HelpCircle,
+    status: "Diseno pendiente",
+    progress: 0,
+    route: "/ai-200",
+    color: "#0284c7",
+  },
+  {
+    id: "cheat-sheets",
+    name: "Cheat Sheets",
+    label: "Repaso compacto",
+    icon: Table2,
+    status: "Planificado",
+    progress: 0,
+    route: "/ai-200",
+    color: "#d97706",
+  },
+  {
+    id: "rapid-review",
+    name: "Rapid Review Pack",
+    label: "Cierre pre-examen",
+    icon: Zap,
+    status: "Planificado",
+    progress: 0,
+    route: "/ai-200",
+    color: "#059669",
+  },
+];
 
 export default function StudioDashboard() {
   const [, setLocation] = useLocation();
-  const [outputStatus, setOutputStatus] = useState<OutputStatus | null>(null);
+  const [catalog, setCatalog] = useState<StudioCatalog | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/studio/output-status/01", {
-      headers: { Authorization: `Bearer ${getToken()}` },
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => setOutputStatus(d))
-      .catch(() => setOutputStatus(null))
+    fetchStudioCatalog()
+      .then(setCatalog)
+      .catch(() => setCatalog(null))
       .finally(() => setLoading(false));
   }, []);
 
-  const hasReal = outputStatus?.hasOutput === true;
-  const genMode = outputStatus?.generationMode;
+  const atlasStats = useMemo(() => {
+    const pages = catalog?.pages ?? [];
+    const generated = pages.filter((p) => p.outputStatus.hasOutput && p.outputStatus.files.html).length;
+    const realVisuals = pages.filter((p) => p.outputStatus.generationMode === "openai_image").length;
+    const approved = pages.filter((p) => p.outputStatus.files.approved).length;
+    return {
+      seeds: catalog?.availableSeeds.length ?? 0,
+      expected: catalog?.totalExpected ?? 61,
+      generated,
+      realVisuals,
+      approved,
+    };
+  }, [catalog]);
+
+  const collectionProgress = Math.round((atlasStats.generated / Math.max(atlasStats.expected, 1)) * 100);
+  const productionRisk = atlasStats.realVisuals < atlasStats.generated ? "Revisar placeholders" : "Controlado";
 
   return (
-    <Layout>
+    <Layout title="Dashboard Studio">
       <div className="h-full overflow-y-auto bg-[#0a1220]">
-
-        {/* Header */}
-        <div className="bg-[#0d1629] border-b border-white/[0.06] px-6 py-4">
-          <p className="text-[8px] font-bold text-teal-400/70 uppercase tracking-[0.2em] mb-0.5">
-            CloudBooks Studio · MVP
-          </p>
-          <h1 className="text-base font-black text-white tracking-tight">
-            Visual Atlas AI-200
-          </h1>
-          <p className="text-[10px] text-white/30 mt-0.5">
-            61 infografías de certificación · gpt-4o-mini + gpt-image-2 medium
-          </p>
+        <div className="bg-[#0d1629] border-b border-white/[0.06] px-6 py-5">
+          <div className="max-w-6xl flex items-start gap-5">
+            <div className="w-11 h-11 rounded-sm bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center shrink-0">
+              <Layers className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[8px] font-bold text-teal-400/70 uppercase tracking-[0.2em] mb-1">
+                CloudBooks Production Studio
+              </p>
+              <h1 className="text-xl font-black text-white tracking-tight">
+                AI-200 Collection
+              </h1>
+              <p className="text-[10px] text-white/35 mt-1 max-w-2xl leading-relaxed">
+                Sistema editorial para producir una coleccion completa por certificacion: seis libros coordinados,
+                contratos por formato, QA, exportacion y trazabilidad por batch.
+              </p>
+            </div>
+            <button
+              onClick={() => setLocation("/ai-200")}
+              className="hidden sm:flex items-center gap-1.5 h-8 px-3 rounded-sm bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/65 transition-all"
+            >
+              Ver coleccion <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
         </div>
 
-        <div className="p-6 max-w-3xl space-y-5">
+        <div className="p-6 max-w-6xl space-y-5">
+          <section className="grid md:grid-cols-4 gap-3">
+            {[
+              { label: "Formatos", value: "6", sub: "libros por certificacion", icon: PackageCheck, color: "text-blue-400" },
+              { label: "Seeds Visual Atlas", value: `${atlasStats.seeds}/${atlasStats.expected}`, sub: "contenido migrado", icon: FileText, color: "text-teal-400" },
+              { label: "Outputs generados", value: String(atlasStats.generated), sub: `${atlasStats.realVisuals} con imagen real`, icon: CheckCircle2, color: "text-emerald-400" },
+              { label: "Riesgo editorial", value: productionRisk, sub: "segun outputs actuales", icon: Shield, color: atlasStats.realVisuals < atlasStats.generated ? "text-amber-400" : "text-emerald-400" },
+            ].map((card) => (
+              <div key={card.label} className="bg-[#0d1629] border border-white/[0.06] rounded-sm p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <card.icon className={cn("w-4 h-4", card.color)} />
+                  {loading && <Loader2 className="w-3 h-3 animate-spin text-white/15" />}
+                </div>
+                <p className="text-[8px] text-white/25 uppercase tracking-widest font-bold mt-4">{card.label}</p>
+                <p className="text-lg font-black text-white mt-0.5 leading-none">{card.value}</p>
+                <p className="text-[8px] text-white/25 mt-1">{card.sub}</p>
+              </div>
+            ))}
+          </section>
 
-          {/* ── Estado de Página 01 ── */}
-          <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/[0.06] flex items-center gap-2">
-              <FileText className="w-3.5 h-3.5 text-blue-400" />
-              <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">
-                Página 01 · Azure Container Registry
+          <section className="bg-[#0d1629] border border-white/[0.06] rounded-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-white/[0.05] flex items-center justify-between">
+              <div>
+                <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Coleccion AI-200</p>
+                <p className="text-[10px] text-white/45 mt-0.5">Estado por libro/formato editorial</p>
+              </div>
+              <span className="text-[8px] font-bold text-blue-300 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded-sm">
+                Progreso global {collectionProgress}%
               </span>
             </div>
-
-            <div className="p-5">
-              {loading ? (
-                <div className="flex items-center gap-2 py-4">
-                  <Loader2 className="w-4 h-4 animate-spin text-white/20" />
-                  <span className="text-[10px] text-white/30">Verificando output real…</span>
-                </div>
-              ) : hasReal ? (
-                <div className="space-y-4">
-                  {/* Estado real */}
-                  <div className={cn(
-                    "flex items-start gap-3 px-4 py-3 rounded-sm border",
-                    genMode === "openai"
-                      ? "bg-emerald-500/8 border-emerald-500/20"
-                      : "bg-blue-500/8 border-blue-500/20"
-                  )}>
-                    <CheckCircle2 className={cn("w-4 h-4 mt-0.5 shrink-0",
-                      genMode === "openai" ? "text-emerald-400" : "text-blue-400")} />
-                    <div className="flex-1">
-                      <p className={cn("text-[10px] font-bold",
-                        genMode === "openai" ? "text-emerald-300" : "text-blue-300")}>
-                        {genMode === "openai" ? "Output real generado por OpenAI" : "Output generado · HTML con fallback SVG"}
-                      </p>
-                      {outputStatus?.generatedAt && (
-                        <p className="text-[9px] text-white/35 mt-0.5">
-                          Generado el {new Date(outputStatus.generatedAt).toLocaleDateString("es-ES", {
-                            day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit"
-                          })}
-                        </p>
-                      )}
-                      <div className="flex gap-2 mt-2 flex-wrap">
-                        {outputStatus?.files.html &&
-                          <span className="text-[7px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-px rounded-sm font-bold">HTML ✓</span>}
-                        {outputStatus?.files.metadata &&
-                          <span className="text-[7px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-px rounded-sm font-bold">Metadata ✓</span>}
-                        {outputStatus?.files.qaReport &&
-                          <span className="text-[7px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-px rounded-sm font-bold">QA Report ✓</span>}
-                        {(outputStatus?.files.previewSvg || outputStatus?.files.previewPng) &&
-                          <span className="text-[7px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-px rounded-sm font-bold">
-                            Preview {outputStatus?.files.previewPng ? "PNG ✓" : "SVG ✓"}
-                          </span>}
+            <div className="divide-y divide-white/[0.05]">
+              {FORMATS.map((format) => {
+                const Icon = format.icon;
+                const active = format.id === "visual-atlas";
+                return (
+                  <button
+                    key={format.id}
+                    onClick={() => setLocation(format.route)}
+                    className="w-full text-left px-4 py-3 hover:bg-white/[0.025] transition-colors flex items-center gap-3"
+                  >
+                    <div className="w-8 h-8 rounded-sm flex items-center justify-center shrink-0" style={{ background: `${format.color}18`, color: format.color }}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[12px] font-bold text-white/80">{format.name}</p>
+                        {active && (
+                          <span className="text-[7px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-px rounded-sm uppercase">
+                            activo
+                          </span>
+                        )}
                       </div>
+                      <p className="text-[9px] text-white/30 mt-0.5">{format.label}</p>
                     </div>
-                    {outputStatus?.htmlPath && (
-                      <a href={outputStatus.htmlPath} target="_blank" rel="noreferrer"
-                        className="flex items-center gap-1 h-7 px-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-sm text-[9px] text-white/50 hover:text-white/80 transition-all shrink-0">
-                        <ExternalLink className="w-3 h-3" />Ver HTML
-                      </a>
-                    )}
-                  </div>
-
-                  {/* Preview si existe */}
-                  {outputStatus?.previewPath && (
-                    <div className="max-w-sm">
-                      <p className="text-[8px] text-white/25 uppercase tracking-widest mb-1.5 font-bold">Preview generado</p>
-                      <div className="rounded-sm border border-white/10 overflow-hidden bg-[#0a1220]">
-                        <img src={outputStatus.previewPath}
-                          alt="Preview real página 01"
-                          className="w-full h-auto"
-                          style={{ aspectRatio: "8.5/11", objectFit: "contain" }} />
+                    <div className="hidden md:flex items-center gap-3 w-56">
+                      <div className="flex-1 h-1 bg-white/[0.06] rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${format.progress}%`, background: format.color }} />
                       </div>
+                      <span className="w-20 text-[8px] text-white/35">{format.status}</span>
                     </div>
-                  )}
-
-                  {/* Acciones */}
-                  <div className="flex gap-2 pt-1">
-                    <button onClick={() => setLocation("/qa/1")}
-                      className="flex items-center gap-1.5 h-8 px-3 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white text-[10px] font-bold rounded-sm transition-all">
-                      Revisar QA <ArrowRight className="w-3 h-3" />
-                    </button>
-                    <button onClick={() => setLocation("/generacion")}
-                      className="flex items-center gap-1.5 h-8 px-3 border border-white/10 hover:border-white/20 text-white/45 hover:text-white/70 text-[10px] font-medium rounded-sm transition-all">
-                      Regenerar
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                /* Sin output real */
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3 px-4 py-3 rounded-sm bg-white/[0.02] border border-white/[0.06]">
-                    <Clock className="w-4 h-4 text-white/20 mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-[10px] font-bold text-white/50">Sin output real generado todavía</p>
-                      <p className="text-[9px] text-white/30 mt-0.5 leading-relaxed">
-                        Siguiente paso: generar página 01 con OpenAI.
-                        El resultado se guardará en{" "}
-                        <span className="font-mono text-white/40 text-[8px]">/public/assets/cloudbooks/ai-200/visual-atlas/pages/01/</span>
-                      </p>
-                    </div>
-                  </div>
-                  <button onClick={() => setLocation("/generacion")}
-                    className="flex items-center gap-2 h-9 px-4 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 text-white text-[10px] font-bold rounded-sm transition-all shadow-lg">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Generar página 01 con OpenAI
+                    <ArrowRight className="w-3 h-3 text-white/20 shrink-0" />
                   </button>
-                </div>
-              )}
+                );
+              })}
             </div>
-          </div>
+          </section>
 
-          {/* ── Cómo funciona (solo si no hay output) ── */}
-          {!hasReal && !loading && (
-            <div className="bg-[#0d1629] border border-white/[0.06] rounded-sm p-4">
-              <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest mb-3">Flujo de producción</p>
-              <div className="space-y-2">
-                {[
-                  { n: "1", label: "Generar página 01", sub: "Plantilla golden master v24 · gpt-image-2 medium genera bloque visual", active: true },
-                  { n: "2", label: "QA y Aprobación", sub: "Revisar score por 6 dimensiones · aprobar o solicitar corrección", active: false },
-                  { n: "3", label: "Exportar", sub: "Descargar HTML, PNG o PDF de la página aprobada", active: false },
-                ].map(step => (
-                  <div key={step.n} className={cn(
-                    "flex items-start gap-3 px-3 py-2.5 rounded-sm border",
-                    step.active ? "border-teal-500/20 bg-teal-500/5" : "border-white/[0.05] bg-white/[0.01]"
-                  )}>
-                    <span className={cn(
-                      "w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black shrink-0 mt-0.5",
-                      step.active ? "bg-teal-500 text-white" : "bg-white/[0.06] text-white/20"
-                    )}>{step.n}</span>
-                    <div>
-                      <p className={cn("text-[10px] font-semibold", step.active ? "text-teal-300" : "text-white/40")}>{step.label}</p>
-                      <p className="text-[8px] text-white/25 mt-0.5">{step.sub}</p>
-                    </div>
-                  </div>
-                ))}
+          <section className="grid md:grid-cols-3 gap-3">
+            {[
+              { title: "Siguiente decision", text: "Consolidar navegacion por formato: cada libro tendra Contenido, QA, Contrato y Exportacion propios.", icon: Activity },
+              { title: "Visual Atlas", text: "Mantenerlo como primer formato productivo y usarlo como fuente para Traps Guide, Cheat Sheets y Rapid Review.", icon: Map },
+              { title: "Gobernanza", text: "Separar contrato visual del Visual Atlas de contratos narrativos para Master Book y Question Bank.", icon: Shield },
+            ].map((item) => (
+              <div key={item.title} className="bg-white/[0.015] border border-white/[0.05] rounded-sm p-4">
+                <item.icon className="w-4 h-4 text-teal-400/70" />
+                <p className="text-[10px] font-bold text-white/65 mt-3">{item.title}</p>
+                <p className="text-[9px] text-white/30 mt-1 leading-relaxed">{item.text}</p>
               </div>
-            </div>
-          )}
-
-          {/* ── Aviso sobre el resto de páginas ── */}
-          <div className="flex items-start gap-2.5 px-4 py-3 bg-white/[0.015] border border-white/[0.04] rounded-sm">
-            <AlertTriangle className="w-3.5 h-3.5 text-white/15 shrink-0 mt-0.5" />
-            <p className="text-[9px] text-white/25 leading-relaxed">
-              <span className="font-semibold text-white/35">Páginas 02–61</span> — el contenido editorial está preparado (grounding verificado, conceptos, trampas de examen).
-              La generación OpenAI se habilitará en batch una vez que página 01 esté aprobada.
-            </p>
-          </div>
-
+            ))}
+          </section>
         </div>
       </div>
     </Layout>
