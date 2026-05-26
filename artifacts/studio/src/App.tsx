@@ -97,7 +97,7 @@ function Router() {
         {() => <PrivateRoute><Contenido /></PrivateRoute>}
       </Route>
       <Route path="/contenido">
-        <Redirect to="/contenido/1" />
+        <Redirect to="/contenido-base" />
       </Route>
 
       <Route path="/generacion">

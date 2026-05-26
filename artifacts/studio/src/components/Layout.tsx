@@ -9,7 +9,7 @@ import {
 
 const NAV_PRODUCTION = [
   { href: "/biblioteca",    label: "Visual Atlas",      icon: Map,       segment: "biblioteca" },
-  { href: "/contenido/1",   label: "Contenido",         icon: Activity,  segment: "contenido" },
+  { href: "/contenido-base", label: "Contenido",        icon: Activity,  segment: "contenido-base" },
   { href: "/generacion",    label: "Generar",           icon: Sparkles,  segment: "generacion" },
   { href: "/qa/1",          label: "QA y Aprobación",   icon: Shield,    segment: "qa" },
   { href: "/exportacion",   label: "Exportación",       icon: Download,  segment: "exportacion" },

@@ -318,7 +318,7 @@ export default function AI200Collection() {
                         {isActive && <ArrowRight className="w-2.5 h-2.5" />}
                       </button>
                       <button
-                        onClick={() => isActive && setLocation("/contenido/1")}
+                        onClick={() => isActive && setLocation("/contenido-base")}
                         disabled={!isActive}
                         className={cn(
                           "flex items-center gap-1.5 h-7 px-3 rounded-sm text-[10px] font-medium border transition-all",
