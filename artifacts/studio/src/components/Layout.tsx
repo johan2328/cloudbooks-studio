@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Map, FileText, Shield, Download, LogOut,
-  ChevronRight, Sparkles, Activity, BookOpen, Layers,
+  ChevronRight, Sparkles, Activity, BookOpen, Layers, History,
 } from "lucide-react";
 
 const NAV_COLLECTION = [
@@ -12,16 +12,17 @@ const NAV_COLLECTION = [
 ];
 
 const NAV_PRODUCTION = [
-  { href: "/biblioteca",    label: "Visual Atlas",      icon: Map,       segment: "biblioteca" },
+  { href: "/biblioteca",    label: "Overview",          icon: Map,       segment: "biblioteca" },
   { href: "/contenido-base", label: "Contenido",        icon: Activity,  segment: "contenido-base" },
-  { href: "/generacion",    label: "Generar",           icon: Sparkles,  segment: "generacion" },
-  { href: "/qa/1",          label: "QA y Aprobación",   icon: Shield,    segment: "qa" },
-  { href: "/exportacion",   label: "Exportación",       icon: Download,  segment: "exportacion" },
+  { href: "/generacion",    label: "Generacion",        icon: Sparkles,  segment: "generacion" },
+  { href: "/qa/1",          label: "QA editorial",      icon: Shield,    segment: "qa" },
+  { href: "/actividad",     label: "Runs",              icon: History,   segment: "actividad" },
+  { href: "/contrato",      label: "Contrato",          icon: FileText,  segment: "contrato" },
+  { href: "/exportacion",   label: "Exportacion",       icon: Download,  segment: "exportacion" },
 ];
 
 const NAV_GOVERNANCE = [
-  { href: "/estandares",    label: "Estándares Editoriales", icon: BookOpen, segment: "estandares" },
-  { href: "/contrato",      label: "Contrato Visual",        icon: FileText, segment: "contrato" },
+  { href: "/estandares",    label: "Estandares Editoriales", icon: BookOpen, segment: "estandares" },
 ];
 
 interface LayoutProps { children: ReactNode; title?: string }

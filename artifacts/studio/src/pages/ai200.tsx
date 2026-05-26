@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import Layout from "@/components/Layout";
 import { cn } from "@/lib/utils";
+import { fetchStudioCatalog, type StudioCatalog } from "@/lib/studio-api";
 import {
   BookOpen, FileText, Target, HelpCircle, Table2, Zap,
-  ArrowRight, ChevronRight, Clock, CheckCircle2, AlertTriangle,
+  ArrowRight, ChevronRight,
   Cpu, Download, Activity, Eye, Shield,
 } from "lucide-react";
 
@@ -176,9 +177,46 @@ function StatusBadge({ status, label }: { status: FormatStatus; label: string })
 export default function AI200Collection() {
   const [, setLocation] = useLocation();
   const [expanded, setExpanded] = useState<string | null>("visual-atlas");
+  const [catalog, setCatalog] = useState<StudioCatalog | null>(null);
+
+  useEffect(() => {
+    fetchStudioCatalog().then(setCatalog).catch(() => setCatalog(null));
+  }, []);
 
   const activeModules = MODULES.filter(m => m.status === "active").length;
   const pendingModules = MODULES.filter(m => m.status === "pending").length;
+  const visualAtlasStats = useMemo(() => {
+    const pages = catalog?.pages ?? [];
+    const generated = pages.filter((p) => p.outputStatus.hasOutput && p.outputStatus.files.html).length;
+    const realVisuals = pages.filter((p) => p.outputStatus.generationMode === "openai_image").length;
+    const approved = pages.filter((p) => p.outputStatus.files.approved).length;
+    const seeds = catalog?.availableSeeds.length ?? 0;
+    const expected = catalog?.totalExpected ?? 61;
+    const qaScore = approved > 0 ? 9.5 : generated > 0 && realVisuals === generated ? 9.2 : generated > 0 ? 8.4 : null;
+
+    return {
+      generated,
+      realVisuals,
+      approved,
+      seeds,
+      expected,
+      qaScore,
+      notes: generated > 0
+        ? `${generated} output(s), ${realVisuals} con imagen real, ${approved} aprobado(s).`
+        : "Sin outputs generados en este entorno. Primero generar una pagina desde el modulo Visual Atlas.",
+    };
+  }, [catalog]);
+
+  const modules = useMemo(() => MODULES.map((mod) => {
+    if (mod.id !== "visual-atlas") return mod;
+    return {
+      ...mod,
+      progress: { done: visualAtlasStats.generated, total: visualAtlasStats.expected },
+      qaScore: visualAtlasStats.qaScore,
+      batches: `${visualAtlasStats.seeds} seeds disponibles de ${visualAtlasStats.expected} paginas esperadas`,
+      notes: visualAtlasStats.notes,
+    };
+  }), [visualAtlasStats]);
 
   return (
     <Layout title="AI-200 Collection">
@@ -204,7 +242,7 @@ export default function AI200Collection() {
               {[
                 { label: "Formatos activos", value: String(activeModules) },
                 { label: "En preparación", value: String(pendingModules) },
-                { label: "QA Visual Atlas", value: "9.2" },
+                { label: "Outputs reales", value: String(visualAtlasStats.generated) },
               ].map(s => (
                 <div key={s.label} className="text-center">
                   <p className="text-[7px] text-white/25 uppercase tracking-wider font-medium">{s.label}</p>
@@ -222,7 +260,7 @@ export default function AI200Collection() {
             <div className="flex-1 h-px bg-white/[0.05]" />
           </div>
 
-          {MODULES.map(mod => {
+          {modules.map(mod => {
             const Icon = mod.icon;
             const isExpanded = expanded === mod.id;
             const isActive = mod.status === "active";
@@ -301,6 +339,27 @@ export default function AI200Collection() {
                         ))}
                       </div>
                     </div>
+
+                    {isActive && (
+                      <div className="grid md:grid-cols-4 gap-2">
+                        {[
+                          { label: "Contenido", text: "Seeds, grounding y brechas", href: "/contenido-base", icon: Activity },
+                          { label: "Produccion", text: "Generacion por pagina", href: "/generacion", icon: Cpu },
+                          { label: "QA editorial", text: "Dictamen, riesgos y gates", href: "/qa/1", icon: Shield },
+                          { label: "Exportacion", text: "HTML, reportes y salida final", href: "/exportacion", icon: Download },
+                        ].map((item) => (
+                          <button
+                            key={item.label}
+                            onClick={() => setLocation(item.href)}
+                            className="text-left bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] hover:border-white/[0.12] rounded-sm p-3 transition-all"
+                          >
+                            <item.icon className="w-3.5 h-3.5 text-blue-300/70" />
+                            <p className="text-[10px] font-bold text-white/70 mt-2">{item.label}</p>
+                            <p className="text-[8px] text-white/28 mt-0.5 leading-snug">{item.text}</p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
                     {/* Acciones */}
                     <div className="flex flex-wrap gap-2 pt-1 border-t border-white/[0.05]">

@@ -52,6 +52,58 @@ const DEFECTS = [
   { id: "color_incoherence",label: "Incoherencia cromática" },
 ];
 
+function buildEditorialAssessment(args: {
+  hasOutput: boolean;
+  isRealVisual: boolean;
+  serverApproved: boolean;
+  realQA: RealQA | null;
+}) {
+  const { hasOutput, isRealVisual, serverApproved, realQA } = args;
+
+  if (!hasOutput) {
+    return {
+      verdict: "Sin material evaluable",
+      risk: "No se puede emitir criterio editorial hasta que exista HTML generado.",
+      next: "Generar la pagina con el contrato Visual Atlas v24 antes de pasar por QA.",
+      tone: "neutral" as const,
+    };
+  }
+
+  if (!isRealVisual) {
+    return {
+      verdict: "Bloqueo editorial",
+      risk: "La pagina usa placeholder visual. En una coleccion premium esto rompe la promesa comercial del Visual Atlas.",
+      next: "Regenerar el upper visual con gpt-image-2 medium y volver a revisar encuadre, legibilidad y densidad.",
+      tone: "danger" as const,
+    };
+  }
+
+  if (serverApproved) {
+    return {
+      verdict: "Lista para exportacion",
+      risk: "Riesgo bajo: el output tiene imagen real, QA registrado y aprobacion trazable.",
+      next: "Mantener esta version como referencia comparativa para las siguientes paginas del batch.",
+      tone: "success" as const,
+    };
+  }
+
+  if (realQA?.verdict === "approved") {
+    return {
+      verdict: "Aprobable con revision humana",
+      risk: "Riesgo moderado: el servidor no bloquea, pero conviene revisar criterio visual, equilibrio de espacios y precision tecnica.",
+      next: "Aprobar si la lectura a tamano real sostiene jerarquia, consistencia iconografica y claridad de examen.",
+      tone: "success" as const,
+    };
+  }
+
+  return {
+    verdict: "Requiere mirada editorial",
+    risk: "Riesgo medio: faltan criterios suficientes para llevarla a produccion sin una revision dirigida.",
+    next: "Marcar defectos visibles y solicitar correccion con una indicacion concreta, no regeneracion abierta.",
+    tone: "warning" as const,
+  };
+}
+
 function getToken() { return localStorage.getItem("studio_token") ?? ""; }
 function authHdr() { return { Authorization: `Bearer ${getToken()}` }; }
 
@@ -156,6 +208,7 @@ export default function QAPage() {
   const isPlaceholder  = !isRealVisual && hasOutput;
   const approvalBlocked = !isRealVisual;
   const serverApproved = outputStatus?.files.approved === true;
+  const editorialAssessment = buildEditorialAssessment({ hasOutput, isRealVisual, serverApproved, realQA });
 
   return (
     <Layout title={`QA · Pág. ${pageNum}`}>
@@ -217,6 +270,40 @@ export default function QAPage() {
             ) : (
               /* ── Con output real ── */
               <>
+                <div className={cn(
+                  "bg-[#0d1629] border rounded-sm p-4",
+                  editorialAssessment.tone === "danger" && "border-red-500/25",
+                  editorialAssessment.tone === "warning" && "border-amber-500/20",
+                  editorialAssessment.tone === "success" && "border-emerald-500/20",
+                  editorialAssessment.tone === "neutral" && "border-white/[0.08]"
+                )}>
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      "w-8 h-8 rounded-sm flex items-center justify-center shrink-0 border",
+                      editorialAssessment.tone === "danger" && "bg-red-500/10 border-red-500/25 text-red-300",
+                      editorialAssessment.tone === "warning" && "bg-amber-500/10 border-amber-500/20 text-amber-300",
+                      editorialAssessment.tone === "success" && "bg-emerald-500/10 border-emerald-500/20 text-emerald-300",
+                      editorialAssessment.tone === "neutral" && "bg-white/[0.03] border-white/[0.08] text-white/35"
+                    )}>
+                      <Shield className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Dictamen editorial</p>
+                      <p className="text-sm font-black text-white/80 mt-1">{editorialAssessment.verdict}</p>
+                      <div className="grid md:grid-cols-2 gap-3 mt-3">
+                        <div className="bg-white/[0.02] border border-white/[0.05] rounded-sm p-3">
+                          <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Riesgo</p>
+                          <p className="text-[10px] text-white/55 leading-relaxed mt-1">{editorialAssessment.risk}</p>
+                        </div>
+                        <div className="bg-white/[0.02] border border-white/[0.05] rounded-sm p-3">
+                          <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Siguiente accion</p>
+                          <p className="text-[10px] text-white/55 leading-relaxed mt-1">{editorialAssessment.next}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Bloque de bloqueo — visible cuando hay placeholder */}
                 {isPlaceholder && (
                   <div className="bg-red-950/30 border border-red-500/30 rounded-sm px-4 py-3 flex items-start gap-3">
