@@ -5,6 +5,7 @@ import pagesRouter       from "./pages";
 import qaRouter          from "./qa";
 import generationRouter  from "./generation";
 import contractRouter    from "./contract";
+import catalogRouter     from "./catalog";
 
 /* ── Studio routes (separadas por responsabilidad) ── */
 import studioGenerateRouter  from "./studio-generate";
@@ -20,6 +21,7 @@ router.use(pagesRouter);
 router.use(qaRouter);
 router.use(generationRouter);
 router.use(contractRouter);
+router.use(catalogRouter);
 
 router.use(studioGenerateRouter);
 router.use(studioApprovalRouter);

@@ -1,23 +1,15 @@
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import CatalogLayout from "@/components/CatalogLayout";
 import { cn } from "@/lib/utils";
 import { ArrowRight, Lock, BookOpen, Plus } from "lucide-react";
 import { useListPages } from "@workspace/api-client-react";
+import { fetchProviderCertifications, type EditorialCertificationSummary } from "@/lib/editorial-catalog-api";
 
-interface Cert {
-  code: string;
-  name: string;
-  fullName: string;
-  level: "Fundamentals" | "Associate" | "Expert" | "Specialty";
-  status: "active" | "planned";
-  formats: number;
-  activeFormats: number;
-  estimatedPages: number;
-  href: string | null;
-}
-
-const CERTS: Cert[] = [
+const FALLBACK_CERTS: EditorialCertificationSummary[] = [
   {
+    id: "ai-200",
+    providerId: "azure",
     code: "AI-200",
     name: "Azure AI Engineer",
     fullName: "Azure AI Engineer Associate",
@@ -26,9 +18,10 @@ const CERTS: Cert[] = [
     formats: 6,
     activeFormats: 1,
     estimatedPages: 61,
-    href: "/ai-200",
   },
   {
+    id: "az-900",
+    providerId: "azure",
     code: "AZ-900",
     name: "Azure Fundamentals",
     fullName: "Microsoft Azure Fundamentals",
@@ -37,9 +30,10 @@ const CERTS: Cert[] = [
     formats: 6,
     activeFormats: 0,
     estimatedPages: 48,
-    href: null,
   },
   {
+    id: "ai-900",
+    providerId: "azure",
     code: "AI-900",
     name: "Azure AI Fundamentals",
     fullName: "Microsoft Azure AI Fundamentals",
@@ -48,9 +42,10 @@ const CERTS: Cert[] = [
     formats: 6,
     activeFormats: 0,
     estimatedPages: 42,
-    href: null,
   },
   {
+    id: "dp-900",
+    providerId: "azure",
     code: "DP-900",
     name: "Azure Data Fundamentals",
     fullName: "Microsoft Azure Data Fundamentals",
@@ -59,9 +54,10 @@ const CERTS: Cert[] = [
     formats: 6,
     activeFormats: 0,
     estimatedPages: 44,
-    href: null,
   },
   {
+    id: "az-104",
+    providerId: "azure",
     code: "AZ-104",
     name: "Azure Administrator",
     fullName: "Microsoft Azure Administrator",
@@ -70,9 +66,10 @@ const CERTS: Cert[] = [
     formats: 6,
     activeFormats: 0,
     estimatedPages: 72,
-    href: null,
   },
   {
+    id: "az-305",
+    providerId: "azure",
     code: "AZ-305",
     name: "Azure Solutions Architect",
     fullName: "Azure Solutions Architect Expert",
@@ -81,7 +78,6 @@ const CERTS: Cert[] = [
     formats: 6,
     activeFormats: 0,
     estimatedPages: 80,
-    href: null,
   },
 ];
 
@@ -94,6 +90,7 @@ const LEVEL_CONFIG = {
 
 export default function Azure() {
   const [, setLocation] = useLocation();
+  const [certs, setCerts] = useState(FALLBACK_CERTS);
   const pagesQuery = useListPages();
   const pages = pagesQuery.data ?? [];
   const approved = pages.filter((p) => p.status === "approved").length;
@@ -101,6 +98,10 @@ export default function Azure() {
   const avgQA = pages.filter(p => p.qaScore && p.qaScore > 0).length > 0
     ? (pages.reduce((s, p) => s + (p.qaScore ?? 0), 0) / pages.filter(p => p.qaScore && p.qaScore > 0).length).toFixed(1)
     : null;
+
+  useEffect(() => {
+    fetchProviderCertifications("azure").then(setCerts).catch(() => setCerts(FALLBACK_CERTS));
+  }, []);
 
   return (
     <CatalogLayout crumbs={[
@@ -117,7 +118,7 @@ export default function Azure() {
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold text-white tracking-tight">Microsoft Azure</h1>
             <p className="text-xs text-white/30 mt-0.5">
-              {CERTS.length} certificaciones · {CERTS.filter(c => c.status === "active").length} en producción · 6 formatos editoriales por colección
+              {certs.length} certificaciones · {certs.filter(c => c.status === "active").length} en producción · 6 formatos editoriales por colección
             </p>
           </div>
           <button
@@ -131,13 +132,13 @@ export default function Azure() {
 
         {/* Certs grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-8">
-          {CERTS.map((cert) => {
+          {certs.map((cert) => {
             const lvl = LEVEL_CONFIG[cert.level];
             const isActive = cert.status === "active";
 
             return (
               <div
-                key={cert.code}
+                key={cert.id}
                 className={cn(
                   "bg-[#0d1629] border rounded-sm flex flex-col transition-all",
                   isActive
@@ -208,7 +209,7 @@ export default function Azure() {
                 <div className="px-4 py-3 mt-auto">
                   {isActive ? (
                     <button
-                      onClick={() => cert.href && setLocation(cert.href)}
+                      onClick={() => setLocation(`/${cert.id}`)}
                       className="w-full flex items-center justify-center gap-2 h-8 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white text-xs font-semibold rounded-sm transition-all shadow-sm"
                     >
                       <BookOpen className="w-3.5 h-3.5" />

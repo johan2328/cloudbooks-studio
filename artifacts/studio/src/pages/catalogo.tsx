@@ -1,66 +1,53 @@
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import CatalogLayout from "@/components/CatalogLayout";
 import { cn } from "@/lib/utils";
 import { ArrowRight, Lock, Cloud, Plus } from "lucide-react";
+import { fetchEditorialProviders, type EditorialProviderSummary } from "@/lib/editorial-catalog-api";
 
-interface CloudProvider {
-  id: string;
-  name: string;
-  shortName: string;
-  color: string;
-  badgeBg: string;
-  badgeText: string;
-  status: "active" | "planned";
-  certCount: number;
-  activeCount: number;
-  description: string;
-  href: string | null;
-}
-
-const PROVIDERS: CloudProvider[] = [
+const FALLBACK_PROVIDERS: EditorialProviderSummary[] = [
   {
     id: "azure",
     name: "Microsoft Azure",
     shortName: "Azure",
-    color: "#0078d4",
-    badgeBg: "bg-[#0078d4]",
     badgeText: "Az",
+    brandColor: "#0078d4",
     status: "active",
     certCount: 6,
     activeCount: 1,
     description: "Colecciones editoriales para certificaciones Microsoft Azure. Proveedor activo.",
-    href: "/azure",
   },
   {
     id: "aws",
     name: "Amazon Web Services",
     shortName: "AWS",
-    color: "#FF9900",
-    badgeBg: "bg-orange-400",
     badgeText: "AW",
+    brandColor: "#FF9900",
     status: "planned",
     certCount: 0,
     activeCount: 0,
     description: "Colecciones para certificaciones AWS. En hoja de ruta.",
-    href: null,
   },
   {
     id: "gcp",
     name: "Google Cloud Platform",
     shortName: "GCP",
-    color: "#4285F4",
-    badgeBg: "bg-blue-400",
     badgeText: "GC",
+    brandColor: "#4285F4",
     status: "planned",
     certCount: 0,
     activeCount: 0,
     description: "Colecciones para certificaciones Google Cloud. En hoja de ruta.",
-    href: null,
   },
 ];
 
 export default function Catalogo() {
   const [, setLocation] = useLocation();
+  const [providers, setProviders] = useState(FALLBACK_PROVIDERS);
+
+  useEffect(() => {
+    fetchEditorialProviders().then(setProviders).catch(() => setProviders(FALLBACK_PROVIDERS));
+  }, []);
 
   return (
     <CatalogLayout crumbs={[{ label: "Biblioteca" }]}>
@@ -85,7 +72,7 @@ export default function Catalogo() {
 
         {/* Providers */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-          {PROVIDERS.map((p) => (
+          {providers.map((p) => (
             <div
               key={p.id}
               className={cn(
@@ -101,7 +88,7 @@ export default function Catalogo() {
                   ? "bg-blue-500/5 border-white/[0.06]"
                   : "bg-white/[0.02] border-white/[0.04]")}>
                 <div className="flex items-center justify-between mb-3">
-                  <div className={cn("w-8 h-8 rounded flex items-center justify-center text-[11px] font-bold text-white", p.badgeBg)}>
+                  <div className="w-8 h-8 rounded flex items-center justify-center text-[11px] font-bold text-white" style={{ background: p.brandColor }}>
                     {p.badgeText}
                   </div>
                   {p.status === "planned" && <Lock className="w-3.5 h-3.5 text-white/15" />}
@@ -132,7 +119,7 @@ export default function Catalogo() {
               <div className="px-5 py-4 mt-auto">
                 {p.status === "active" ? (
                   <button
-                    onClick={() => p.href && setLocation(p.href)}
+                    onClick={() => setLocation(`/${p.id}`)}
                     className="w-full flex items-center justify-center gap-2 h-8 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white text-xs font-semibold rounded-sm transition-all shadow-sm"
                   >
                     <Cloud className="w-3.5 h-3.5" />
