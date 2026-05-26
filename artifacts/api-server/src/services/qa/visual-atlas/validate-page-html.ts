@@ -39,6 +39,8 @@ export function runStructuralQa(html: string, data: VisualAtlasPageData): Struct
     { name: "Title present in h1", ok: html.includes(data.title) },
     { name: "Context deck present", ok: html.includes(data.context.slice(0, 40)) },
     { name: "Guide question present", ok: html.includes(data.guideQuestion.slice(0, 30)) },
+    { name: "Guide icon present", ok: html.includes('class="guide-mark"') && html.includes('aria-hidden="true"') },
+    { name: "Domain title icon present", ok: html.includes('class="title-icon"') },
     { name: "Upper visual block exists", ok: html.includes('class="upper"') },
     { name: "Exam traps: 3 items", ok: data.traps.length === 3 },
     { name: `Exam traps header ${contract.page.trapColor}`, ok: html.includes(contract.page.trapColor) },

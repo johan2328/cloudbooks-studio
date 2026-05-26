@@ -14,20 +14,16 @@ export function renderVisualAtlasPage(data: VisualAtlasPageData): string {
   const contract = VISUAL_ATLAS_V24_CONTRACT;
 
   /* ── Icono de título ─────────────────────────────────────────────────── */
-  const titleIconSvg = `<svg width="86" height="86" viewBox="0 0 86 86" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="43" cy="18" rx="18" ry="10" fill="#0078D4" opacity="0.12"/>
-    <ellipse cx="30" cy="21" rx="11" ry="7" fill="#0078D4" opacity="0.09"/>
-    <ellipse cx="56" cy="21" rx="11" ry="7" fill="#0078D4" opacity="0.09"/>
-    <rect x="12" y="27" width="62" height="48" rx="5" fill="#EBF4FF" stroke="#3B82F6" stroke-width="1.5"/>
-    <rect x="12" y="27" width="62" height="16" rx="5" fill="#0078D4" opacity="0.20"/>
-    <circle cx="64" cy="35" r="3" fill="#0D9488" opacity="0.50"/>
-    <circle cx="55" cy="35" r="3" fill="#0D9488" opacity="0.30"/>
-    <rect x="18" y="50" width="16" height="11" rx="2" fill="#0078D4" opacity="0.25"/>
-    <rect x="36" y="50" width="16" height="11" rx="2" fill="#0D9488" opacity="0.25"/>
-    <rect x="54" y="50" width="16" height="11" rx="2" fill="#0078D4" opacity="0.25"/>
-    <rect x="18" y="63" width="16" height="8" rx="2" fill="#0D9488" opacity="0.18"/>
-    <rect x="36" y="63" width="16" height="8" rx="2" fill="#0078D4" opacity="0.18"/>
-    <rect x="54" y="63" width="16" height="8" rx="2" fill="#0D9488" opacity="0.18"/>
+  const titleIconSvg = `<svg class="title-icon" width="${contract.hero.iconWidth}" height="${contract.hero.iconHeight}" viewBox="0 0 180 130" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Soluciones contenerizadas en Azure">
+    <path d="M46 86h89c17 0 30-12 30-28 0-15-12-27-27-28-6-16-22-25-40-22-15 2-27 13-31 27-15-2-29 10-29 25 0 10 4 19 8 26Z" fill="#F8FBFF" stroke="#0969DA" stroke-width="5" stroke-linejoin="round"/>
+    <g transform="translate(73 45)">
+      <path d="M7 12 43 0l36 12v48L43 75 7 60Z" fill="#E8F2FF" stroke="#0B3A75" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M43 0v75M7 12l36 13 36-13" stroke="#0B3A75" stroke-width="3"/>
+      <rect x="20" y="27" width="46" height="30" rx="3" fill="#0078D4" stroke="#0B3A75" stroke-width="3"/>
+      <path d="M29 31v22M41 29v27M53 31v22" stroke="#B9E3FF" stroke-width="3"/>
+    </g>
+    <circle cx="42" cy="88" r="12" fill="#DFF6F2" stroke="#0D9488" stroke-width="4"/>
+    <path d="M35 88h14M42 81v14" stroke="#0D9488" stroke-width="4" stroke-linecap="round"/>
   </svg>`;
 
   /* ── Upper visual — imagen real o placeholder claro ──────────────────── */
@@ -105,18 +101,18 @@ body {
 }
 h1 {
   grid-area: title;
-  font-size: 35px;
+  font-size: ${contract.hero.titleFontSize}px;
   font-weight: 900;
   color: #06133E;
-  line-height: 1.01;
+  line-height: ${contract.hero.titleLineHeight};
   letter-spacing: -0.022em;
   align-self: end;
 }
 .deck {
   grid-area: deck;
-  font-size: 13.55px;
+  font-size: ${contract.hero.deckFontSize}px;
   color: #2d3a5c;
-  line-height: 1.25;
+  line-height: ${contract.hero.deckLineHeight};
   align-self: start;
 }
 .icon-slot {
@@ -134,15 +130,15 @@ h1 {
   display: flex;
   align-items: center;
   padding: 0 22px;
-  gap: 10px;
+  gap: 9px;
   overflow: hidden;
 }
 .guide-mark {
-  width: 22px; height: 22px;
+  width: ${contract.guide.markerSize}px; height: ${contract.guide.markerSize}px;
   background: ${contract.page.guideColor};
   color: #ffffff;
   border-radius: 50%;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
   display: flex;
   align-items: center;
@@ -150,7 +146,7 @@ h1 {
   flex-shrink: 0;
 }
 .guide > span {
-  font-size: 11px;
+  font-size: ${contract.guide.fontSize}px;
   color: #0d2260;
   line-height: 1.3;
   white-space: nowrap;
@@ -223,7 +219,7 @@ section.body {
 }
 .mod.traps { border-right: 1px solid #dde3ed; }
 .mod-header {
-  padding: 8px 16px;
+  padding: ${contract.exam.headerPaddingY}px 16px;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -232,7 +228,7 @@ section.body {
 .mod.traps .mod-header { background: ${contract.page.trapColor}; }
 .mod.check .mod-header { background: ${contract.chrome.footer.background}; }
 .mod-header-label {
-  font-size: 8.5px;
+  font-size: ${contract.exam.headerFontSize}px;
   font-weight: 800;
   letter-spacing: 0.10em;
   text-transform: uppercase;
@@ -240,10 +236,10 @@ section.body {
 }
 .mod-body {
   flex: 1;
-  padding: 10px 14px;
+  padding: ${contract.exam.bodyPaddingY}px 14px;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: ${contract.exam.bodyGap}px;
   overflow: hidden;
 }
 .mod.traps .mod-body { background: #fff9f9; }
@@ -266,26 +262,26 @@ section.body {
 }
 .trap-content { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .trap-wrong {
-  font-size: 9.5px;
+  font-size: ${contract.exam.trapWrongFontSize}px;
   font-weight: 700;
   color: #374151;
   text-decoration: line-through;
   text-decoration-color: #f87171;
 }
 .trap-arrow { font-size: 8px; color: #9ca3af; }
-.trap-correction { font-size: 9px; color: #1f2937; line-height: 1.45; }
+.trap-correction { font-size: ${contract.exam.trapCorrectionFontSize}px; color: #1f2937; line-height: 1.42; }
 
 /* Autocheck items */
-.autocheck-question { font-size: 10px; font-weight: 700; color: #06133E; line-height: 1.4; }
+.autocheck-question { font-size: ${contract.exam.autocheckQuestionFontSize}px; font-weight: 700; color: #06133E; line-height: 1.34; }
 .autocheck-options { display: flex; flex-direction: column; gap: 4px; }
 .option-row {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 5px 8px;
+  padding: ${contract.exam.optionPaddingY}px 8px;
   border-radius: 3px;
   border: 1px solid #e5e7eb;
-  font-size: 9.5px;
+  font-size: ${contract.exam.optionFontSize}px;
 }
 .option-row.correct { background: #d1fae5; border-color: #6ee7b7; color: #065f46; font-weight: 700; }
 .option-row.wrong-opt { background: #f9fafb; color: #6b7280; }
@@ -299,7 +295,7 @@ section.body {
 .option-row.correct .option-badge { background: #a7f3d0; color: #065f46; }
 .option-row.wrong-opt .option-badge { background: #e5e7eb; color: #6b7280; }
 .autocheck-explanation {
-  font-size: 9px;
+  font-size: ${contract.exam.explanationFontSize}px;
   color: #1f2937;
   line-height: 1.45;
   padding: 6px 8px;
@@ -308,7 +304,7 @@ section.body {
   border-radius: 0 3px 3px 0;
 }
 .discard-notes { display: flex; flex-direction: column; gap: 2px; }
-.discard-note { font-size: 8px; color: #9ca3af; line-height: 1.4; }
+.discard-note { font-size: ${contract.exam.discardFontSize}px; color: #9ca3af; line-height: 1.32; }
 
 /* ── FOOTER ─────────────────────────────────────────────────────────────── */
 .footer {
@@ -339,7 +335,7 @@ section.body {
   </section>
 
   <section class="guide">
-    <span class="guide-mark">?</span>
+    <span class="guide-mark"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6.4 5.5a1.8 1.8 0 1 1 3.1 1.2c-.8.7-1.5 1.1-1.5 2.3" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="8" cy="12.2" r="1" fill="white"/></svg></span>
     <span><strong>PREGUNTA GUÍA:</strong>${data.guideQuestion}</span>
   </section>
 

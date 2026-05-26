@@ -99,6 +99,11 @@ router.get("/studio/key-status", (_req, res): void => {
     contractId:          VISUAL_ATLAS_V24_CONTRACT.id,
     upperVisualRole:     VISUAL_ATLAS_V24_CONTRACT.upperVisual.role,
     upperVisualSize:     VISUAL_ATLAS_V24_CONTRACT.generation.imageSize,
+    layoutRows:          VISUAL_ATLAS_V24_CONTRACT.page.gridRows,
+    upperVisualSlot: {
+      width: VISUAL_ATLAS_V24_CONTRACT.upperVisual.slotWidth,
+      height: VISUAL_ATLAS_V24_CONTRACT.upperVisual.slotHeight,
+    },
     chrome: {
       topbar: {
         fontSize: VISUAL_ATLAS_V24_CONTRACT.chrome.topbar.fontSize,
@@ -109,6 +114,11 @@ router.get("/studio/key-status", (_req, res): void => {
         fontSize: VISUAL_ATLAS_V24_CONTRACT.chrome.footer.fontSize,
         brandText: VISUAL_ATLAS_V24_CONTRACT.chrome.footer.brandText,
       },
+    },
+    density: {
+      guideFontSize: VISUAL_ATLAS_V24_CONTRACT.guide.fontSize,
+      examHeaderFontSize: VISUAL_ATLAS_V24_CONTRACT.exam.headerFontSize,
+      optionFontSize: VISUAL_ATLAS_V24_CONTRACT.exam.optionFontSize,
     },
     approach:            "golden_master_fixed_template",
     layout:              "Golden Master Visual Atlas v24",
