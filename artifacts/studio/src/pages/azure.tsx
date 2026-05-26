@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import CatalogLayout from "@/components/CatalogLayout";
 import { cn } from "@/lib/utils";
-import { ArrowRight, Lock, BookOpen } from "lucide-react";
+import { ArrowRight, Lock, BookOpen, Plus } from "lucide-react";
 import { useListPages } from "@workspace/api-client-react";
 
 interface Cert {
@@ -114,12 +114,19 @@ export default function Azure() {
           <div className="w-10 h-10 rounded bg-[#0078d4] flex items-center justify-center text-white text-sm font-bold shrink-0">
             Az
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold text-white tracking-tight">Microsoft Azure</h1>
             <p className="text-xs text-white/30 mt-0.5">
               {CERTS.length} certificaciones · {CERTS.filter(c => c.status === "active").length} en producción · 6 formatos editoriales por colección
             </p>
           </div>
+          <button
+            disabled
+            title="Pendiente: crear certificaciones desde DB, contratos y seeds."
+            className="hidden sm:flex items-center gap-1.5 h-8 px-3 rounded-sm border border-white/[0.08] bg-white/[0.03] text-[10px] font-bold text-white/25 cursor-not-allowed"
+          >
+            <Plus className="w-3 h-3" />Nueva certificacion
+          </button>
         </div>
 
         {/* Certs grid */}

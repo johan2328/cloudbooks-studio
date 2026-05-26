@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import CatalogLayout from "@/components/CatalogLayout";
 import { cn } from "@/lib/utils";
-import { ArrowRight, Lock, Cloud } from "lucide-react";
+import { ArrowRight, Lock, Cloud, Plus } from "lucide-react";
 
 interface CloudProvider {
   id: string;
@@ -67,11 +67,20 @@ export default function Catalogo() {
       <div className="px-8 py-8 max-w-5xl mx-auto w-full">
 
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-xl font-bold text-white tracking-tight">Biblioteca</h1>
-          <p className="text-sm text-white/40 mt-1">
-            Colecciones editoriales de certificación cloud. Selecciona un proveedor para explorar sus certificaciones.
-          </p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight">Biblioteca</h1>
+            <p className="text-sm text-white/40 mt-1">
+              Colecciones editoriales de certificación cloud. Selecciona un proveedor para explorar sus certificaciones.
+            </p>
+          </div>
+          <button
+            disabled
+            title="La creacion real de proveedores/certificaciones requiere schema persistente."
+            className="hidden sm:flex items-center gap-1.5 h-8 px-3 rounded-sm border border-white/[0.08] bg-white/[0.03] text-[10px] font-bold text-white/25 cursor-not-allowed"
+          >
+            <Plus className="w-3 h-3" />Nueva coleccion
+          </button>
         </div>
 
         {/* Providers */}

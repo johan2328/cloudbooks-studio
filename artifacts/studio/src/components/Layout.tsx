@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 
 const NAV_COLLECTION = [
+  { href: "/catalogo", label: "Biblioteca Cloud", icon: BookOpen, segment: "catalogo" },
+  { href: "/azure", label: "Azure", icon: Layers, segment: "azure" },
   { href: "/ai-200", label: "AI-200 Collection", icon: Layers, segment: "ai-200" },
 ];
 

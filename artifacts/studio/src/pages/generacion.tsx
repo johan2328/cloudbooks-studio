@@ -1,5 +1,6 @@
 import { useState, useEffect, type ElementType } from "react";
 import Layout from "@/components/Layout";
+import { useLocation } from "wouter";
 import {
   Sparkles, CheckCircle2, XCircle, Loader2, Key,
   ChevronRight, Clock, Code2, FileText, Shield, Eye,
@@ -79,6 +80,7 @@ async function readJsonOrThrow<T>(res: Response, label: string): Promise<T> {
 
 export default function Generacion() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [step, setStep]         = useState<RunStep>("idle");
   const [error, setError]       = useState<string | null>(null);
   const [result, setResult]     = useState<GenerationResult | null>(null);
@@ -88,6 +90,7 @@ export default function Generacion() {
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const pageId = getPageIdFromLocation("01");
   const page: StudioCatalogPage | undefined = catalog?.pages.find((p) => p.pageId === pageId) ?? catalog?.pages[0];
+  const pageOptions = catalog?.pages ?? [];
 
   useEffect(() => {
     fetch("/api/studio/key-status", { headers: authHdr() })
@@ -181,6 +184,25 @@ export default function Generacion() {
               <p className="text-[9px] text-white/30 mt-0.5 truncate">{page.domain}</p>
             )}
           </div>
+
+          {/* Page selector */}
+          {pageOptions.length > 0 && (
+            <label className="flex items-center gap-2 h-9 px-2.5 rounded-sm bg-white/[0.03] border border-white/[0.08]">
+              <span className="text-[8px] font-bold text-white/25 uppercase tracking-wider">Pagina</span>
+              <select
+                value={page?.pageId ?? pageId}
+                onChange={(event) => setLocation(`/generacion?page=${event.target.value}`)}
+                disabled={isRunning}
+                className="bg-transparent text-[10px] font-bold text-white/70 outline-none disabled:opacity-40"
+              >
+                {pageOptions.map((p) => (
+                  <option key={p.pageId} value={p.pageId} className="bg-[#0d1629] text-white">
+                    {p.pageNumber} - {p.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           {/* Key badge */}
           {!keyChecked ? (
@@ -442,7 +464,7 @@ export default function Generacion() {
                       [result.outputs.metadata, "metadata.json",  FileText, "text-teal-400"],
                       [result.outputs.qaReport, "qa-report.md",   Shield,   "text-sky-400"],
                       ...(result.outputs.previewPng
-                        ? [[result.outputs.previewPng, "upper-visual.png", Eye, "text-violet-400"] as const]
+                        ? [[result.outputs.previewPng, "upper-art.png", Eye, "text-violet-400"] as const]
                         : []),
                     ] as [string | null, string, typeof Code2, string][])
                       .filter(([url]) => !!url)

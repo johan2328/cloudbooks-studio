@@ -273,7 +273,7 @@ export default function ContenidoGrounding() {
 
   return (
     <Layout title="Base editorial AI-200 — Contenido y Grounding">
-      <div className="flex flex-col h-full bg-[#0a1220] overflow-hidden">
+      <div className="h-full bg-[#0a1220] overflow-y-auto">
 
         {/* ── Header con breadcrumb ── */}
         <div className="bg-[#0d1629] border-b border-white/[0.06] px-6 py-3 shrink-0">
@@ -349,10 +349,10 @@ export default function ContenidoGrounding() {
         </div>
 
         {/* ── Main split layout ── */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="grid grid-cols-[240px_minmax(0,1fr)] min-h-[560px]">
 
           {/* ── Left: topics list ── */}
-          <aside className="w-60 bg-[#0d1629] border-r border-white/[0.06] flex flex-col overflow-hidden shrink-0">
+          <aside className="bg-[#0d1629] border-r border-white/[0.06] flex flex-col min-h-[560px]">
             <div className="px-4 py-2.5 border-b border-white/[0.06] shrink-0">
               <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Temas · Batch 01-10</p>
             </div>
@@ -388,7 +388,7 @@ export default function ContenidoGrounding() {
           </aside>
 
           {/* ── Right: topic detail ── */}
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="min-w-0 flex flex-col">
 
             {/* Detail header */}
             <div className="bg-[#0d1629] border-b border-white/[0.06] px-5 py-3 shrink-0">
@@ -440,7 +440,7 @@ export default function ContenidoGrounding() {
             </div>
 
             {/* Detail content */}
-            <div className="flex-1 overflow-y-auto p-5">
+            <div className="p-5">
 
               {/* ── Tab: Contenido editorial ── */}
               {detailTab === "contenido" && (
@@ -598,7 +598,7 @@ export default function ContenidoGrounding() {
         </div>
 
         {/* ── Bottom panels ── */}
-        <div className="border-t border-white/[0.06] bg-[#0d1629] shrink-0" style={{ maxHeight:"260px" }}>
+        <div className="border-t border-white/[0.06] bg-[#0d1629]">
           <div className="flex gap-0.5 px-5 pt-2 border-b border-white/[0.05]">
             {([["matriz","Matriz de cobertura"],["brechas","Brechas editoriales"]] as const).map(([id, label]) => (
               <button key={id} onClick={() => setBottomTab(id)}
@@ -609,7 +609,7 @@ export default function ContenidoGrounding() {
             ))}
           </div>
 
-          <div className="overflow-x-auto overflow-y-auto p-4" style={{ maxHeight:"220px" }}>
+          <div className="overflow-x-auto p-4">
 
             {/* ── Matriz de cobertura ── */}
             {bottomTab === "matriz" && (
