@@ -63,6 +63,20 @@ const STEPS: { key: RunStep; label: string; sub: string }[] = [
 function getToken() { return localStorage.getItem("studio_token") ?? ""; }
 function authHdr() { return { Authorization: `Bearer ${getToken()}` }; }
 
+async function readJsonOrThrow<T>(res: Response, label: string): Promise<T> {
+  const contentType = res.headers.get("content-type") ?? "";
+  const bodyText = await res.text();
+  if (!contentType.includes("application/json")) {
+    const preview = bodyText.replace(/\s+/g, " ").slice(0, 180);
+    throw new Error(`${label} devolvio ${res.status} ${res.statusText || ""} con content-type '${contentType || "desconocido"}'. Respuesta no JSON: ${preview}`);
+  }
+  try {
+    return JSON.parse(bodyText) as T;
+  } catch (err) {
+    throw new Error(`${label} devolvio JSON invalido: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
 export default function Generacion() {
   const { toast } = useToast();
   const [step, setStep]         = useState<RunStep>("idle");
@@ -104,7 +118,7 @@ export default function Generacion() {
     try {
       // Re-verificar key
       const keyRes  = await fetch("/api/studio/key-status", { headers: authHdr() });
-      const keyData = await keyRes.json() as KeyStatus;
+      const keyData = await readJsonOrThrow<KeyStatus>(keyRes, "key-status");
       if (!keyData.hasKey) {
         setError("OPENAI_API_KEY no configurada en Secrets. Ir a Replit → Secrets → agregar OPENAI_API_KEY.");
         setStep("error");
@@ -126,12 +140,12 @@ export default function Generacion() {
       await new Promise(r => setTimeout(r, 200));
 
       if (!genRes.ok) {
-        const err = await genRes.json() as { error: string };
+        const err = await readJsonOrThrow<{ error?: string; detail?: string }>(genRes, "generate-visual-atlas-page");
         throw new Error(err.error ?? `HTTP ${genRes.status}`);
       }
 
       setStep("saving");
-      const data = await genRes.json() as GenerationResult;
+      const data = await readJsonOrThrow<GenerationResult>(genRes, "generate-visual-atlas-page");
       await new Promise(r => setTimeout(r, 150));
 
       setResult(data);
