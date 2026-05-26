@@ -1,0 +1,150 @@
+import type { VisualAtlasPageData } from "../../lib/visual-atlas-types";
+import { IMAGE_MODEL, IMAGE_QUALITY, TEMPLATE_VERSION, TEXT_MODEL } from "../../config/generation";
+
+export const VISUAL_ATLAS_V24_CONTRACT = {
+  id: "visual-atlas-v24",
+  version: TEMPLATE_VERSION,
+  name: "Visual Atlas v24",
+  generation: {
+    textModel: TEXT_MODEL,
+    imageModel: IMAGE_MODEL,
+    imageQuality: IMAGE_QUALITY,
+    imageSize: "1536x1024" as const,
+    allowHighQuality: false,
+    costGuardrail: "high_quality_blocked_gpt_image_2_medium_only" as const,
+  },
+  page: {
+    width: 768,
+    height: 1152,
+    background: "#edf2f8",
+    topbarColor: "#061B49",
+    footerColor: "#061B49",
+    guideColor: "#0969DA",
+    trapColor: "#D92D20",
+    gridRows: "34px 198px 48px 838px 34px",
+    bodyRows: "494px 1fr",
+  },
+  zones: {
+    htmlOwns: [
+      "topbar",
+      "page title",
+      "context deck",
+      "guide question",
+      "exam traps",
+      "autocheck",
+      "footer",
+      "page number",
+    ],
+    imageOwns: [
+      "four modular concept cards",
+      "technical diagrams",
+      "small internal labels",
+      "decision flows",
+      "maps",
+      "role badges",
+      "callout chips",
+    ],
+  },
+  upperVisual: {
+    slotWidth: 728,
+    slotHeight: 494,
+    requiredCardCount: 4,
+    requiredGrid: "2x2",
+    role: "upper_visual_asset_only",
+    safeMargin: "keep all important content inside a visible safe margin",
+    style: [
+      "premium editorial technical diagram",
+      "white background",
+      "quiet separators",
+      "flat Azure-like line icon family",
+      "navy, Azure blue and teal accents",
+      "restrained orange or red only when semantically useful",
+      "no 3D",
+      "no glossy app icons",
+      "no random mixed illustration styles",
+    ],
+    forbiddenComposition: [
+      "full page infographic",
+      "global page header",
+      "global title banner",
+      "book cover",
+      "marketing hero",
+      "dashboard UI",
+      "dark background",
+      "dense tiny tables",
+      "footer",
+      "exam traps section",
+      "autocheck section",
+      "question block",
+    ],
+    forbiddenText: [
+      "AI-200",
+      "Azure Certification Atlas",
+      "Visual Study Atlas",
+      "CloudBooks",
+      "DOMINIO",
+      "CERTIFICACION",
+      "CERTIFICATION",
+      "PAGINA",
+      "PAGE",
+      "TRAMPAS DEL EXAMEN",
+      "VERIFICACION AUTOCHECK",
+      "PREGUNTA GUIA",
+    ],
+  },
+  qa: {
+    structuralRequiredScore: 10,
+    humanArtScoreToProduce: 9.5,
+    requireRealUpperVisualForApproval: true,
+  },
+} as const;
+
+function list(values: readonly string[]): string {
+  return values.map((value) => `- ${value}`).join("\n");
+}
+
+export function buildUpperVisualPrompt(data: VisualAtlasPageData): string {
+  const contract = VISUAL_ATLAS_V24_CONTRACT;
+  const modulesText = data.visualModules
+    .map((m) => `${m.num}. ${m.title}: ${m.description}`)
+    .join("\n");
+  const dynamicForbiddenText = [
+    data.title,
+    data.subtitle,
+    data.domainLabel,
+    `${data.pageNumber}/${data.totalPages}`,
+  ].filter(Boolean);
+
+  return `Create ONLY the modular upper visual asset for CloudBooks ${contract.name}.
+
+Role:
+- This image is an upper visual asset, not a complete page.
+- It will be inserted into a deterministic HTML page that already owns: ${contract.zones.htmlOwns.join(", ")}.
+- Do not design the surrounding page. Start directly with the internal concept composition.
+
+Canvas and composition:
+- Landscape technical infographic asset.
+- Target HTML slot: ${contract.upperVisual.slotWidth}x${contract.upperVisual.slotHeight}px.
+- Requested render size: ${contract.generation.imageSize}; keep safe margins because the HTML slot will fit the image with object-fit: contain.
+- Use exactly ${contract.upperVisual.requiredCardCount} internal concept cards in a balanced ${contract.upperVisual.requiredGrid} grid.
+- Each internal card may have a small number badge (${data.visualModules.map((m) => m.num).join(", ")}) and a short card title.
+- No global header above the cards. No book/page title. No footer.
+
+Forbidden composition:
+${list(contract.upperVisual.forbiddenComposition)}
+
+Forbidden text:
+${list([...contract.upperVisual.forbiddenText, ...dynamicForbiddenText])}
+
+Visual style:
+${list(contract.upperVisual.style)}
+
+Editorial intent:
+- Make the learner understand faster, not merely decorate.
+- Each card must combine a compact explanation with a useful mini diagram.
+- Prefer arrows, sequence flows, region maps, decision trees, SKU matrices, security boundaries and cause/effect diagrams when appropriate.
+- Spanish labels are allowed only inside the cards and only when they clarify the diagram.
+
+Internal card content:
+${modulesText}`;
+}

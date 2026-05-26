@@ -1,5 +1,5 @@
 import type { VisualAtlasPageData } from "../../lib/visual-atlas-types";
-import { TEMPLATE_VERSION } from "../../config/generation";
+import { VISUAL_ATLAS_V24_CONTRACT } from "../../domain/editorial-contracts/visual-atlas-v24";
 
 const seed: VisualAtlasPageData = {
   domainLabel: "Dominio 1 - Soluciones contenerizadas en Azure",
@@ -37,7 +37,7 @@ const seed: VisualAtlasPageData = {
       "D descartada: latest es un tag mutable.",
     ],
   },
-  contractVersion: TEMPLATE_VERSION,
+  contractVersion: VISUAL_ATLAS_V24_CONTRACT.version,
   visualModules: [
     {
       num: "01",

@@ -2,13 +2,11 @@ import { Router } from "express";
 
 import { getSeed, listSeeds } from "../data/page-seeds";
 import { readOutputStatus } from "../services/export/output-status";
-import {
-  TEXT_MODEL, IMAGE_MODEL, IMAGE_QUALITY,
-  BLOCK_LEGACY_IMG_MODEL, TEMPLATE_VERSION,
-} from "../config/generation";
+import { VISUAL_ATLAS_V24_CONTRACT } from "../domain/editorial-contracts/visual-atlas-v24";
+import { BLOCK_LEGACY_IMG_MODEL } from "../config/generation";
 
-const ALLOW_HIGH_QUALITY = false as const;
-const GUARDRAIL_LABEL    = "high_quality_blocked_gpt_image_2_medium_only" as const;
+const ALLOW_HIGH_QUALITY = VISUAL_ATLAS_V24_CONTRACT.generation.allowHighQuality;
+const GUARDRAIL_LABEL = VISUAL_ATLAS_V24_CONTRACT.generation.costGuardrail;
 
 const router = Router();
 
@@ -91,13 +89,16 @@ router.get("/studio/seed-status/:pageId", (req, res): void => {
 router.get("/studio/key-status", (_req, res): void => {
   res.json({
     hasKey:              !!process.env.OPENAI_API_KEY,
-    textModel:           TEXT_MODEL,
-    imageModel:          IMAGE_MODEL,
-    imageQuality:        IMAGE_QUALITY,
+    textModel:           VISUAL_ATLAS_V24_CONTRACT.generation.textModel,
+    imageModel:          VISUAL_ATLAS_V24_CONTRACT.generation.imageModel,
+    imageQuality:        VISUAL_ATLAS_V24_CONTRACT.generation.imageQuality,
     allowHighQuality:    ALLOW_HIGH_QUALITY,
     blockLegacyImgModel: BLOCK_LEGACY_IMG_MODEL,
     costGuardrail:       GUARDRAIL_LABEL,
-    templateVersion:     TEMPLATE_VERSION,
+    templateVersion:     VISUAL_ATLAS_V24_CONTRACT.version,
+    contractId:          VISUAL_ATLAS_V24_CONTRACT.id,
+    upperVisualRole:     VISUAL_ATLAS_V24_CONTRACT.upperVisual.role,
+    upperVisualSize:     VISUAL_ATLAS_V24_CONTRACT.generation.imageSize,
     approach:            "golden_master_fixed_template",
     layout:              "Golden Master Visual Atlas v24",
     template:            "locked",

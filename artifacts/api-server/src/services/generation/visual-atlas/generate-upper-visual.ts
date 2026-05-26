@@ -2,12 +2,15 @@ import OpenAI from "openai";
 import { writeFile } from "fs/promises";
 import { join } from "path";
 
-import { IMAGE_MODEL, IMAGE_QUALITY, BLOCK_LEGACY_IMG_MODEL } from "../../../config/generation";
+import { BLOCK_LEGACY_IMG_MODEL } from "../../../config/generation";
 import type { VisualAtlasPageData } from "../../../lib/visual-atlas-types";
+import { VISUAL_ATLAS_V24_CONTRACT } from "../../../domain/editorial-contracts/visual-atlas-v24";
 import { buildImagePrompt } from "./build-image-prompt";
 import { pagePublicPath } from "../../export/paths";
 
-const ALLOW_HIGH_QUALITY = false as const;
+const ALLOW_HIGH_QUALITY = VISUAL_ATLAS_V24_CONTRACT.generation.allowHighQuality;
+const IMAGE_MODEL = VISUAL_ATLAS_V24_CONTRACT.generation.imageModel;
+const IMAGE_QUALITY = VISUAL_ATLAS_V24_CONTRACT.generation.imageQuality;
 
 export interface UpperVisualResult {
   imageGenerated: boolean;
@@ -51,7 +54,7 @@ export async function generateUpperVisual(
       model:   IMAGE_MODEL,
       prompt:  buildImagePrompt(seedData),
       n:       1,
-      size:    "1536x1024",
+      size:    VISUAL_ATLAS_V24_CONTRACT.generation.imageSize,
       quality: IMAGE_QUALITY,
     });
 

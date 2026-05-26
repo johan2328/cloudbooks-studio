@@ -2,13 +2,16 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 
 import type { VisualAtlasPageData } from "../../../lib/visual-atlas-types";
-import { TEXT_MODEL, IMAGE_MODEL, IMAGE_QUALITY, TEMPLATE_VERSION } from "../../../config/generation";
+import { VISUAL_ATLAS_V24_CONTRACT } from "../../../domain/editorial-contracts/visual-atlas-v24";
 import { pageOutputDir, pagePublicPath } from "../../export/paths";
 import { renderVisualAtlasPage } from "../../renderers/visual-atlas/render-golden-page";
 import { runStructuralQa, computeQaDimensionScores, type StructuralQaResult } from "../../qa/visual-atlas/validate-page-html";
 import { generateUpperVisual } from "./generate-upper-visual";
 
-const GUARDRAIL_LABEL = "high_quality_blocked_gpt_image_2_medium_only" as const;
+const GUARDRAIL_LABEL = VISUAL_ATLAS_V24_CONTRACT.generation.costGuardrail;
+const TEXT_MODEL = VISUAL_ATLAS_V24_CONTRACT.generation.textModel;
+const IMAGE_MODEL = VISUAL_ATLAS_V24_CONTRACT.generation.imageModel;
+const IMAGE_QUALITY = VISUAL_ATLAS_V24_CONTRACT.generation.imageQuality;
 
 export interface GeneratePageResult {
   pageId:          string;
@@ -80,7 +83,7 @@ export async function generateVisualAtlasPage(
     domain:           pageData.domainLabel,
     batch:            pageData.batchLabel,
     certificationId:  "ai-200",
-    contractVersion:  TEMPLATE_VERSION,
+    contractVersion:  VISUAL_ATLAS_V24_CONTRACT.version,
     generatedAt,
     templateApproach: "golden_master_v24",
     textModel:        TEXT_MODEL,
@@ -100,7 +103,7 @@ export async function generateVisualAtlasPage(
 ## ${pageData.title} — ${pageData.subtitle}
 
 **Generado:** ${generatedAt}
-**Template:** Golden Master Visual Atlas ${TEMPLATE_VERSION}
+**Template:** Golden Master Visual Atlas ${VISUAL_ATLAS_V24_CONTRACT.version}
 **Modelo imagen:** ${imageGenerated ? IMAGE_MODEL + " " + IMAGE_QUALITY : "placeholder"}
 **Upper visual:** ${imageGenerated ? "upper_visual_real" : "upper_visual_placeholder"}
 **Veredicto:** ${dim.verdictLabel}
@@ -129,7 +132,7 @@ ${!imageGenerated ? "- Acción requerida: Generar upper visual premium con gpt-i
   return {
     pageId,
     durationMs,
-    templateVersion: TEMPLATE_VERSION,
+    templateVersion: VISUAL_ATLAS_V24_CONTRACT.version,
     approach:        "golden_master_fixed_template",
     outputs: {
       html:       pagePublicPath(pageId, "page.html"),

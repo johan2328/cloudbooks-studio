@@ -1,4 +1,5 @@
 import type { VisualAtlasPageData } from "../../../lib/visual-atlas-types";
+import { VISUAL_ATLAS_V24_CONTRACT } from "../../../domain/editorial-contracts/visual-atlas-v24";
 
 /**
  * GOLDEN MASTER v24 — renderVisualAtlasPage(data)
@@ -10,6 +11,7 @@ import type { VisualAtlasPageData } from "../../../lib/visual-atlas-types";
  */
 export function renderVisualAtlasPage(data: VisualAtlasPageData): string {
   const optionLetters = ["A", "B", "C", "D", "E", "F"];
+  const contract = VISUAL_ATLAS_V24_CONTRACT;
 
   /* ── Icono de título ─────────────────────────────────────────────────── */
   const titleIconSvg = `<svg width="86" height="86" viewBox="0 0 86 86" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -47,14 +49,14 @@ export function renderVisualAtlasPage(data: VisualAtlasPageData): string {
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=768">
+<meta name="viewport" content="width=${contract.page.width}">
 <title>Pág. ${data.pageNumber}/${data.totalPages} — ${data.title} · AI-200 Visual Study Atlas</title>
 <style>
 /* ── GOLDEN MASTER v24 · LIGHT EDITORIAL · LOCKED ─────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background: #edf2f8;
+  background: ${contract.page.background};
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -64,18 +66,18 @@ body {
 
 /* ── .page — contenedor libro 768×1152 ──────────────────────────────────── */
 .page {
-  width: 768px;
-  height: 1152px;
+  width: ${contract.page.width}px;
+  height: ${contract.page.height}px;
   background: #ffffff;
   display: grid;
-  grid-template-rows: 34px 198px 48px 838px 34px;
+  grid-template-rows: ${contract.page.gridRows};
   overflow: hidden;
   box-shadow: 0 4px 32px rgba(0,0,0,0.12);
 }
 
 /* ── TOPBAR ─────────────────────────────────────────────────────────────── */
 .topbar {
-  background: #061B49;
+  background: ${contract.page.topbarColor};
   color: rgba(255,255,255,0.60);
   font-size: 9px;
   font-weight: 700;
@@ -144,7 +146,7 @@ h1 {
 /* ── GUIDE ──────────────────────────────────────────────────────────────── */
 .guide {
   background: #f0f7ff;
-  border-bottom: 2px solid #0969DA;
+  border-bottom: 2px solid ${contract.page.guideColor};
   display: flex;
   align-items: center;
   padding: 0 22px;
@@ -153,7 +155,7 @@ h1 {
 }
 .guide-mark {
   width: 22px; height: 22px;
-  background: #0969DA;
+  background: ${contract.page.guideColor};
   color: #ffffff;
   border-radius: 50%;
   font-size: 13px;
@@ -173,7 +175,7 @@ h1 {
 }
 .guide strong {
   font-weight: 800;
-  color: #0969DA;
+  color: ${contract.page.guideColor};
   letter-spacing: 0.06em;
   margin-right: 5px;
 }
@@ -181,7 +183,7 @@ h1 {
 /* ── BODY (main content area) ───────────────────────────────────────────── */
 section.body {
   display: grid;
-  grid-template-rows: 494px 1fr;
+  grid-template-rows: ${contract.page.bodyRows};
   overflow: hidden;
 }
 
@@ -193,10 +195,11 @@ section.body {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0 ${(contract.page.width - contract.upperVisual.slotWidth) / 2}px;
 }
 .upper img {
-  width: 100%;
-  height: 100%;
+  width: ${contract.upperVisual.slotWidth}px;
+  height: ${contract.upperVisual.slotHeight}px;
   object-fit: contain;
   display: block;
 }
@@ -242,8 +245,8 @@ section.body {
   gap: 7px;
   flex-shrink: 0;
 }
-.mod.traps .mod-header { background: #D92D20; }
-.mod.check .mod-header { background: #061B49; }
+.mod.traps .mod-header { background: ${contract.page.trapColor}; }
+.mod.check .mod-header { background: ${contract.page.footerColor}; }
 .mod-header-label {
   font-size: 8.5px;
   font-weight: 800;
@@ -325,7 +328,7 @@ section.body {
 
 /* ── FOOTER ─────────────────────────────────────────────────────────────── */
 .footer {
-  background: #061B49;
+  background: ${contract.page.footerColor};
   color: rgba(255,255,255,0.45);
   font-size: 8px;
   display: flex;

@@ -1,4 +1,5 @@
 import type { VisualAtlasPageData } from "../../../lib/visual-atlas-types";
+import { VISUAL_ATLAS_V24_CONTRACT } from "../../../domain/editorial-contracts/visual-atlas-v24";
 
 export interface StructuralQaResult {
   passed: boolean;
@@ -19,48 +20,64 @@ export interface QaDimensionScores {
 }
 
 /**
- * Valida la estructura del HTML renderizado contra el contrato Golden Master v24.
- * Determinístico — sin Math.random. Bloquea aprobación si hay violaciones críticas.
+ * Deterministic structural QA against the centralized Visual Atlas v24 contract.
+ * Human visual QA still decides whether the generated upper visual reaches 9.5.
  */
 export function runStructuralQa(html: string, data: VisualAtlasPageData): StructuralQaResult {
+  const contract = VISUAL_ATLAS_V24_CONTRACT;
   const checks = [
-    { name: "Dimensiones 768×1152",            ok: html.includes("width: 768px") && html.includes("height: 1152px") },
-    { name: "Grid rows 34-198-48-838-34",       ok: html.includes("34px 198px 48px 838px 34px") },
-    { name: "Fondo editorial #edf2f8",          ok: html.includes("background: #edf2f8") },
-    { name: "Topbar/footer navy #061B49",       ok: html.includes("#061B49") },
-    { name: "Título presente en h1",            ok: html.includes(data.title) },
-    { name: "Deck/contexto presente",           ok: html.includes(data.context.slice(0, 40)) },
-    { name: "Pregunta guía presente",           ok: html.includes(data.guideQuestion.slice(0, 30)) },
-    { name: "Bloque .upper existe",             ok: html.includes('class="upper"') },
-    { name: "Trampas: 3 items",                 ok: data.traps.length === 3 },
-    { name: "Header trampas rojo #D92D20",      ok: html.includes("#D92D20") },
-    { name: "Guide border #0969DA",             ok: html.includes("#0969DA") },
-    { name: "Footer AI-200 Visual Study Atlas", ok: html.includes("AI-200 Visual Study Atlas") },
-    { name: "Sin CDN externos",                 ok: !html.includes("googleapis.com") && !html.includes("cloudflare.com") },
-    { name: "Sin dark body #0d1629",            ok: !html.includes("background: #0d1629") },
+    {
+      name: `Dimensions ${contract.page.width}x${contract.page.height}`,
+      ok: html.includes(`width: ${contract.page.width}px`) && html.includes(`height: ${contract.page.height}px`),
+    },
+    { name: `Grid rows ${contract.page.gridRows}`, ok: html.includes(contract.page.gridRows) },
+    { name: `Body rows ${contract.page.bodyRows}`, ok: html.includes(contract.page.bodyRows) },
+    { name: `Editorial background ${contract.page.background}`, ok: html.includes(`background: ${contract.page.background}`) },
+    { name: `Topbar/footer ${contract.page.topbarColor}`, ok: html.includes(contract.page.topbarColor) },
+    { name: "Title present in h1", ok: html.includes(data.title) },
+    { name: "Context deck present", ok: html.includes(data.context.slice(0, 40)) },
+    { name: "Guide question present", ok: html.includes(data.guideQuestion.slice(0, 30)) },
+    { name: "Upper visual block exists", ok: html.includes('class="upper"') },
+    { name: "Exam traps: 3 items", ok: data.traps.length === 3 },
+    { name: `Exam traps header ${contract.page.trapColor}`, ok: html.includes(contract.page.trapColor) },
+    { name: `Guide border ${contract.page.guideColor}`, ok: html.includes(contract.page.guideColor) },
+    { name: "Footer brand present", ok: html.includes("AI-200 Visual Study Atlas") },
+    { name: "No external CDNs", ok: !html.includes("googleapis.com") && !html.includes("cloudflare.com") },
+    { name: "No dark app body background", ok: !html.includes("background: #0d1629") },
   ];
-  const passed = checks.filter(c => c.ok).length;
-  const total  = checks.length;
+  const passed = checks.filter((c) => c.ok).length;
+  const total = checks.length;
   return { passed: passed === total, checks, score: Math.round((passed / total) * 10) };
 }
 
 /**
- * Computa scores por dimensión QA basados en si se generó imagen real.
- * Determinístico — sin Math.random. Alineado con QA_GATES del contrato editorial.
+ * Deterministic QA dimensions. These are conservative until human visual QA
+ * confirms the upper visual against the art direction threshold.
  */
 export function computeQaDimensionScores(imageGenerated: boolean): QaDimensionScores {
-  const artDirection         = imageGenerated ? 7 : 5;
+  const contract = VISUAL_ATLAS_V24_CONTRACT;
+  const artDirection = imageGenerated ? 7 : 5;
   const editorialConsistency = imageGenerated ? 7 : 5;
-  const readability          = 8;
-  const technicalAccuracy    = 10;
-  const density              = imageGenerated ? 7 : 4;
-  const commercialRisk       = 10;
+  const readability = 8;
+  const technicalAccuracy = 10;
+  const density = imageGenerated ? 7 : 4;
+  const commercialRisk = 10;
   const avg = Math.round(
     (artDirection + editorialConsistency + readability + technicalAccuracy + density + commercialRisk) / 6,
   );
-  const verdict      = imageGenerated ? "needs_visual_review" as const : "needs_revision" as const;
+  const verdict = imageGenerated ? "needs_visual_review" as const : "needs_revision" as const;
   const verdictLabel = imageGenerated
-    ? "⚠ Requiere revisión visual humana"
-    : "🔴 BLOQUEADO: upper visual no premium";
-  return { artDirection, editorialConsistency, readability, technicalAccuracy, density, commercialRisk, avg, verdict, verdictLabel };
+    ? `Requires human visual review: target ${contract.qa.humanArtScoreToProduce}/10 before production`
+    : "Blocked: upper visual is not a real premium image";
+  return {
+    artDirection,
+    editorialConsistency,
+    readability,
+    technicalAccuracy,
+    density,
+    commercialRisk,
+    avg,
+    verdict,
+    verdictLabel,
+  };
 }
