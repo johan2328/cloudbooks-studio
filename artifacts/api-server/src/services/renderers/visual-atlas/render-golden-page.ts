@@ -77,33 +77,17 @@ body {
 
 /* ── TOPBAR ─────────────────────────────────────────────────────────────── */
 .topbar {
-  background: ${contract.page.topbarColor};
-  color: rgba(255,255,255,0.60);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
+  background: ${contract.chrome.topbar.background};
+  color: ${contract.chrome.topbar.color};
+  font-size: ${contract.chrome.topbar.fontSize}px;
+  font-weight: ${contract.chrome.topbar.fontWeight};
+  letter-spacing: ${contract.chrome.topbar.letterSpacing};
+  text-transform: ${contract.chrome.topbar.textTransform};
   display: flex;
   align-items: center;
-  padding: 0 20px;
-  gap: 10px;
-}
-.topbar::before {
-  content: '';
-  width: 7px; height: 7px;
-  background: #0D9488;
-  border-radius: 50%;
-  flex-shrink: 0;
+  padding: 0 ${contract.chrome.topbar.paddingX}px;
 }
 .tb-spacer { flex: 1; }
-.tb-badge {
-  font-size: 7px;
-  color: rgba(255,255,255,0.35);
-  border: 1px solid rgba(255,255,255,0.12);
-  padding: 1px 7px;
-  border-radius: 2px;
-  letter-spacing: 0.10em;
-}
 
 /* ── HERO ───────────────────────────────────────────────────────────────── */
 .hero {
@@ -246,7 +230,7 @@ section.body {
   flex-shrink: 0;
 }
 .mod.traps .mod-header { background: ${contract.page.trapColor}; }
-.mod.check .mod-header { background: ${contract.page.footerColor}; }
+.mod.check .mod-header { background: ${contract.chrome.footer.background}; }
 .mod-header-label {
   font-size: 8.5px;
   font-weight: 800;
@@ -328,15 +312,16 @@ section.body {
 
 /* ── FOOTER ─────────────────────────────────────────────────────────────── */
 .footer {
-  background: ${contract.page.footerColor};
-  color: rgba(255,255,255,0.45);
-  font-size: 8px;
+  background: ${contract.chrome.footer.background};
+  color: ${contract.chrome.footer.color};
+  font-size: ${contract.chrome.footer.fontSize}px;
+  font-weight: ${contract.chrome.footer.fontWeight};
   display: flex;
   align-items: center;
-  padding: 0 20px;
+  padding: 0 ${contract.chrome.footer.paddingX}px;
   justify-content: space-between;
 }
-.page-no { font-family: monospace; font-size: 7.5px; }
+.page-no { font-weight: ${contract.chrome.footer.fontWeight}; }
 </style>
 </head>
 <body>
@@ -345,8 +330,6 @@ section.body {
 
   <div class="topbar">
     ${data.domainLabel}
-    <span class="tb-spacer"></span>
-    <span class="tb-badge">AI-200</span>
   </div>
 
   <section class="hero">
@@ -406,7 +389,7 @@ section.body {
   </section>
 
   <footer class="footer">
-    <span>AI-200 Visual Study Atlas</span>
+    <span>${contract.chrome.footer.brandText}</span>
     <span class="page-no">${data.pageNumber}/${data.totalPages}</span>
   </footer>
 

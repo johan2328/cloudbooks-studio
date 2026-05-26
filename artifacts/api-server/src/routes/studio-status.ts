@@ -99,6 +99,17 @@ router.get("/studio/key-status", (_req, res): void => {
     contractId:          VISUAL_ATLAS_V24_CONTRACT.id,
     upperVisualRole:     VISUAL_ATLAS_V24_CONTRACT.upperVisual.role,
     upperVisualSize:     VISUAL_ATLAS_V24_CONTRACT.generation.imageSize,
+    chrome: {
+      topbar: {
+        fontSize: VISUAL_ATLAS_V24_CONTRACT.chrome.topbar.fontSize,
+        showCertificationBadge: VISUAL_ATLAS_V24_CONTRACT.chrome.topbar.showCertificationBadge,
+        showStatusDot: VISUAL_ATLAS_V24_CONTRACT.chrome.topbar.showStatusDot,
+      },
+      footer: {
+        fontSize: VISUAL_ATLAS_V24_CONTRACT.chrome.footer.fontSize,
+        brandText: VISUAL_ATLAS_V24_CONTRACT.chrome.footer.brandText,
+      },
+    },
     approach:            "golden_master_fixed_template",
     layout:              "Golden Master Visual Atlas v24",
     template:            "locked",
