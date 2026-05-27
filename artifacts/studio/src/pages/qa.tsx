@@ -58,8 +58,21 @@ function buildEditorialAssessment(args: {
   isRealVisual: boolean;
   serverApproved: boolean;
   realQA: RealQA | null;
+  pageTitle?: string;
+  pageNumber?: string;
 }) {
-  const { hasOutput, isRealVisual, serverApproved, realQA } = args;
+  const { hasOutput, isRealVisual, serverApproved, realQA, pageTitle, pageNumber } = args;
+  const pageLabel = pageTitle ? `${pageTitle}` : `Pagina ${pageNumber ?? "sin numero"}`;
+
+  const rankedDims = QA_DIMS
+    .map((dim) => ({ ...dim, value: realQA?.scores[dim.key] ?? null }))
+    .filter((dim): dim is (typeof QA_DIMS[number] & { value: number }) => dim.value !== null)
+    .sort((a, b) => a.value - b.value);
+
+  const weakest = rankedDims[0];
+  const strongest = rankedDims[rankedDims.length - 1];
+  const total = realQA?.scores.total ?? null;
+  const firstObservation = realQA?.observations.find((item) => item.trim().length > 0);
 
   if (!hasOutput) {
     return {
@@ -73,8 +86,8 @@ function buildEditorialAssessment(args: {
   if (!isRealVisual) {
     return {
       verdict: "Bloqueo editorial",
-      risk: "La pagina usa placeholder visual. En una coleccion premium esto rompe la promesa comercial del Visual Atlas.",
-      next: "Regenerar el upper visual con gpt-image-2 medium y volver a revisar encuadre, legibilidad y densidad.",
+      risk: `${pageLabel} usa placeholder visual. En una coleccion premium esto rompe la promesa comercial del Visual Atlas.`,
+      next: "Regenerar el upper visual con gpt-image-2 medium y volver a revisar encuadre, legibilidad y densidad antes de aprobar.",
       tone: "danger" as const,
     };
   }
@@ -82,8 +95,12 @@ function buildEditorialAssessment(args: {
   if (serverApproved) {
     return {
       verdict: "Lista para exportacion",
-      risk: "Riesgo bajo: el output tiene imagen real, QA registrado y aprobacion trazable.",
-      next: "Mantener esta version como referencia comparativa para las siguientes paginas del batch.",
+      risk: total != null
+        ? `Riesgo bajo: ${pageLabel} ya quedo aprobada con trazabilidad y un score total de ${total.toFixed(1)}/10.`
+        : `Riesgo bajo: ${pageLabel} ya quedo aprobada con trazabilidad completa.`,
+      next: strongest
+        ? `Usar esta pagina como referencia del batch, especialmente en ${strongest.label.toLowerCase()}.`
+        : "Mantener esta version como referencia comparativa para las siguientes paginas del batch.",
       tone: "success" as const,
     };
   }
@@ -91,16 +108,24 @@ function buildEditorialAssessment(args: {
   if (realQA?.verdict === "approved") {
     return {
       verdict: "Aprobable con revision humana",
-      risk: "Riesgo moderado: el servidor no bloquea, pero conviene revisar criterio visual, equilibrio de espacios y precision tecnica.",
-      next: "Aprobar si la lectura a tamano real sostiene jerarquia, consistencia iconografica y claridad de examen.",
+      risk: weakest
+        ? `El servidor la da por aprobable, pero ${pageLabel} sigue pidiendo una ultima mirada en ${weakest.label.toLowerCase()}.`
+        : `El servidor la da por aprobable, pero ${pageLabel} conviene revisarla a tamano real una vez mas.`,
+      next: firstObservation
+        ? `Chequeo final sugerido: ${firstObservation}`
+        : "Aprobar si la lectura a tamano real sostiene jerarquia, consistencia iconografica y claridad de examen.",
       tone: "success" as const,
     };
   }
 
   return {
     verdict: "Requiere mirada editorial",
-    risk: "Riesgo medio: faltan criterios suficientes para llevarla a produccion sin una revision dirigida.",
-    next: "Marcar defectos visibles y solicitar correccion con una indicacion concreta, no regeneracion abierta.",
+    risk: weakest
+      ? `${pageLabel} todavia no llega al umbral editorial. El flanco mas debil hoy es ${weakest.label.toLowerCase()}.`
+      : `Riesgo medio: ${pageLabel} no tiene criterios suficientes para llevarla a produccion sin una revision dirigida.`,
+    next: firstObservation
+      ? `Solicitar correccion concreta sobre esto: ${firstObservation}`
+      : "Marcar defectos visibles y solicitar correccion con una indicacion concreta, no regeneracion abierta.",
     tone: "warning" as const,
   };
 }
@@ -216,7 +241,14 @@ export default function QAPage() {
   const isPlaceholder  = !isRealVisual && hasOutput;
   const approvalBlocked = !isRealVisual;
   const serverApproved = outputStatus?.files.approved === true;
-  const editorialAssessment = buildEditorialAssessment({ hasOutput, isRealVisual, serverApproved, realQA });
+  const editorialAssessment = buildEditorialAssessment({
+    hasOutput,
+    isRealVisual,
+    serverApproved,
+    realQA,
+    pageTitle: page?.title,
+    pageNumber: pageNum,
+  });
 
   return (
     <Layout title={`QA · Pág. ${pageNum}`}>
@@ -416,10 +448,11 @@ export default function QAPage() {
                       <Download className="w-3 h-3" />Descargar HTML
                     </a>
                     {outputStatus.files.qaReport && (
-                      <a href={`/api/studio/qa-report/${pageNum}`} target="_blank" rel="noreferrer"
+                      <button
+                        onClick={() => setLocation(`/qa-report/${parseInt(pageNum, 10)}`)}
                         className="flex items-center gap-1.5 h-9 px-3 border border-white/[0.08] text-white/35 hover:text-white/60 text-[9px] font-medium rounded-sm transition-all">
                         <FileText className="w-3 h-3" />QA Report
-                      </a>
+                      </button>
                     )}
                     <button onClick={() => setLocation(`/generacion?page=${pageNum}`)}
                       className="flex items-center gap-1.5 h-9 px-3 border border-amber-500/25 bg-amber-500/10 text-amber-300 hover:bg-amber-500/18 text-[9px] font-bold rounded-sm transition-all ml-auto">

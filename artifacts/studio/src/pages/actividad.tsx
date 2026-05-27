@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Layout from "@/components/Layout";
 import { useStudio } from "@/lib/studio-store";
 import { cn, actionLabel, actionColor, formatDateTime, statusLabel, statusColorDark } from "@/lib/utils";
 import {
   Activity, RefreshCw, CheckCircle2, AlertTriangle, Download,
-  Zap, FlaskConical, Shield, FileEdit, Filter, Upload, Link2, Package,
+  Zap, FlaskConical, Shield, FileEdit, Filter, Upload, Link2, Package, Search,
 } from "lucide-react";
 import type { ActionType } from "@/lib/types";
 
@@ -46,10 +46,29 @@ export default function Actividad() {
   const { state } = useStudio();
   const [filterType, setFilterType] = useState<ActionType | "all">("all");
   const [filterUser, setFilterUser] = useState("Todos los usuarios");
+  const [search, setSearch] = useState("");
 
-  const logs = state.actionLog
-    .filter(l => filterType === "all" || l.actionType === filterType)
-    .filter(l => filterUser === "Todos los usuarios" || l.userName === filterUser);
+  const logs = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return state.actionLog
+      .filter(l => filterType === "all" || l.actionType === filterType)
+      .filter(l => filterUser === "Todos los usuarios" || l.userName === filterUser)
+      .filter((log) => {
+        if (!term) return true;
+        const haystack = [
+          log.userName,
+          log.pageTitle,
+          log.pageNumber,
+          log.result,
+          log.note,
+          actionLabel(log.actionType),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(term);
+      });
+  }, [filterType, filterUser, search, state.actionLog]);
 
   /* Stats */
   const today = new Date().toISOString().slice(0, 10);
@@ -127,6 +146,19 @@ export default function Actividad() {
             </div>
 
             <div className="border-t border-white/[0.05] pt-4">
+              <p className="text-[9px] font-bold text-white/25 uppercase tracking-widest mb-2">Buscar</p>
+              <label className="flex items-center gap-2 h-8 px-2.5 rounded-sm bg-white/[0.03] border border-white/[0.08]">
+                <Search className="w-3 h-3 text-white/20" />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Pagina, usuario o accion"
+                  className="w-full bg-transparent text-[10px] text-white/70 placeholder:text-white/20 outline-none"
+                />
+              </label>
+            </div>
+
+            <div className="border-t border-white/[0.05] pt-4">
               <p className="text-[9px] font-bold text-white/25 uppercase tracking-widest mb-2">Estado del equipo</p>
               <div className="space-y-1.5">
                 {["Ana García", "Carlos Méndez", "Laura Vidal"].map((u, i) => {
@@ -159,6 +191,11 @@ export default function Actividad() {
               </div>
             ) : (
               <div className="divide-y divide-white/[0.03]">
+                <div className="px-6 py-3 bg-[#0d1629] border-b border-white/[0.04]">
+                  <p className="text-[9px] text-amber-300/80">
+                    La auditoria actual funciona como registro operativo de sesion del Studio. Todavia no es una bitacora persistida en base de datos.
+                  </p>
+                </div>
                 {logs.map((log, i) => {
                   const Icon = ACTION_ICONS[log.actionType] ?? Activity;
                   const color = actionColor(log.actionType);

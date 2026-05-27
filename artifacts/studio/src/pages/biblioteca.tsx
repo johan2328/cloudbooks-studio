@@ -301,10 +301,11 @@ function OutputPanel({ page, setLocation }: { page: StudioCatalogPage; setLocati
                 </a>
               )}
               {status.files.qaReport && (
-                <a href={`/api/studio/qa-report/${page.pageId}`} target="_blank" rel="noreferrer"
+                <button
+                  onClick={() => setLocation(`/qa-report/${parseInt(page.pageId, 10)}`)}
                   className="flex items-center gap-1.5 h-9 px-3 border border-white/[0.08] text-white/35 hover:text-white/60 text-[9px] font-medium rounded-sm transition-all">
                   <FileText className="w-3 h-3" />QA Report
-                </a>
+                </button>
               )}
               <button
                 onClick={() => setLocation(`/qa/${parseInt(page.pageId, 10)}`)}

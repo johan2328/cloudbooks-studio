@@ -26,6 +26,7 @@ import Biblioteca from "@/pages/biblioteca";
 import Contenido from "@/pages/contenido";
 import Generacion from "@/pages/generacion";
 import QAPage from "@/pages/qa";
+import QAReportPage from "@/pages/qa-report";
 import Exportacion from "@/pages/exportacion";
 import Contrato from "@/pages/contrato";
 import Estandares from "@/pages/estandares";
@@ -48,7 +49,7 @@ const queryClient = new QueryClient({
 
 /* Paths que pertenecen al Production Studio (requieren StudioProvider) */
 const STUDIO_PREFIXES = [
-  "/studio", "/biblioteca", "/generacion", "/qa", "/exportacion",
+  "/studio", "/biblioteca", "/generacion", "/qa", "/qa-report", "/exportacion",
   "/contrato", "/estandares", "/actividad", "/conectores", "/assets",
   "/contenido", "/contenido-base", "/catalogo", "/azure", "/ai-200",
 ];
@@ -109,6 +110,10 @@ function Router() {
       </Route>
       <Route path="/qa">
         <Redirect to="/qa/1" />
+      </Route>
+
+      <Route path="/qa-report/:id">
+        {() => <PrivateRoute><QAReportPage /></PrivateRoute>}
       </Route>
 
       <Route path="/exportacion">
