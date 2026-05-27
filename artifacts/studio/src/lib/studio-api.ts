@@ -95,13 +95,19 @@ export function authHeaders(): HeadersInit {
 }
 
 export async function fetchStudioCatalog(): Promise<StudioCatalog> {
-  const res = await fetch("/api/studio/visual-atlas-pages", { headers: authHeaders() });
+  const res = await fetch("/api/studio/visual-atlas-pages", {
+    headers: authHeaders(),
+    cache: "no-store",
+  });
   if (!res.ok) throw new Error(`No se pudo cargar el catalogo operativo (${res.status})`);
   return res.json() as Promise<StudioCatalog>;
 }
 
 export async function fetchStudioKeyStatus(): Promise<StudioKeyStatus> {
-  const res = await fetch("/api/studio/key-status", { headers: authHeaders() });
+  const res = await fetch("/api/studio/key-status", {
+    headers: authHeaders(),
+    cache: "no-store",
+  });
   if (!res.ok) throw new Error(`No se pudo cargar el runtime del Studio (${res.status})`);
   return res.json() as Promise<StudioKeyStatus>;
 }

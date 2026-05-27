@@ -18,6 +18,9 @@ const router = Router();
 router.get("/studio/output-status/:pageId", async (req, res): Promise<void> => {
   const { pageId } = req.params;
   const status = await readOutputStatus(pageId);
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
   res.json(status);
 });
 
@@ -51,6 +54,9 @@ router.get("/studio/visual-atlas-pages", async (_req, res): Promise<void> => {
     }),
   );
 
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
   res.json({
     source: "server_seed_and_output_status",
     totalExpected: pages[0]?.totalPages ?? 61,
@@ -89,6 +95,9 @@ router.get("/studio/seed-status/:pageId", (req, res): void => {
  */
 router.get("/studio/key-status", (_req, res): void => {
   const runtime = getRuntimeInfo();
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
   res.json({
     hasKey:              !!process.env.OPENAI_API_KEY,
     textModel:           VISUAL_ATLAS_V24_CONTRACT.generation.textModel,

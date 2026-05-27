@@ -64,12 +64,6 @@ const STEP_NUMBERS: Record<RunStep, string> = {
 function getToken() { return localStorage.getItem("studio_token") ?? ""; }
 function authHdr() { return { Authorization: `Bearer ${getToken()}` }; }
 
-function humanGuardrail(status: StudioKeyStatus | null): string {
-  if (!status) return "gpt-image-2 medium only";
-  if (status.allowHighQuality) return "gpt-image-2 high habilitado";
-  return "gpt-image-2 medium only · high bloqueado por costo";
-}
-
 async function readJsonOrThrow<T>(res: Response, label: string): Promise<T> {
   const contentType = res.headers.get("content-type") ?? "";
   const bodyText = await res.text();
@@ -247,12 +241,6 @@ export default function Generacion() {
               ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Generando…</>
               : <><Sparkles className="w-3.5 h-3.5" />Generar pagina {page?.pageNumber ?? pageId}</>}
           </button>
-        </div>
-
-        <div className="bg-[#0d1629] border-b border-white/[0.05] px-6 py-1.5 flex items-center justify-end">
-          <span className="text-[8px] font-semibold text-teal-300/55">
-            {humanGuardrail(keyStatus)}
-          </span>
         </div>
 
         <div className="p-6 max-w-6xl space-y-5">
