@@ -129,7 +129,13 @@ Notas:
 
 ---
 
-## Comandos útiles
+## Documentos de diseno
+
+- [Editorial Composer Spec](./docs/editorial-composer-spec.md): sistema dual de pagina (`locked` + `composer`) para composicion premium por bloques con validacion editorial.
+
+---
+
+## Comandos utiles
 
 ```bash
 # Typecheck completo
