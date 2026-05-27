@@ -20,7 +20,7 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
     guideColor: "#0969DA",
     trapColor: "#D92D20",
     gridRows: "34px 170px 42px 872px 34px",
-    bodyRows: "506px 1fr",
+    bodyRows: "540px 1fr",
   },
   chrome: {
     topbar: {
@@ -69,7 +69,7 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
   },
   upperVisual: {
     slotWidth: 724,
-    slotHeight: 490,
+    slotHeight: 520,
     requiredCardCount: 4,
     requiredGrid: "2x2",
     role: "upper_visual_asset_only",
@@ -119,30 +119,32 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
     titleLineHeight: 1.02,
     deckFontSize: 14,
     deckLineHeight: 1.28,
-    iconWidth: 112,
-    iconHeight: 86,
+    iconWidth: 132,
+    iconHeight: 96,
   },
   guide: {
     height: 42,
     fontSize: 11.4,
-    markerSize: 22,
-    markerIcon: "binoculars",
+    markerSize: 24,
+    markerIcon: "focus_lens",
   },
   exam: {
     headerPaddingY: 6,
     headerFontSize: 8.2,
-    bodyPaddingY: 8,
-    bodyGap: 6,
+    bodyPaddingY: 7,
+    bodyGap: 5,
+    trapItemGap: 5,
+    trapNumberSize: 15,
     trapWrongLabel: "Mito",
     trapCorrectionLabel: "Correccion",
     trapWrongTextDecoration: "none",
-    trapWrongFontSize: 8.8,
-    trapCorrectionFontSize: 8.6,
-    autocheckQuestionFontSize: 9.2,
-    optionFontSize: 8.8,
-    optionPaddingY: 4,
-    explanationFontSize: 8.4,
-    discardFontSize: 7.6,
+    trapWrongFontSize: 8.4,
+    trapCorrectionFontSize: 8.1,
+    autocheckQuestionFontSize: 8.8,
+    optionFontSize: 8.4,
+    optionPaddingY: 3,
+    explanationFontSize: 8.1,
+    discardFontSize: 7.1,
   },
   qa: {
     structuralRequiredScore: 10,
@@ -182,6 +184,9 @@ Canvas and composition:
 - Use exactly ${contract.upperVisual.requiredCardCount} internal concept cards in a balanced ${contract.upperVisual.requiredGrid} grid.
 - Each internal card may have a small number badge (${data.visualModules.map((m) => m.num).join(", ")}) and a short card title.
 - No global header above the cards. No book/page title. No footer.
+- Internal text must be easy to read after the image is inserted into a ${contract.upperVisual.slotWidth}x${contract.upperVisual.slotHeight}px slot.
+- Prefer fewer labels with larger type rather than many tiny labels.
+- Never use spreadsheet-like microtext. Aim for bold, editorial microcopy that remains readable when the full page is viewed at normal screen size.
 
 Forbidden composition:
 ${list(contract.upperVisual.forbiddenComposition)}
