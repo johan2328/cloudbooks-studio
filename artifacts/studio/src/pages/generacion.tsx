@@ -80,7 +80,7 @@ async function readJsonOrThrow<T>(res: Response, label: string): Promise<T> {
 
 export default function Generacion() {
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [step, setStep]         = useState<RunStep>("idle");
   const [error, setError]       = useState<string | null>(null);
   const [result, setResult]     = useState<GenerationResult | null>(null);
@@ -104,21 +104,23 @@ export default function Generacion() {
   }, []);
 
   useEffect(() => {
-    function syncFromUrl() {
-      setSelectedPageId(getPageIdFromLocation("01"));
-    }
-
-    syncFromUrl();
-    window.addEventListener("popstate", syncFromUrl);
-    return () => window.removeEventListener("popstate", syncFromUrl);
-  }, []);
+    setSelectedPageId(getPageIdFromLocation("01"));
+  }, [location]);
 
   useEffect(() => {
     if (!pageOptions.length) return;
     if (!pageOptions.some((p) => p.pageId === selectedPageId)) {
-      setSelectedPageId(pageOptions[0].pageId);
+      const fallbackPageId = pageOptions[0].pageId;
+      setSelectedPageId(fallbackPageId);
+      setLocation(`/generacion?page=${fallbackPageId}`);
     }
-  }, [pageOptions, selectedPageId]);
+  }, [pageOptions, selectedPageId, setLocation]);
+
+  useEffect(() => {
+    setStep("idle");
+    setError(null);
+    setResult(null);
+  }, [selectedPageId]);
 
   const isRunning = ["generating_image", "assembling_html", "running_qa", "saving"].includes(step);
   const hasKey    = keyStatus?.hasKey ?? false;
@@ -211,7 +213,7 @@ export default function Generacion() {
                 onChange={(event) => {
                   const nextPageId = event.target.value;
                   setSelectedPageId(nextPageId);
-                  window.history.pushState({}, "", `/generacion?page=${nextPageId}`);
+                  setLocation(`/generacion?page=${nextPageId}`);
                 }}
                 disabled={isRunning}
                 className="bg-transparent text-[10px] font-bold text-white/70 outline-none disabled:opacity-40"
