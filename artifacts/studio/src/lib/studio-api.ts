@@ -85,6 +85,79 @@ export interface StudioKeyStatus {
   runtime: StudioRuntimeInfo;
 }
 
+export interface ComposerProposalPageSummary {
+  pageId: string;
+  pageNumber: string;
+  family: string;
+  recommendedTransition: string;
+  totalScore: number;
+  missing: string[];
+}
+
+export interface ComposerCatalogResponse {
+  source: "api_visual_atlas_composer_v1";
+  pages: ComposerProposalPageSummary[];
+}
+
+export interface ComposerBlock {
+  id: string;
+  type: string;
+  variant: string;
+  required: boolean;
+  minHeight: number;
+  maxHeight: number;
+  priority: number;
+  dependsOn?: string[];
+  scoreWeight?: number;
+  content: Record<string, unknown>;
+}
+
+export interface ComposerProposal {
+  source: "api_visual_atlas_composer_v1";
+  pageId: string;
+  lockedReference: {
+    pageId: string;
+    pageNumber: string;
+    contractId: string;
+    title: string;
+    domain: string;
+    preservedZones: string[];
+  };
+  recommendedTransition: {
+    level: "composer_minor" | "composer_structural" | "composer_full";
+    reason: string;
+    unlockedCapabilities: string[];
+    blockedCapabilities: string[];
+  };
+  draft: {
+    pageId: string;
+    pageNumber: string;
+    mode: "composer";
+    family: "comparison" | "architecture" | "decision" | "coverage_map" | "lifecycle";
+    blocks: ComposerBlock[];
+    coverage: {
+      technicalCore: boolean;
+      examSignals: boolean;
+      validationPresent: boolean;
+      weakAreas: string[];
+    };
+    structuralValidation: {
+      passed: boolean;
+      missing: string[];
+      warnings: string[];
+    };
+    editorialValidation: {
+      coverageScore: number;
+      readabilityScore: number;
+      usefulDensityScore: number;
+      examUtilityScore: number;
+      consistencyScore: number;
+      total: number;
+    };
+  };
+  nextActions: string[];
+}
+
 export function getStudioToken(): string {
   return localStorage.getItem("studio_token") ?? "";
 }
@@ -110,6 +183,24 @@ export async function fetchStudioKeyStatus(): Promise<StudioKeyStatus> {
   });
   if (!res.ok) throw new Error(`No se pudo cargar el runtime del Studio (${res.status})`);
   return res.json() as Promise<StudioKeyStatus>;
+}
+
+export async function fetchComposerCatalog(): Promise<ComposerCatalogResponse> {
+  const res = await fetch("/api/studio/composer/pages", {
+    headers: authHeaders(),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`No se pudo cargar el catalogo composer (${res.status})`);
+  return res.json() as Promise<ComposerCatalogResponse>;
+}
+
+export async function fetchComposerProposal(pageId: string): Promise<ComposerProposal> {
+  const res = await fetch(`/api/studio/composer/proposal/${pageId}`, {
+    headers: authHeaders(),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`No se pudo cargar la propuesta composer para ${pageId} (${res.status})`);
+  return res.json() as Promise<ComposerProposal>;
 }
 
 export function getPageIdFromLocation(defaultPageId = "01"): string {

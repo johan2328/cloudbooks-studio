@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import {
   AlertTriangle,
+  Blocks,
   CheckCircle2,
   Clock,
   ExternalLink,
@@ -308,6 +309,11 @@ function OutputPanel({ page, setLocation }: { page: StudioCatalogPage; setLocati
                   <FileText className="w-3 h-3" />QA Report
                 </button>
               )}
+              <button
+                onClick={() => setLocation(`/composer/${page.pageId}`)}
+                className="flex items-center gap-1.5 h-9 px-3 border border-white/[0.08] text-white/35 hover:text-white/60 text-[9px] font-medium rounded-sm transition-all">
+                <Blocks className="w-3 h-3" />Composer
+              </button>
               <button
                 onClick={() => setLocation(`/qa/${parseInt(page.pageId, 10)}`)}
                 className="flex items-center gap-1.5 h-9 px-3 border border-white/[0.08] text-white/35 hover:text-white/60 text-[9px] font-medium rounded-sm transition-all">

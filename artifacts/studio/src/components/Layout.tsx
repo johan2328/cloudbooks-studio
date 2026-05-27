@@ -17,6 +17,7 @@ import {
   Lock,
   LogOut,
   Map,
+  Blocks,
   Package,
   Pin,
   PinOff,
@@ -37,6 +38,7 @@ const BOOK_FORMATS = [
 const NAV_PRODUCTION = [
   { href: "/biblioteca", label: "Overview", icon: Map, segment: "biblioteca" },
   { href: "/contenido-base", label: "Contenido", icon: Activity, segment: "contenido-base" },
+  { href: "/composer/01", label: "Composer", icon: Blocks, segment: "composer" },
   { href: "/generacion", label: "Generacion", icon: Sparkles, segment: "generacion" },
   { href: "/qa/1", label: "QA editorial", icon: Shield, segment: "qa" },
   { href: "/actividad", label: "Runs", icon: History, segment: "actividad" },

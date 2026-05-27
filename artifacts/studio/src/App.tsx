@@ -31,6 +31,7 @@ import Exportacion from "@/pages/exportacion";
 import Contrato from "@/pages/contrato";
 import Estandares from "@/pages/estandares";
 import Actividad from "@/pages/actividad";
+import ComposerPage from "@/pages/composer";
 import Conectores from "@/pages/conectores";
 import Assets from "@/pages/assets";
 import ContenidoGrounding from "@/pages/contenido-grounding";
@@ -50,7 +51,7 @@ const queryClient = new QueryClient({
 /* Paths que pertenecen al Production Studio (requieren StudioProvider) */
 const STUDIO_PREFIXES = [
   "/studio", "/biblioteca", "/generacion", "/qa", "/qa-report", "/exportacion",
-  "/contrato", "/estandares", "/actividad", "/conectores", "/assets",
+  "/contrato", "/estandares", "/actividad", "/composer", "/conectores", "/assets",
   "/contenido", "/contenido-base", "/catalogo", "/azure", "/ai-200",
 ];
 
@@ -114,6 +115,13 @@ function Router() {
 
       <Route path="/qa-report/:id">
         {() => <PrivateRoute><QAReportPage /></PrivateRoute>}
+      </Route>
+
+      <Route path="/composer/:id">
+        {() => <PrivateRoute><ComposerPage /></PrivateRoute>}
+      </Route>
+      <Route path="/composer">
+        <Redirect to="/composer/01" />
       </Route>
 
       <Route path="/exportacion">
