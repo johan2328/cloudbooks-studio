@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import {
   Sparkles, CheckCircle2, XCircle, Loader2, Key,
   ChevronRight, Clock, Code2, FileText, Shield, Eye,
-  ExternalLink, Lock, ImageIcon,
+  ExternalLink, Lock, ImageIcon, RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
