@@ -132,6 +132,7 @@ Notas:
 ## Documentos de diseno
 
 - [Editorial Composer Spec](./docs/editorial-composer-spec.md): sistema dual de pagina (`locked` + `composer`) para composicion premium por bloques con validacion editorial.
+- [Composer Transition and Red Team](./docs/editorial-composer-transition-and-red-team.md): paso controlado de `locked` a `composer`, auditoria requerida y riesgos globales de producto, UX, gobernanza y negocio.
 
 ---
 
