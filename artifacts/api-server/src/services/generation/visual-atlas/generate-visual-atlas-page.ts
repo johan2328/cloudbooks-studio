@@ -62,7 +62,10 @@ export async function generateVisualAtlasPage(
   const { imageGenerated, imagePath, imageError } = await generateUpperVisual(pageId, seedData, outDir, log);
 
   /* ── Step 2: Ensamblar HTML con plantilla cerrada ─────────────────────── */
-  const pageData: VisualAtlasPageData = { ...seedData, upperVisualSrc: imagePath };
+  const pageData: VisualAtlasPageData = {
+    ...seedData,
+    upperVisualSrc: imageGenerated ? "./upper-art.png" : imagePath,
+  };
   log.info({ pageId, hasImage: imageGenerated }, "Assembling HTML from golden master template");
   const pageHtml = renderVisualAtlasPage(pageData);
 
