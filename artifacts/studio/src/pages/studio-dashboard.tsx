@@ -5,6 +5,7 @@ import {
   ArrowRight,
   BookOpen,
   CheckCircle2,
+  Copy,
   FileText,
   HelpCircle,
   Layers,
@@ -19,7 +20,7 @@ import {
 
 import Layout from "@/components/Layout";
 import { cn } from "@/lib/utils";
-import { fetchStudioCatalog, type StudioCatalog } from "@/lib/studio-api";
+import { fetchStudioCatalog, fetchStudioKeyStatus, type StudioCatalog, type StudioKeyStatus } from "@/lib/studio-api";
 
 const FORMATS = [
   {
@@ -87,6 +88,7 @@ const FORMATS = [
 export default function StudioDashboard() {
   const [, setLocation] = useLocation();
   const [catalog, setCatalog] = useState<StudioCatalog | null>(null);
+  const [keyStatus, setKeyStatus] = useState<StudioKeyStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -94,6 +96,10 @@ export default function StudioDashboard() {
       .then(setCatalog)
       .catch(() => setCatalog(null))
       .finally(() => setLoading(false));
+
+    fetchStudioKeyStatus()
+      .then(setKeyStatus)
+      .catch(() => setKeyStatus(null));
   }, []);
 
   const atlasStats = useMemo(() => {
@@ -160,6 +166,39 @@ export default function StudioDashboard() {
                 <p className="text-[8px] text-white/25 mt-1">{card.sub}</p>
               </div>
             ))}
+          </section>
+
+          <section className="bg-[#0d1629] border border-white/[0.06] rounded-sm px-4 py-3 flex flex-wrap items-center gap-3">
+            <div>
+              <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Runtime activo</p>
+              <p className="text-[10px] text-white/55 mt-0.5">
+                GitHub como fuente de verdad · Secrets solo desde Replit
+              </p>
+            </div>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <span className="text-[8px] font-bold text-blue-300 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded-sm">
+                SHA {keyStatus?.runtime.gitSha ?? "desconocido"}
+              </span>
+              <span className="text-[8px] font-bold text-white/45 bg-white/[0.04] border border-white/[0.08] px-2 py-1 rounded-sm">
+                {keyStatus?.runtime.gitBranch ?? "sin branch"}
+              </span>
+              {keyStatus?.runtime.gitDirty ? (
+                <span className="text-[8px] font-bold text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-sm">
+                  workspace con cambios
+                </span>
+              ) : (
+                <span className="text-[8px] font-bold text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-sm">
+                  workspace limpio
+                </span>
+              )}
+              <button
+                onClick={() => navigator.clipboard.writeText(keyStatus?.runtime.syncCommand ?? "pnpm sync:replit")}
+                className="h-7 px-3 rounded-sm bg-white/[0.04] border border-white/[0.08] text-[8px] font-bold text-white/60 hover:text-white inline-flex items-center gap-1.5"
+              >
+                <Copy className="w-3 h-3" />
+                Copiar sync
+              </button>
+            </div>
           </section>
 
           <section className="bg-[#0d1629] border border-white/[0.06] rounded-sm overflow-hidden">

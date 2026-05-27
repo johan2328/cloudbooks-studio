@@ -64,6 +64,27 @@ export interface StudioCatalog {
   pages: StudioCatalogPage[];
 }
 
+export interface StudioRuntimeInfo {
+  gitSha: string | null;
+  gitBranch: string | null;
+  gitDirty: boolean;
+  syncCommand: string;
+  secretsSource: string;
+}
+
+export interface StudioKeyStatus {
+  hasKey: boolean;
+  textModel: string;
+  imageModel: string;
+  imageQuality: string;
+  allowHighQuality: boolean;
+  blockLegacyImgModel: boolean;
+  costGuardrail: string;
+  templateVersion: string;
+  approach: string;
+  runtime: StudioRuntimeInfo;
+}
+
 export function getStudioToken(): string {
   return localStorage.getItem("studio_token") ?? "";
 }
@@ -77,6 +98,12 @@ export async function fetchStudioCatalog(): Promise<StudioCatalog> {
   const res = await fetch("/api/studio/visual-atlas-pages", { headers: authHeaders() });
   if (!res.ok) throw new Error(`No se pudo cargar el catalogo operativo (${res.status})`);
   return res.json() as Promise<StudioCatalog>;
+}
+
+export async function fetchStudioKeyStatus(): Promise<StudioKeyStatus> {
+  const res = await fetch("/api/studio/key-status", { headers: authHeaders() });
+  if (!res.ok) throw new Error(`No se pudo cargar el runtime del Studio (${res.status})`);
+  return res.json() as Promise<StudioKeyStatus>;
 }
 
 export function getPageIdFromLocation(defaultPageId = "01"): string {

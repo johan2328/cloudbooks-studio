@@ -10,24 +10,14 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
   fetchStudioCatalog,
+  fetchStudioKeyStatus,
   getPageIdFromLocation,
   type StudioCatalog,
   type StudioCatalogPage,
+  type StudioKeyStatus,
 } from "@/lib/studio-api";
 
 type RunStep = "idle" | "generating_image" | "assembling_html" | "running_qa" | "saving" | "done" | "error";
-
-interface KeyStatus {
-  hasKey: boolean;
-  textModel: string;
-  imageModel: string;
-  imageQuality: string;
-  allowHighQuality: boolean;
-  blockLegacyImgModel: boolean;
-  costGuardrail: string;
-  templateVersion: string;
-  approach: string;
-}
 
 interface GenerationResult {
   pageId: string;
@@ -74,7 +64,7 @@ const STEP_NUMBERS: Record<RunStep, string> = {
 function getToken() { return localStorage.getItem("studio_token") ?? ""; }
 function authHdr() { return { Authorization: `Bearer ${getToken()}` }; }
 
-function humanGuardrail(status: KeyStatus | null): string {
+function humanGuardrail(status: StudioKeyStatus | null): string {
   if (!status) return "gpt-image-2 medium only";
   if (status.allowHighQuality) return "gpt-image-2 high habilitado";
   return "gpt-image-2 medium only · high bloqueado por costo";
@@ -109,9 +99,8 @@ export default function Generacion() {
   const pageOptions = catalog?.pages ?? [];
 
   useEffect(() => {
-    fetch("/api/studio/key-status", { headers: authHdr() })
-      .then(r => r.json())
-      .then((d: KeyStatus) => { setKeyStatus(d); setKeyChecked(true); })
+    fetchStudioKeyStatus()
+      .then((d: StudioKeyStatus) => { setKeyStatus(d); setKeyChecked(true); })
       .catch(() => { setKeyChecked(true); });
 
     fetchStudioCatalog()
@@ -137,7 +126,7 @@ export default function Generacion() {
     try {
       // Re-verificar key
       const keyRes  = await fetch("/api/studio/key-status", { headers: authHdr() });
-      const keyData = await readJsonOrThrow<KeyStatus>(keyRes, "key-status");
+      const keyData = await readJsonOrThrow<StudioKeyStatus>(keyRes, "key-status");
       if (!keyData.hasKey) {
         setError("OPENAI_API_KEY no configurada en Secrets. Ir a Replit → Secrets → agregar OPENAI_API_KEY.");
         setStep("error");

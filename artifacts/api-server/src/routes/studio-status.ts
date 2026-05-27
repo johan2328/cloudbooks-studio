@@ -4,6 +4,7 @@ import { getSeed, listSeeds } from "../data/page-seeds";
 import { readOutputStatus } from "../services/export/output-status";
 import { VISUAL_ATLAS_V24_CONTRACT } from "../domain/editorial-contracts/visual-atlas-v24";
 import { BLOCK_LEGACY_IMG_MODEL } from "../config/generation";
+import { getRuntimeInfo } from "../lib/runtime-info";
 
 const ALLOW_HIGH_QUALITY = VISUAL_ATLAS_V24_CONTRACT.generation.allowHighQuality;
 const GUARDRAIL_LABEL = VISUAL_ATLAS_V24_CONTRACT.generation.costGuardrail;
@@ -87,6 +88,7 @@ router.get("/studio/seed-status/:pageId", (req, res): void => {
  * Devuelve configuración activa de modelos y guardrails.
  */
 router.get("/studio/key-status", (_req, res): void => {
+  const runtime = getRuntimeInfo();
   res.json({
     hasKey:              !!process.env.OPENAI_API_KEY,
     textModel:           VISUAL_ATLAS_V24_CONTRACT.generation.textModel,
@@ -125,6 +127,7 @@ router.get("/studio/key-status", (_req, res): void => {
     template:            "locked",
     renderer:            "deterministic HTML",
     svgFallback:         "disabled",
+    runtime,
   });
 });
 

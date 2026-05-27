@@ -107,6 +107,26 @@ pnpm --filter @workspace/studio run dev
 
 > En Replit, los workflows arrancan ambos servidores automáticamente.
 
+### Flujo recomendado para Replit sin depender del agente
+
+1. Hacer cambios localmente y empujar a GitHub.
+2. En la Shell de Replit correr:
+
+```bash
+pnpm sync:replit
+```
+
+Ese comando:
+- hace `git fetch/pull --rebase` desde `origin/main`,
+- instala dependencias bloqueadas,
+- empuja el esquema de base de datos,
+- y deja el runtime alineado con el SHA remoto.
+
+Notas:
+- Los secretos ya no deben vivir en `.replit`. Usar solo `Secrets` de Replit.
+- El Dashboard del Studio muestra el `SHA` activo y si el workspace está limpio o no.
+- El API server corre en modo watch, así que un pull válido debería refrescar backend/frontend sin depender del agente.
+
 ---
 
 ## Comandos útiles
