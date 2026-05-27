@@ -177,12 +177,12 @@ export default function StudioDashboard() {
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <span className="text-[8px] font-bold text-blue-300 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded-sm">
-                SHA {keyStatus?.runtime.gitSha ?? "desconocido"}
+                SHA {keyStatus?.runtime?.gitSha ?? "desconocido"}
               </span>
               <span className="text-[8px] font-bold text-white/45 bg-white/[0.04] border border-white/[0.08] px-2 py-1 rounded-sm">
-                {keyStatus?.runtime.gitBranch ?? "sin branch"}
+                {keyStatus?.runtime?.gitBranch ?? "sin branch"}
               </span>
-              {keyStatus?.runtime.gitDirty ? (
+              {keyStatus?.runtime?.gitDirty ? (
                 <span className="text-[8px] font-bold text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-sm">
                   workspace con cambios
                 </span>
@@ -192,7 +192,7 @@ export default function StudioDashboard() {
                 </span>
               )}
               <button
-                onClick={() => navigator.clipboard.writeText(keyStatus?.runtime.syncCommand ?? "pnpm sync:replit")}
+                onClick={() => navigator.clipboard.writeText(keyStatus?.runtime?.syncCommand ?? "pnpm sync:replit")}
                 className="h-7 px-3 rounded-sm bg-white/[0.04] border border-white/[0.08] text-[8px] font-bold text-white/60 hover:text-white inline-flex items-center gap-1.5"
               >
                 <Copy className="w-3 h-3" />
