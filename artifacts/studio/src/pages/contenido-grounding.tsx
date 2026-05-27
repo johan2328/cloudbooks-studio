@@ -208,6 +208,7 @@ export default function ContenidoGrounding() {
   const [lastSync, setLastSync]     = useState<string | null>(null);
   const [syncing, setSyncing]       = useState(false);
   const [bottomTab, setBottomTab]   = useState<"matriz"|"brechas">("matriz");
+  const [selectedBatch, setSelectedBatch] = useState("01-10");
 
   const selected = TOPICS.find(t => t.id === selectedId)!;
 
@@ -298,6 +299,21 @@ export default function ContenidoGrounding() {
                     <p className="text-[9px] text-blue-400/80 font-semibold">Google Sheet / CSV · AI-200 Batch 01-10</p>
                   </div>
                 </div>
+                <label className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.03] border border-white/[0.07] rounded-sm">
+                  <Package className="w-3 h-3 text-teal-400" />
+                  <div>
+                    <p className="text-[8px] font-bold text-white/50">Batch activo</p>
+                    <select
+                      value={selectedBatch}
+                      onChange={(event) => setSelectedBatch(event.target.value)}
+                      className="bg-transparent text-[9px] text-teal-300/80 font-semibold outline-none"
+                    >
+                      <option value="01-10" className="bg-[#0d1629] text-white">AI-200 Batch 01-10</option>
+                      <option value="11-20" className="bg-[#0d1629] text-white" disabled>AI-200 Batch 11-20 - planificado</option>
+                      <option value="21-30" className="bg-[#0d1629] text-white" disabled>AI-200 Batch 21-30 - planificado</option>
+                    </select>
+                  </div>
+                </label>
                 <div className="flex items-center gap-1.5 text-[8px] text-white/25">
                   <span>10 temas detectados</span>
                   <span>·</span>
@@ -600,7 +616,7 @@ export default function ContenidoGrounding() {
         {/* ── Bottom panels ── */}
         <div className="border-t border-white/[0.06] bg-[#0d1629]">
           <div className="flex gap-0.5 px-5 pt-2 border-b border-white/[0.05]">
-            {([["matriz","Matriz de cobertura"],["brechas","Brechas editoriales"]] as const).map(([id, label]) => (
+            {([["matriz","Cobertura por formato"],["brechas","Brechas editoriales"]] as const).map(([id, label]) => (
               <button key={id} onClick={() => setBottomTab(id)}
                 className={cn(
                   "h-7 px-3 rounded-sm text-[9px] font-semibold transition-all",
@@ -613,6 +629,18 @@ export default function ContenidoGrounding() {
 
             {/* ── Matriz de cobertura ── */}
             {bottomTab === "matriz" && (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-3 rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                  <p className="text-[8px] text-white/35 leading-relaxed max-w-xl">
+                    Mapa editorial del batch: indica que formatos consumen cada tema. No es un score; sirve para detectar huecos antes de generar libros.
+                  </p>
+                  <div className="ml-auto flex items-center gap-3 text-[7px] text-white/30">
+                    <span className="inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-emerald-400/70" /> incluido</span>
+                    <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> grounded</span>
+                    <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" /> revision</span>
+                    <span className="inline-flex items-center gap-1"><span className="text-white/15">·</span> no aplica</span>
+                  </div>
+                </div>
               <table className="w-full text-[7px] border-collapse">
                 <thead>
                   <tr>
@@ -656,6 +684,7 @@ export default function ContenidoGrounding() {
                   })}
                 </tbody>
               </table>
+              </div>
             )}
 
             {/* ── Brechas editoriales ── */}

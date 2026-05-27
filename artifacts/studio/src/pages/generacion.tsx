@@ -58,11 +58,17 @@ const STEPS: { key: RunStep; label: string; sub: string }[] = [
   { key: "assembling_html",  label: "Ensamblando HTML",  sub: "Plantilla golden master v24 — sin IA libre" },
   { key: "running_qa",       label: "QA estructural",    sub: "10 checks de layout y contenido" },
   { key: "saving",           label: "Guardando outputs", sub: "/public/assets/cloudbooks/…" },
-  { key: "done",             label: "Completado",        sub: "page.html listo · Replit static" },
+  { key: "done",             label: "Completado",        sub: "page.html listo · static files" },
 ];
 
 function getToken() { return localStorage.getItem("studio_token") ?? ""; }
 function authHdr() { return { Authorization: `Bearer ${getToken()}` }; }
+
+function humanGuardrail(status: KeyStatus | null): string {
+  if (!status) return "gpt-image-2 medium only";
+  if (status.allowHighQuality) return "gpt-image-2 high habilitado";
+  return "gpt-image-2 medium only · high bloqueado por costo";
+}
 
 async function readJsonOrThrow<T>(res: Response, label: string): Promise<T> {
   const contentType = res.headers.get("content-type") ?? "";
@@ -244,8 +250,8 @@ export default function Generacion() {
             <span className="text-teal-400/60 font-semibold">Layout bloqueado:</span>{" "}
             formato libro 768×1152 · estructura editorial local v24 · la IA no redesigna la página
           </span>
-          <span className="ml-auto text-[7px] font-mono text-teal-500/40">
-            {keyStatus?.costGuardrail ?? "high_quality_blocked"}
+          <span className="ml-auto text-[7px] font-semibold text-teal-300/50">
+            {humanGuardrail(keyStatus)}
           </span>
         </div>
 
@@ -299,7 +305,7 @@ export default function Generacion() {
                   {
                     label: "Output path",
                     value: `/pages/${page?.pageId ?? pageId}/page.html`,
-                    note:  "Replit static files · public/assets/cloudbooks/…",
+                    note:  "Static files · public/assets/cloudbooks/…",
                     icon:  FileText,
                     color: "text-white/30",
                   },

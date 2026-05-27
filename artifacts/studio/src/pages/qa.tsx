@@ -3,6 +3,7 @@ import { useRoute, useLocation } from "wouter";
 import Layout from "@/components/Layout";
 import { cn, scoreColorDark } from "@/lib/utils";
 import { useStudio } from "@/lib/studio-store";
+import { fetchStudioCatalog, type StudioCatalogPage } from "@/lib/studio-api";
 import {
   CheckCircle2, RotateCcw, AlertTriangle, ChevronLeft, ChevronRight,
   Shield, Loader2, ExternalLink, XCircle, Download, FileText,
@@ -124,6 +125,13 @@ export default function QAPage() {
   const [showRevision, setShowRevision] = useState(false);
   const [checkedDefects, setCheckedDefects] = useState<Set<string>>(new Set());
   const [approving, setApproving] = useState(false);
+  const [catalogPages, setCatalogPages] = useState<StudioCatalogPage[]>([]);
+
+  useEffect(() => {
+    fetchStudioCatalog()
+      .then((catalog) => setCatalogPages(catalog.pages))
+      .catch(() => setCatalogPages([]));
+  }, []);
 
   useEffect(() => {
     setLoadingStatus(true);
@@ -229,6 +237,24 @@ export default function QAPage() {
             </p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
+            <label className="flex items-center gap-1.5 h-7 px-2 rounded-sm bg-white/[0.03] border border-white/[0.08]">
+              <span className="text-[8px] font-bold text-white/25 uppercase tracking-wider">Pagina</span>
+              <select
+                value={pageNum}
+                onChange={(event) => setLocation(`/qa/${parseInt(event.target.value, 10)}`)}
+                className="bg-transparent text-[9px] font-bold text-white/65 outline-none"
+              >
+                {(catalogPages.length ? catalogPages : Array.from({ length: 10 }, (_, i) => ({
+                  pageId: String(i + 1).padStart(2, "0"),
+                  pageNumber: String(i + 1).padStart(2, "0"),
+                  title: `Pagina ${String(i + 1).padStart(2, "0")}`,
+                } as StudioCatalogPage))).map((p) => (
+                  <option key={p.pageId} value={p.pageId} className="bg-[#0d1629] text-white">
+                    {p.pageNumber} - {p.title}
+                  </option>
+                ))}
+              </select>
+            </label>
             {currentNum > 1 && (
               <button onClick={() => setLocation(`/qa/${currentNum - 1}`)}
                 className="text-[9px] text-white/25 hover:text-white/60 flex items-center gap-0.5 transition-colors">
@@ -395,8 +421,8 @@ export default function QAPage() {
                         <FileText className="w-3 h-3" />QA Report
                       </a>
                     )}
-                    <button onClick={() => setLocation("/generacion")}
-                      className="flex items-center gap-1.5 h-9 px-3 border border-white/[0.07] text-white/20 hover:text-amber-400/60 hover:border-amber-500/20 text-[9px] font-medium rounded-sm transition-all ml-auto">
+                    <button onClick={() => setLocation(`/generacion?page=${pageNum}`)}
+                      className="flex items-center gap-1.5 h-9 px-3 border border-amber-500/25 bg-amber-500/10 text-amber-300 hover:bg-amber-500/18 text-[9px] font-bold rounded-sm transition-all ml-auto">
                       <RotateCcw className="w-3 h-3" />Regenerar
                     </button>
                   </div>

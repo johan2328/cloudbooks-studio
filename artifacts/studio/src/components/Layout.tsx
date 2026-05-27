@@ -1,16 +1,20 @@
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Map, FileText, Shield, Download, LogOut,
   ChevronRight, Sparkles, Activity, BookOpen, Layers, History,
+  ChevronDown, Cloud, Lock, Package, HelpCircle, Zap,
 } from "lucide-react";
 
-const NAV_COLLECTION = [
-  { href: "/catalogo", label: "Biblioteca Cloud", icon: BookOpen, segment: "catalogo" },
-  { href: "/azure", label: "Azure", icon: Layers, segment: "azure" },
-  { href: "/ai-200", label: "AI-200 Collection", icon: Layers, segment: "ai-200" },
+const BOOK_FORMATS = [
+  { label: "Master Book", icon: BookOpen, enabled: false },
+  { label: "Visual Atlas", icon: Map, enabled: true },
+  { label: "Exam Traps Guide", icon: Shield, enabled: false },
+  { label: "Question Bank", icon: HelpCircle, enabled: false },
+  { label: "Cheat Sheets", icon: FileText, enabled: false },
+  { label: "Rapid Review Pack", icon: Zap, enabled: false },
 ];
 
 const NAV_PRODUCTION = [
@@ -32,6 +36,9 @@ interface LayoutProps { children: ReactNode; title?: string }
 export default function Layout({ children, title }: LayoutProps) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
+  const [cloudTreeOpen, setCloudTreeOpen] = useState(true);
+  const [azureOpen, setAzureOpen] = useState(true);
+  const [ai200Open, setAi200Open] = useState(true);
 
   return (
     <div className="flex h-screen bg-[#0a1220] overflow-hidden">
@@ -45,10 +52,8 @@ export default function Layout({ children, title }: LayoutProps) {
             <img src="/cloudbooks-logo-nobg.png" alt="CloudBooks"
               className="w-28 opacity-90 hover:opacity-100 transition-opacity" draggable={false} />
           </Link>
-          <div className="mt-1.5 flex items-center gap-1.5">
+          <div className="mt-1.5">
             <span className="text-[7px] font-bold text-teal-400/60 uppercase tracking-[0.2em]">Studio</span>
-            <span className="text-white/10">·</span>
-            <span className="text-[7px] text-white/20">AI-200 Collection</span>
           </div>
         </div>
 
@@ -76,21 +81,80 @@ export default function Layout({ children, title }: LayoutProps) {
           </div>
 
           <div className="px-2 space-y-px">
-            {NAV_COLLECTION.map(({ href, label, icon: Icon, segment }) => {
-              const active = location.startsWith(`/${segment}`);
-              return (
-                <Link key={href} href={href}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-2 rounded-sm text-[10px] font-medium transition-all",
-                    active
-                      ? "bg-violet-600/15 text-white border-l-2 border-violet-400 pl-[10px]"
-                      : "text-white/35 hover:text-white/70 hover:bg-white/5"
-                  )}>
-                  <Icon className={cn("w-3 h-3 shrink-0", active ? "text-violet-300" : "text-white/20")} />
-                  <span>{label}</span>
-                </Link>
-              );
-            })}
+            <button
+              onClick={() => setCloudTreeOpen((v) => !v)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-sm text-[10px] font-medium text-white/45 hover:text-white/75 hover:bg-white/5 transition-all"
+            >
+              {cloudTreeOpen ? <ChevronDown className="w-3 h-3 text-white/20" /> : <ChevronRight className="w-3 h-3 text-white/20" />}
+              <BookOpen className="w-3 h-3 text-white/25" />
+              <span>Biblioteca Cloud</span>
+            </button>
+
+            {cloudTreeOpen && (
+              <div className="ml-4 pl-2 border-l border-white/[0.06] space-y-px">
+                <button
+                  onClick={() => setAzureOpen((v) => !v)}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-[9px] font-medium text-white/35 hover:text-white/65 hover:bg-white/5 transition-all"
+                >
+                  {azureOpen ? <ChevronDown className="w-2.5 h-2.5 text-white/18" /> : <ChevronRight className="w-2.5 h-2.5 text-white/18" />}
+                  <Cloud className="w-3 h-3 text-blue-300/45" />
+                  <span>Azure</span>
+                </button>
+
+                {azureOpen && (
+                  <div className="ml-4 pl-2 border-l border-white/[0.05] space-y-px">
+                    <button
+                      onClick={() => setAi200Open((v) => !v)}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-[9px] font-medium text-white/45 hover:text-white/70 hover:bg-white/5 transition-all"
+                    >
+                      {ai200Open ? <ChevronDown className="w-2.5 h-2.5 text-white/18" /> : <ChevronRight className="w-2.5 h-2.5 text-white/18" />}
+                      <Layers className="w-3 h-3 text-violet-300/55" />
+                      <span>AI-200</span>
+                    </button>
+
+                    {ai200Open && (
+                      <div className="ml-4 pl-2 border-l border-white/[0.05] space-y-px">
+                        {BOOK_FORMATS.map(({ label, icon: Icon, enabled }) => {
+                          const active = enabled && location.startsWith("/biblioteca");
+                          const item = (
+                            <div
+                              className={cn(
+                                "flex items-center gap-2 px-2 py-1.5 rounded-sm text-[8.5px] font-semibold transition-all",
+                                enabled
+                                  ? active
+                                    ? "bg-blue-600/15 text-white"
+                                    : "text-blue-200/50 hover:text-white/80 hover:bg-white/5"
+                                  : "text-white/18"
+                              )}
+                            >
+                              <Icon className={cn("w-2.5 h-2.5 shrink-0", enabled ? "text-blue-300/70" : "text-white/15")} />
+                              <span className="truncate">{label}</span>
+                              {!enabled && <Lock className="w-2 h-2 ml-auto text-white/12" />}
+                            </div>
+                          );
+                          return enabled ? (
+                            <Link key={label} href="/biblioteca">{item}</Link>
+                          ) : (
+                            <div key={label} title="Formato planificado">{item}</div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <Link href="/ai-200"
+              className={cn(
+                "mt-1 flex items-center gap-2 px-3 py-2 rounded-sm text-[10px] font-medium transition-all",
+                location.startsWith("/ai-200")
+                  ? "bg-violet-600/15 text-white border-l-2 border-violet-400 pl-[10px]"
+                  : "text-white/35 hover:text-white/70 hover:bg-white/5"
+              )}>
+              <Package className={cn("w-3 h-3 shrink-0", location.startsWith("/ai-200") ? "text-violet-300" : "text-white/20")} />
+              <span>AI-200 Collection</span>
+            </Link>
           </div>
 
           <div className="mx-3 h-px bg-white/[0.05] my-2" />

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Download, ExternalLink, FileText, Image, Loader2, Package, Shield, XCircle } from "lucide-react";
+import { useLocation } from "wouter";
+import { Download, ExternalLink, FileText, Image, Loader2, Shield, XCircle } from "lucide-react";
 
 import Layout from "@/components/Layout";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ function downloadUrl(url: string, filename: string) {
 }
 
 export default function Exportacion() {
+  const [, setLocation] = useLocation();
   const [catalog, setCatalog] = useState<StudioCatalog | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +48,7 @@ export default function Exportacion() {
         <div className="bg-[#0d1629] border-b border-white/[0.06] px-6 py-3 flex items-center gap-4 shrink-0">
           {[
             { label: "HTML reales", value: exportable.length, color: "text-blue-400" },
-            { label: "PNG visual", value: withUpperPng.length, color: "text-violet-400" },
+            { label: "PNG visual asset", value: withUpperPng.length, color: "text-violet-400" },
             { label: "Aprobadas", value: approved.length, color: "text-emerald-400" },
           ].map((s) => (
             <div key={s.label} className="text-center">
@@ -67,7 +69,7 @@ export default function Exportacion() {
               onClick={() => withUpperPng.forEach((p, i) => setTimeout(() => downloadUrl(pageAsset(p.pageId, "upper-art.png"), `ai200-p${p.pageId}-upper-art.png`), i * 250))}
               className="flex items-center gap-1.5 h-8 px-3 rounded-sm bg-violet-500/10 border border-violet-500/20 text-[9px] font-bold text-violet-300 disabled:opacity-30"
             >
-              <Image className="w-3 h-3" />Descargar PNG visual
+              <Image className="w-3 h-3" />Descargar PNG visual asset
             </button>
           </div>
         </div>
@@ -75,7 +77,7 @@ export default function Exportacion() {
         <div className="bg-blue-500/[0.06] border-b border-blue-500/15 px-6 py-2 shrink-0">
           <p className="text-[8px] text-blue-200/55 leading-relaxed">
             Exportacion conectada a outputs reales del servidor. El PNG disponible hoy es el <span className="font-mono">upper-art.png</span>
-            generado por gpt-image-2 medium; PNG print-ready de pagina completa requiere un render server-side adicional.
+            generado por gpt-image-2 medium. PNG print-ready de pagina completa todavia requiere renderer server-side.
           </p>
         </div>
 
@@ -100,14 +102,14 @@ export default function Exportacion() {
             <div className="flex flex-col items-center justify-center min-h-[360px] text-center">
               <Download className="w-10 h-10 text-white/10 mb-4" />
               <p className="text-sm font-semibold text-white/30">Sin outputs reales exportables</p>
-              <p className="text-xs text-white/18 mt-1">Genera una pagina desde Visual Atlas para habilitar HTML y PNG visual.</p>
+              <p className="text-xs text-white/18 mt-1">Genera una pagina desde Visual Atlas para habilitar HTML y PNG visual asset.</p>
             </div>
           )}
 
           {exportable.length > 0 && (
             <div className="max-w-5xl space-y-3">
               <p className="text-[9px] font-bold text-white/25 uppercase tracking-widest">Paginas con output real</p>
-              {exportable.map((page) => <ExportRow key={page.pageId} page={page} />)}
+              {exportable.map((page) => <ExportRow key={page.pageId} page={page} setLocation={setLocation} />)}
             </div>
           )}
         </div>
@@ -116,7 +118,7 @@ export default function Exportacion() {
   );
 }
 
-function ExportRow({ page }: { page: StudioCatalogPage }) {
+function ExportRow({ page, setLocation }: { page: StudioCatalogPage; setLocation: (to: string) => void }) {
   const status = page.outputStatus;
   const htmlUrl = status.htmlPath ?? pageAsset(page.pageId, "page.html");
   const pngUrl = pageAsset(page.pageId, "upper-art.png");
@@ -138,7 +140,7 @@ function ExportRow({ page }: { page: StudioCatalogPage }) {
         <div className="flex items-center gap-3 text-[8px] text-white/25">
           <span>{status.generationMode}</span>
           <span>{status.generatedAt ? new Date(status.generatedAt).toLocaleDateString("es-ES") : "sin fecha"}</span>
-          <span>{status.files.upperVisual ? "upper-art.png disponible" : "sin PNG visual"}</span>
+          <span>{status.files.upperVisual ? "PNG visual asset disponible" : "sin PNG visual asset"}</span>
         </div>
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
@@ -155,22 +157,20 @@ function ExportRow({ page }: { page: StudioCatalogPage }) {
           onClick={() => downloadUrl(pngUrl, `ai200-p${page.pageId}-upper-art.png`)}
           className="flex items-center gap-1 h-7 px-2.5 rounded-sm text-[8px] font-bold border bg-violet-500/10 border-violet-500/20 text-violet-300 disabled:opacity-30"
         >
-          <Image className="w-2.5 h-2.5" />PNG visual
+          <Image className="w-2.5 h-2.5" />PNG visual asset
         </button>
-        <a
-          href={`/api/studio/qa-report/${page.pageId}`}
-          target="_blank"
-          rel="noreferrer"
+        <button
+          onClick={() => setLocation(`/qa/${parseInt(page.pageId, 10)}`)}
           className="flex items-center gap-1 h-7 px-2.5 rounded-sm text-[8px] font-bold border bg-white/[0.03] border-white/[0.08] text-white/40"
         >
-          <Shield className="w-2.5 h-2.5" />QA
-        </a>
+          <Shield className="w-2.5 h-2.5" />QA editorial
+        </button>
         <button
           disabled
-          title="Book Pack real pendiente de empaquetador server-side"
+          title="Pendiente: PNG de pagina completa generado por renderer server-side"
           className="flex items-center gap-1 h-7 px-2.5 rounded-sm text-[8px] font-bold border bg-white/[0.02] border-white/[0.05] text-white/18 cursor-not-allowed"
         >
-          <Package className="w-2.5 h-2.5" />Pack
+          <Image className="w-2.5 h-2.5" />PNG pagina completa
         </button>
       </div>
     </div>
