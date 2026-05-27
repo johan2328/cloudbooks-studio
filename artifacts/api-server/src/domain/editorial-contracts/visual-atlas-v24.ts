@@ -119,8 +119,8 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
     titleLineHeight: 1.02,
     deckFontSize: 14,
     deckLineHeight: 1.28,
-    iconWidth: 96,
-    iconHeight: 74,
+    iconWidth: 112,
+    iconHeight: 86,
   },
   guide: {
     height: 42,

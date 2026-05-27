@@ -114,7 +114,7 @@ export async function generateVisualAtlasPage(
 - Legibilidad: **${dim.readability}/10**
 - Precisión técnica: **${dim.technicalAccuracy}/10**
 - Densidad útil: **${dim.density}/10**
-- Riesgo comercial: **${dim.commercialRisk}/10**
+- Seguridad comercial: **${dim.commercialRisk}/10** (puntaje alto = bajo riesgo comercial)
 
 ## Checks estructurales
 ${qaLines}

@@ -244,16 +244,10 @@ function OutputPanel({ page, setLocation }: { page: StudioCatalogPage; setLocati
               <div>
                 <p className="text-[11px] font-bold text-white/45">Sin output generado todavia</p>
                 <p className="text-[9px] text-white/30 mt-1 leading-relaxed">
-                  Esta pagina tiene seed productivo y esta lista para generacion real.
+                  Esta pagina tiene seed productivo y esta lista para generacion real. Usa el boton principal del header para correr el pipeline.
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setLocation(`/generacion?page=${page.pageId}`)}
-              className="flex items-center gap-2 h-9 px-4 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 text-white text-[10px] font-bold rounded-sm transition-all"
-            >
-              <Sparkles className="w-3.5 h-3.5" />Generar pagina {page.pageNumber}
-            </button>
           </div>
         )}
 

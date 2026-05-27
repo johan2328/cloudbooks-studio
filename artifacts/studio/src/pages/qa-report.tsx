@@ -27,8 +27,39 @@ const QA_DIMS = [
   { key: "readability", label: "Legibilidad" },
   { key: "technical_accuracy", label: "Precision tecnica" },
   { key: "useful_density", label: "Densidad util" },
-  { key: "commercial_risk", label: "Riesgo comercial" },
+  { key: "commercial_risk", label: "Seguridad comercial" },
 ] as const;
+
+function dimensionMeaning(key: string, score: number): string {
+  switch (key) {
+    case "art_direction":
+      if (score >= 9) return "La composicion visual ya se acerca a una pieza lista para produccion.";
+      if (score >= 7) return "La direccion de arte es correcta en estructura, pero todavia puede ganar presencia, equilibrio y fuerza editorial.";
+      return "La pagina necesita una mejora visual clara en composicion, jerarquia o impacto.";
+    case "editorial_consistency":
+      if (score >= 9) return "La familia visual, la tipografia y las reglas editoriales se perciben estables.";
+      if (score >= 7) return "La consistencia general es buena, aunque aun hay variaciones visibles entre modulos o assets.";
+      return "La pagina transmite demasiada variacion en estilo, etiquetas o recursos visuales.";
+    case "readability":
+      if (score >= 9) return "Se lee con soltura a tamano real y mantiene buena jerarquia.";
+      if (score >= 7) return "La lectura es funcional, pero todavia hay zonas que pueden respirar mejor o ganar claridad.";
+      return "La legibilidad todavia no sostiene una lectura comoda a tamano real.";
+    case "technical_accuracy":
+      if (score >= 9) return "El contenido tecnico esta alineado con el criterio esperado para certificacion.";
+      if (score >= 7) return "La base tecnica es buena, pero conviene revisar algun matiz o formulacion.";
+      return "Todavia hay riesgo tecnico o ambiguedad conceptual.";
+    case "useful_density":
+      if (score >= 9) return "La pagina usa muy bien el espacio: mucha utilidad sin sentirse sobrecargada.";
+      if (score >= 7) return "La densidad es aceptable, pero aun hay huecos o zonas con poco rendimiento editorial.";
+      return "La pagina desperdicia espacio o no reparte bien la carga informativa.";
+    case "commercial_risk":
+      if (score >= 9) return "Puntaje alto aqui significa riesgo comercial bajo: no se detecta nada que devalue el producto.";
+      if (score >= 7) return "El riesgo comercial es controlado, aunque todavia hay detalles de acabado que pueden restar premium.";
+      return "Hay riesgo visible de percepcion pobre o falta de acabado premium.";
+    default:
+      return "Sin comentario adicional.";
+  }
+}
 
 function getToken() {
   return localStorage.getItem("studio_token") ?? "";
@@ -126,13 +157,17 @@ export default function QAReportPage() {
                     </div>
                     <div className="grid md:grid-cols-2 gap-3 mt-4">
                       {QA_DIMS.map((dim) => {
-                        const value = (report.scores[dim.key] ?? 0) * 10;
+                        const rawValue = report.scores[dim.key] ?? 0;
+                        const value = rawValue * 10;
                         return (
                           <div key={dim.key} className="bg-white/[0.02] border border-white/[0.05] rounded-sm px-3 py-2.5">
                             <div className="flex items-center justify-between gap-3">
                               <span className="text-[9px] text-white/55">{dim.label}</span>
                               <span className={cn("text-[9px] font-bold", scoreColorDark(value))}>{value.toFixed(0)}/100</span>
                             </div>
+                            <p className="mt-1.5 text-[8px] text-white/32 leading-relaxed">
+                              {dimensionMeaning(dim.key, rawValue)}
+                            </p>
                           </div>
                         );
                       })}
