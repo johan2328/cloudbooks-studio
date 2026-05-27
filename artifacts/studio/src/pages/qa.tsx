@@ -574,6 +574,9 @@ export default function QAPage() {
                       </span>
                     )}
                   </div>
+                  <p className="text-[10px] text-white/35 mb-3 leading-relaxed">
+                    Cada dimension mide algo distinto. <span className="text-white/55 font-semibold">Seguridad comercial</span> puntua alto cuando el riesgo de percepcion premium es bajo.
+                  </p>
                   {realQA ? (
                     <div className="space-y-2.5">
                       <div className="bg-white/[0.02] border border-white/[0.05] rounded-sm px-3 py-2.5 flex items-center justify-between gap-3">
@@ -628,37 +631,48 @@ export default function QAPage() {
 
                 {/* Checklist de defectos */}
                 <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
-                  <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-1">
-                    Notas manuales de revision
-                    {checkedDefects.size > 0 && (
-                      <span className="ml-2 text-amber-400 normal-case font-normal">· {checkedDefects.size} marcados</span>
-                    )}
-                  </p>
-                  <p className="text-[9px] text-white/35 mb-3 max-w-xl leading-relaxed">
-                    Este bloque solo documenta hallazgos del editor. No cambia el contrato ni bloquea aprobacion por si mismo.
-                  </p>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {DEFECTS.map(d => {
-                      const checked = checkedDefects.has(d.id);
-                      return (
-                        <label key={d.id} className={cn(
-                          "flex items-center gap-2 px-2.5 py-2 rounded-sm border cursor-pointer transition-all",
-                          checked ? "bg-amber-500/8 border-amber-500/20" : "bg-white/[0.02] border-white/[0.05] hover:border-white/10"
-                        )}>
-                          <input type="checkbox" checked={checked}
-                            onChange={() => setCheckedDefects(prev => {
-                              const next = new Set(prev);
-                              if (next.has(d.id)) next.delete(d.id); else next.add(d.id);
-                              return next;
-                            })}
-                            className="shrink-0 accent-amber-400" />
-                          <span className={cn("text-[9px] font-medium", checked ? "text-amber-300" : "text-white/45")}>
-                            {d.label}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setManualNotesOpen((value) => !value)}
+                    className="w-full flex items-center justify-between gap-3 text-left"
+                  >
+                    <div>
+                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-1">
+                        Notas manuales de revision
+                        {checkedDefects.size > 0 && (
+                          <span className="ml-2 text-amber-400 normal-case font-normal">- {checkedDefects.size} marcados</span>
+                        )}
+                      </p>
+                      <p className="text-[9px] text-white/35 max-w-xl leading-relaxed">
+                        Hallazgos manuales del editor. Se guardan localmente por pagina en este navegador; no cambian el contrato ni bloquean aprobacion por si mismos.
+                      </p>
+                    </div>
+                    <ChevronDown className={cn("w-4 h-4 text-white/30 transition-transform shrink-0", manualNotesOpen && "rotate-180")} />
+                  </button>
+                  {manualNotesOpen && (
+                    <div className="grid grid-cols-2 gap-1.5 mt-3">
+                      {DEFECTS.map(d => {
+                        const checked = checkedDefects.has(d.id);
+                        return (
+                          <label key={d.id} className={cn(
+                            "flex items-center gap-2 px-2.5 py-2 rounded-sm border cursor-pointer transition-all",
+                            checked ? "bg-amber-500/8 border-amber-500/20" : "bg-white/[0.02] border-white/[0.05] hover:border-white/10"
+                          )}>
+                            <input type="checkbox" checked={checked}
+                              onChange={() => setCheckedDefects(prev => {
+                                const next = new Set(prev);
+                                if (next.has(d.id)) next.delete(d.id); else next.add(d.id);
+                                return next;
+                              })}
+                              className="shrink-0 accent-amber-400" />
+                            <span className={cn("text-[9px] font-medium", checked ? "text-amber-300" : "text-white/45")}>
+                              {d.label}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </>
             )}
