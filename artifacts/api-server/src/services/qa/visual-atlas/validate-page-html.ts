@@ -44,6 +44,8 @@ export function runStructuralQa(html: string, data: VisualAtlasPageData): Struct
     { name: "Upper visual block exists", ok: html.includes('class="upper"') },
     { name: "Exam traps: 3 items", ok: data.traps.length === 3 },
     { name: `Exam traps header ${contract.page.trapColor}`, ok: html.includes(contract.page.trapColor) },
+    { name: "Exam traps without strikethrough", ok: html.includes(`text-decoration: ${contract.exam.trapWrongTextDecoration}`) },
+    { name: "Exam traps labels present", ok: html.includes(contract.exam.trapWrongLabel) && html.includes(contract.exam.trapCorrectionLabel) },
     { name: `Guide border ${contract.page.guideColor}`, ok: html.includes(contract.page.guideColor) },
     { name: "Footer brand present", ok: html.includes(contract.chrome.footer.brandText) },
     { name: `Footer font ${contract.chrome.footer.fontSize}px`, ok: html.includes(`font-size: ${contract.chrome.footer.fontSize}px`) },

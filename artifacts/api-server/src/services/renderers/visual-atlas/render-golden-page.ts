@@ -264,12 +264,21 @@ section.body {
 .trap-wrong {
   font-size: ${contract.exam.trapWrongFontSize}px;
   font-weight: 700;
-  color: #374151;
-  text-decoration: line-through;
-  text-decoration-color: #f87171;
+  color: #7f1d1d;
+  text-decoration: ${contract.exam.trapWrongTextDecoration};
 }
-.trap-arrow { font-size: 8px; color: #9ca3af; }
+.trap-wrong::before {
+  content: "${contract.exam.trapWrongLabel}: ";
+  color: #dc2626;
+  font-weight: 900;
+}
+.trap-arrow { display: none; }
 .trap-correction { font-size: ${contract.exam.trapCorrectionFontSize}px; color: #1f2937; line-height: 1.42; }
+.trap-correction::before {
+  content: "${contract.exam.trapCorrectionLabel}: ";
+  color: #047857;
+  font-weight: 900;
+}
 
 /* Autocheck items */
 .autocheck-question { font-size: ${contract.exam.autocheckQuestionFontSize}px; font-weight: 700; color: #06133E; line-height: 1.34; }

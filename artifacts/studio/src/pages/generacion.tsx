@@ -496,6 +496,38 @@ export default function Generacion() {
             </div>
           )}
 
+          {step === "done" && !result && (
+            <div className="bg-[#0d1629] border border-emerald-500/15 rounded-sm p-4">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-[10px] font-bold text-emerald-300">Generacion completada</p>
+                  <p className="text-[8px] text-white/35 mt-1 leading-relaxed">
+                    El servidor termino el proceso, pero no devolvio el detalle de checklist al panel. Puedes revisar el output real en Overview o pasar directo a QA editorial.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <a
+                      href={`/assets/cloudbooks/ai-200/visual-atlas/pages/${page?.pageId ?? pageId}/page.html`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="h-7 px-3 rounded-sm bg-blue-500/10 border border-blue-500/20 text-[8px] font-bold text-blue-300 hover:bg-blue-500/18 inline-flex items-center"
+                    >
+                      Abrir HTML real
+                    </a>
+                    <button onClick={() => setLocation("/biblioteca")}
+                      className="h-7 px-3 rounded-sm bg-white/[0.04] border border-white/[0.08] text-[8px] font-bold text-white/45 hover:text-white/75">
+                      Ver en Overview
+                    </button>
+                    <button onClick={() => setLocation(`/qa/${parseInt(page?.pageId ?? pageId, 10)}`)}
+                      className="h-7 px-3 rounded-sm bg-emerald-500/10 border border-emerald-500/20 text-[8px] font-bold text-emerald-300 hover:bg-emerald-500/18">
+                      Revisar QA
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
     </Layout>

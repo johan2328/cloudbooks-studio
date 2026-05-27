@@ -19,8 +19,8 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
     background: "#edf2f8",
     guideColor: "#0969DA",
     trapColor: "#D92D20",
-    gridRows: "34px 210px 38px 836px 34px",
-    bodyRows: "506px 1fr",
+    gridRows: "34px 182px 38px 864px 34px",
+    bodyRows: "524px 1fr",
   },
   chrome: {
     topbar: {
@@ -133,6 +133,9 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
     headerFontSize: 8.2,
     bodyPaddingY: 8,
     bodyGap: 6,
+    trapWrongLabel: "Mito",
+    trapCorrectionLabel: "Correccion",
+    trapWrongTextDecoration: "none",
     trapWrongFontSize: 8.8,
     trapCorrectionFontSize: 8.6,
     autocheckQuestionFontSize: 9.2,
