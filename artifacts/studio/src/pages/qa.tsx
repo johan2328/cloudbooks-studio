@@ -249,6 +249,8 @@ export default function QAPage() {
   const serverApproved = outputStatus?.files.approved === true;
   const htmlUrl = withCacheBust(outputStatus?.htmlPath ?? null, outputStatus?.generatedAt);
   const previewUrl = withCacheBust(outputStatus?.previewPath ?? null, outputStatus?.generatedAt);
+  const totalScore = realQA?.scores.total ?? null;
+  const gapToTarget = totalScore != null ? Math.max(0, 9.5 - totalScore) : null;
   const editorialAssessment = buildEditorialAssessment({
     hasOutput,
     isRealVisual,
@@ -548,13 +550,20 @@ export default function QAPage() {
                   </div>
                   {realQA ? (
                     <div className="space-y-2.5">
+                      <div className="bg-white/[0.02] border border-white/[0.05] rounded-sm px-3 py-2.5 flex items-center justify-between gap-3">
+                        <span className="text-[10px] text-white/60 font-semibold">Puntaje global editorial</span>
+                        <div className="text-right">
+                          <p className="text-[14px] font-black text-white/85">{totalScore?.toFixed(1) ?? "0.0"}/10</p>
+                          <p className="text-[8px] text-amber-300/80">brecha {gapToTarget?.toFixed(1) ?? "0.0"} hacia 9.5</p>
+                        </div>
+                      </div>
                       {QA_DIMS.map(dim => {
                         const val = (realQA.scores[dim.key] ?? 0) * 10;
                         return (
                           <div key={dim.key}>
                             <div className="flex justify-between mb-0.5">
-                              <span className="text-[9px] text-white/50">{dim.label}</span>
-                              <span className={cn("text-[9px] font-bold", scoreColorDark(val))}>
+                              <span className="text-[10px] text-white/68 font-semibold">{dim.label}</span>
+                              <span className={cn("text-[10px] font-bold", scoreColorDark(val))}>
                                 {val.toFixed(0)}/100
                               </span>
                             </div>
@@ -633,3 +642,4 @@ export default function QAPage() {
     </Layout>
   );
 }
+

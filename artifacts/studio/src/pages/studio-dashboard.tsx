@@ -19,7 +19,7 @@ import {
 
 import Layout from "@/components/Layout";
 import { cn } from "@/lib/utils";
-import { fetchStudioCatalog, type StudioCatalog } from "@/lib/studio-api";
+import { authHeaders, fetchStudioCatalog, type StudioCatalog } from "@/lib/studio-api";
 
 const FORMATS = [
   {
@@ -87,11 +87,37 @@ const FORMATS = [
 export default function StudioDashboard() {
   const [, setLocation] = useLocation();
   const [catalog, setCatalog] = useState<StudioCatalog | null>(null);
+  const [qualityScore, setQualityScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchStudioCatalog()
-      .then(setCatalog)
+      .then(async (data) => {
+        setCatalog(data);
+        const pagesWithQa = data.pages.filter((p) => p.outputStatus.files.qaReport);
+        if (!pagesWithQa.length) {
+          setQualityScore(null);
+          return;
+        }
+
+        const results = await Promise.all(
+          pagesWithQa.map(async (page) => {
+            try {
+              const res = await fetch(`/api/studio/qa-report/${page.pageId}`, { headers: authHeaders() });
+              if (!res.ok) return null;
+              const report = await res.json() as { scores?: Record<string, number> };
+              return typeof report.scores?.total === "number" ? report.scores.total : null;
+            } catch {
+              return null;
+            }
+          }),
+        );
+
+        const validScores = results.filter((score): score is number => typeof score === "number");
+        setQualityScore(validScores.length
+          ? validScores.reduce((sum, score) => sum + score, 0) / validScores.length
+          : null);
+      })
       .catch(() => setCatalog(null))
       .finally(() => setLoading(false));
   }, []);
@@ -111,7 +137,7 @@ export default function StudioDashboard() {
   }, [catalog]);
 
   const collectionProgress = Math.round((atlasStats.generated / Math.max(atlasStats.expected, 1)) * 100);
-  const productionRisk = atlasStats.realVisuals < atlasStats.generated ? "Revisar placeholders" : "Controlado";
+  const qualityGap = qualityScore != null ? Math.max(0, 9.5 - qualityScore) : null;
 
   return (
     <Layout title="Dashboard Studio">
@@ -123,14 +149,13 @@ export default function StudioDashboard() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[8px] font-bold text-teal-400/70 uppercase tracking-[0.2em] mb-1">
-                CloudBooks Production Studio
+                Coleccion editorial
               </p>
               <h1 className="text-xl font-black text-white tracking-tight">
                 AI-200 Collection
               </h1>
               <p className="text-[10px] text-white/35 mt-1 max-w-2xl leading-relaxed">
-                Sistema editorial para producir una coleccion completa por certificacion: seis libros coordinados,
-                contratos por formato, QA, exportacion y trazabilidad por batch.
+                Vision global del estado editorial: avance por formato, cobertura de paginas, QA y salida lista para exportacion.
               </p>
             </div>
             <button
@@ -148,7 +173,7 @@ export default function StudioDashboard() {
               { label: "Formatos", value: "6", sub: "libros por certificacion", icon: PackageCheck, color: "text-blue-400" },
               { label: "Seeds Visual Atlas", value: `${atlasStats.seeds}/${atlasStats.expected}`, sub: "contenido migrado", icon: FileText, color: "text-teal-400" },
               { label: "Outputs generados", value: String(atlasStats.generated), sub: `${atlasStats.realVisuals} con imagen real`, icon: CheckCircle2, color: "text-emerald-400" },
-              { label: "Riesgo editorial", value: productionRisk, sub: "segun outputs actuales", icon: Shield, color: atlasStats.realVisuals < atlasStats.generated ? "text-amber-400" : "text-emerald-400" },
+              { label: "Puntaje editorial", value: qualityScore != null ? `${qualityScore.toFixed(1)}/10` : "Sin QA", sub: qualityGap != null ? `brecha ${qualityGap.toFixed(1)} hacia 9.5` : "aun no hay reportes QA", icon: Shield, color: qualityGap != null && qualityGap > 0.5 ? "text-amber-400" : "text-emerald-400" },
             ].map((card) => (
               <div key={card.label} className="bg-[#0d1629] border border-white/[0.06] rounded-sm p-4">
                 <div className="flex items-center justify-between gap-3">

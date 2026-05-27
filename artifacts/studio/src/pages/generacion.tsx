@@ -146,7 +146,7 @@ export default function Generacion() {
       const keyRes  = await fetch("/api/studio/key-status", { headers: authHdr() });
       const keyData = await readJsonOrThrow<StudioKeyStatus>(keyRes, "key-status");
       if (!keyData.hasKey) {
-        setError("OPENAI_API_KEY no configurada en Secrets. Ir a Replit → Secrets → agregar OPENAI_API_KEY.");
+        setError("OPENAI_API_KEY no configurada en el entorno. Agrega la clave antes de generar esta pagina.");
         setStep("error");
         return;
       }
@@ -231,21 +231,6 @@ export default function Generacion() {
             </label>
           )}
 
-          {/* Key badge */}
-          {!keyChecked ? (
-            <span className="flex items-center gap-1 text-[8px] text-white/25 border border-white/10 px-2 py-1 rounded-sm">
-              <Loader2 className="w-2.5 h-2.5 animate-spin" />Verificando…
-            </span>
-          ) : hasKey ? (
-            <span className="flex items-center gap-1 text-[8px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-sm font-semibold">
-              <Key className="w-2.5 h-2.5" />OPENAI_API_KEY ✓
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 text-[8px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-sm font-semibold">
-              <Key className="w-2.5 h-2.5" />Sin API key
-            </span>
-          )}
-
           {/* Único botón primario */}
           <button
             onClick={generate}
@@ -264,14 +249,8 @@ export default function Generacion() {
           </button>
         </div>
 
-        {/* ── Guardrail banner ── */}
-        <div className="bg-[#0d1629] border-b border-white/[0.05] px-6 py-1.5 flex items-center gap-3">
-          <Lock className="w-2.5 h-2.5 text-teal-400/40 shrink-0" />
-          <span className="text-[8px] text-white/25">
-            <span className="text-teal-400/60 font-semibold">Layout bloqueado:</span>{" "}
-            formato libro 768×1152 · estructura editorial local v24 · la IA no redesigna la página
-          </span>
-          <span className="ml-auto text-[7px] font-semibold text-teal-300/50">
+        <div className="bg-[#0d1629] border-b border-white/[0.05] px-6 py-1.5 flex items-center justify-end">
+          <span className="text-[8px] font-semibold text-teal-300/55">
             {humanGuardrail(keyStatus)}
           </span>
         </div>
@@ -291,14 +270,14 @@ export default function Generacion() {
                   {
                     label: "Layout",
                     value: "Golden Master Visual Atlas v24",
-                    note:  "Plantilla fija — la IA no decide estructura",
+                    note:  "",
                     icon:  Lock,
                     color: "text-teal-400",
                   },
                   {
                     label: "Template",
                     value: "locked",
-                    note:  "768×1152 px · 6 secciones editoriales fijas",
+                    note:  "",
                     icon:  Lock,
                     color: "text-teal-400",
                   },
@@ -319,7 +298,7 @@ export default function Generacion() {
                   {
                     label: "High quality",
                     value: "blocked",
-                    note:  "ALLOW_HIGH_QUALITY = false permanentemente",
+                    note:  "",
                     icon:  XCircle,
                     color: "text-red-400/70",
                   },
@@ -336,7 +315,9 @@ export default function Generacion() {
                     <div className="min-w-0">
                       <p className="text-[7px] text-white/25 uppercase tracking-widest font-bold">{c.label}</p>
                       <p className="text-[9.5px] font-semibold text-white/70 mt-0.5 font-mono leading-tight">{c.value}</p>
-                      <p className="text-[7px] text-white/20 mt-0.5 leading-snug">{c.note}</p>
+                      {c.note ? (
+                        <p className="text-[7px] text-white/20 mt-0.5 leading-snug">{c.note}</p>
+                      ) : null}
                     </div>
                   </div>
                 ))}
@@ -348,8 +329,7 @@ export default function Generacion() {
                   <div>
                     <p className="text-[9px] font-bold text-amber-400">OPENAI_API_KEY no configurada</p>
                     <p className="text-[8px] text-amber-400/50 mt-0.5 leading-snug">
-                      Replit → Secrets (ícono de candado) → agregar{" "}
-                      <span className="font-mono">OPENAI_API_KEY</span>
+                      Agrega <span className="font-mono">OPENAI_API_KEY</span> en la configuracion del entorno para habilitar generacion real.
                     </p>
                   </div>
                 </div>
@@ -579,4 +559,5 @@ interface ConfigRow {
   icon: ElementType;
   color: string;
 }
+
 

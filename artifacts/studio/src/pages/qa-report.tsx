@@ -101,6 +101,9 @@ export default function QAReportPage() {
     return (report?.redTeamLog ?? []).filter((item) => item.toLowerCase().includes(term));
   }, [report, search]);
 
+  const totalScore = report?.scores.total ?? null;
+  const gapToTarget = totalScore != null ? Math.max(0, 9.5 - totalScore) : null;
+
   return (
     <Layout title={`QA Report · Pag. ${pageNum}`}>
       <div className="flex flex-col h-full bg-[#0a1220] overflow-hidden">
@@ -150,6 +153,14 @@ export default function QAReportPage() {
                         )}>
                           {report.verdict === "approved" ? "Aprobable" : "Requiere revision"}
                         </p>
+                        {totalScore != null && (
+                          <p className="text-[11px] text-white/55 mt-2">
+                            Puntaje global <span className="font-black text-white/80">{totalScore.toFixed(1)}/10</span>
+                            {gapToTarget != null && (
+                              <span className="ml-2 text-amber-300/85">· brecha {gapToTarget.toFixed(1)} hacia 9.5</span>
+                            )}
+                          </p>
+                        )}
                       </div>
                       <div className="w-10 h-10 rounded-sm border border-white/[0.08] bg-white/[0.02] flex items-center justify-center">
                         <FileSearch className="w-4 h-4 text-white/35" />
@@ -162,13 +173,13 @@ export default function QAReportPage() {
                         return (
                           <div key={dim.key} className="bg-white/[0.02] border border-white/[0.05] rounded-sm px-3 py-2.5">
                             <div className="flex items-center justify-between gap-3">
-                              <span className="text-[9px] text-white/55">{dim.label}</span>
-                              <span className={cn("text-[9px] font-bold", scoreColorDark(value))}>{value.toFixed(0)}/100</span>
-                            </div>
-                            <p className="mt-1.5 text-[8px] text-white/32 leading-relaxed">
-                              {dimensionMeaning(dim.key, rawValue)}
-                            </p>
+                            <span className="text-[10px] text-white/70 font-semibold">{dim.label}</span>
+                            <span className={cn("text-[11px] font-bold", scoreColorDark(value))}>{value.toFixed(0)}/100</span>
                           </div>
+                          <p className="mt-2 text-[9px] text-white/42 leading-relaxed">
+                            {dimensionMeaning(dim.key, rawValue)}
+                          </p>
+                        </div>
                         );
                       })}
                     </div>
@@ -185,7 +196,7 @@ export default function QAReportPage() {
                         className="w-full bg-transparent text-[10px] text-white/70 placeholder:text-white/20 outline-none"
                       />
                     </label>
-                    <p className="text-[9px] text-white/30 mt-3 leading-relaxed">
+                    <p className="text-[10px] text-white/35 mt-3 leading-relaxed">
                       Este visor deja de mostrarte JSON crudo y organiza observaciones, checks y texto original del reporte generado.
                     </p>
                   </div>
@@ -196,7 +207,7 @@ export default function QAReportPage() {
                     <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">Observaciones</p>
                     <div className="space-y-2">
                       {filteredObservations.length > 0 ? filteredObservations.map((item) => (
-                        <div key={item} className="px-3 py-2 rounded-sm bg-white/[0.02] border border-white/[0.05] text-[10px] text-white/60 leading-relaxed">
+                        <div key={item} className="px-3 py-2.5 rounded-sm bg-white/[0.02] border border-white/[0.05] text-[11px] text-white/68 leading-relaxed">
                           {item}
                         </div>
                       )) : (
@@ -209,7 +220,7 @@ export default function QAReportPage() {
                     <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">Checks estructurales y red team</p>
                     <div className="space-y-2">
                       {filteredRedTeam.length > 0 ? filteredRedTeam.map((item) => (
-                        <div key={item} className="px-3 py-2 rounded-sm bg-white/[0.02] border border-white/[0.05] text-[10px] text-white/60 leading-relaxed">
+                        <div key={item} className="px-3 py-2.5 rounded-sm bg-white/[0.02] border border-white/[0.05] text-[11px] text-white/68 leading-relaxed">
                           {item}
                         </div>
                       )) : (
