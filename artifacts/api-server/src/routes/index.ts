@@ -13,6 +13,7 @@ import studioApprovalRouter  from "./studio-approval";
 import studioStatusRouter    from "./studio-status";
 import studioQaRouter        from "./studio-qa";
 import studioActivityRouter  from "./studio-activity";
+import studioComposerRouter  from "./studio-composer";
 
 const router: IRouter = Router();
 
@@ -29,5 +30,6 @@ router.use(studioApprovalRouter);
 router.use(studioStatusRouter);
 router.use(studioQaRouter);
 router.use(studioActivityRouter);
+router.use(studioComposerRouter);
 
 export default router;
