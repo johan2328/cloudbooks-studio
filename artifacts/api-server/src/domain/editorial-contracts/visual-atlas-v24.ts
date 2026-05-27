@@ -68,8 +68,8 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
     ],
   },
   upperVisual: {
-    slotWidth: 760,
-    slotHeight: 506,
+    slotWidth: 724,
+    slotHeight: 490,
     requiredCardCount: 4,
     requiredGrid: "2x2",
     role: "upper_visual_asset_only",
@@ -178,6 +178,7 @@ Canvas and composition:
 - Landscape technical infographic asset.
 - Target HTML slot: ${contract.upperVisual.slotWidth}x${contract.upperVisual.slotHeight}px.
 - Requested render size: ${contract.generation.imageSize}; keep safe margins because the HTML slot will fit the image with object-fit: contain.
+- Reserve a visible internal white border on all four edges of the image; no important shape, label, arrow or icon may touch the outer frame.
 - Use exactly ${contract.upperVisual.requiredCardCount} internal concept cards in a balanced ${contract.upperVisual.requiredGrid} grid.
 - Each internal card may have a small number badge (${data.visualModules.map((m) => m.num).join(", ")}) and a short card title.
 - No global header above the cards. No book/page title. No footer.
