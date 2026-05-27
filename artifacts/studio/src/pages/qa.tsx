@@ -5,7 +5,7 @@ import { cn, scoreColorDark } from "@/lib/utils";
 import { useStudio } from "@/lib/studio-store";
 import { fetchStudioCatalog, type StudioCatalogPage } from "@/lib/studio-api";
 import {
-  CheckCircle2, RotateCcw, AlertTriangle, ChevronLeft, ChevronRight,
+  CheckCircle2, RotateCcw, AlertTriangle, ChevronLeft, ChevronRight, ChevronDown,
   Shield, Loader2, ExternalLink, XCircle, Download, FileText,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -46,7 +46,7 @@ const QA_DIMS = [
   { key: "readability",           label: "Legibilidad",             desc: "Tamaño, contraste, claridad" },
   { key: "technical_accuracy",    label: "Precisión técnica",       desc: "Correctitud de conceptos Microsoft" },
   { key: "useful_density",        label: "Densidad útil",           desc: "Info relevante / espacio" },
-  { key: "commercial_risk",       label: "Riesgo comercial",        desc: "Sin copy de venta o lenguaje comercial" },
+  { key: "commercial_risk",       label: "Seguridad comercial",     desc: "Percepcion premium y ausencia de senales que devaluen el producto" },
 ] as const;
 
 const DEFECTS = [
@@ -58,6 +58,10 @@ const DEFECTS = [
   { id: "crop",             label: "Recorte de elementos" },
   { id: "color_incoherence",label: "Incoherencia cromática" },
 ];
+
+function getDefectStorageKey(pageId: string) {
+  return `cloudbooks.qa.defects.${pageId}`;
+}
 
 function buildEditorialAssessment(args: {
   hasOutput: boolean;
@@ -155,6 +159,7 @@ export default function QAPage() {
   const [revisionComment, setRevisionComment] = useState("");
   const [showRevision, setShowRevision] = useState(false);
   const [checkedDefects, setCheckedDefects] = useState<Set<string>>(new Set());
+  const [manualNotesOpen, setManualNotesOpen] = useState(true);
   const [approving, setApproving] = useState(false);
   const [catalogPages, setCatalogPages] = useState<StudioCatalogPage[]>([]);
 
@@ -183,6 +188,27 @@ export default function QAPage() {
       .catch(() => setOutputStatus(null))
       .finally(() => setLoadingStatus(false));
   }, [pageNum]);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(getDefectStorageKey(pageNum));
+      if (!raw) {
+        setCheckedDefects(new Set());
+        return;
+      }
+      const parsed = JSON.parse(raw) as string[];
+      setCheckedDefects(new Set(parsed));
+    } catch {
+      setCheckedDefects(new Set());
+    }
+  }, [pageNum]);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      getDefectStorageKey(pageNum),
+      JSON.stringify(Array.from(checkedDefects)),
+    );
+  }, [pageNum, checkedDefects]);
 
   /**
    * Aprobación real: primero valida contra el servidor (que chequea
@@ -642,4 +668,6 @@ export default function QAPage() {
     </Layout>
   );
 }
+
+
 

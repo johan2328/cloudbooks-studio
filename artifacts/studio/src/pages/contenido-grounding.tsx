@@ -4,7 +4,7 @@ import Layout from "@/components/Layout";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
-  ChevronRight, CheckCircle2, AlertTriangle, Clock, HelpCircle,
+  ChevronRight, ChevronDown, CheckCircle2, AlertTriangle, Clock, HelpCircle,
   RefreshCw, BookOpen, Zap, Shield, FileText, Globe, Link2,
   Database, AlertCircle, Package, ExternalLink, Activity,
   BookMarked, Send, Search,
@@ -208,6 +208,7 @@ export default function ContenidoGrounding() {
   const [lastSync, setLastSync]     = useState<string | null>(null);
   const [syncing, setSyncing]       = useState(false);
   const [bottomTab, setBottomTab]   = useState<"matriz"|"brechas">("matriz");
+  const [bottomPanelOpen, setBottomPanelOpen] = useState(true);
   const [selectedBatch, setSelectedBatch] = useState("01-10");
 
   const selected = TOPICS.find(t => t.id === selectedId)!;
@@ -615,16 +616,27 @@ export default function ContenidoGrounding() {
 
         {/* ── Bottom panels ── */}
         <div className="border-t border-white/[0.06] bg-[#0d1629]">
-          <div className="flex gap-0.5 px-5 pt-2 border-b border-white/[0.05]">
-            {([["matriz","Cobertura por formato"],["brechas","Brechas editoriales"]] as const).map(([id, label]) => (
-              <button key={id} onClick={() => setBottomTab(id)}
-                className={cn(
-                  "h-7 px-3 rounded-sm text-[9px] font-semibold transition-all",
-                  bottomTab === id ? "bg-white/[0.07] text-white/70" : "text-white/25 hover:text-white/50"
-                )}>{label}</button>
-            ))}
+          <div className="flex items-center justify-between gap-3 px-5 pt-2 border-b border-white/[0.05]">
+            <div className="flex gap-0.5">
+              {([["matriz","Cobertura por formato"],["brechas","Brechas editoriales"]] as const).map(([id, label]) => (
+                <button key={id} onClick={() => setBottomTab(id)}
+                  className={cn(
+                    "h-7 px-3 rounded-sm text-[9px] font-semibold transition-all",
+                    bottomTab === id ? "bg-white/[0.07] text-white/70" : "text-white/25 hover:text-white/50"
+                  )}>{label}</button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setBottomPanelOpen((value) => !value)}
+              className="mb-1 inline-flex items-center gap-1.5 h-7 px-3 rounded-sm border border-white/[0.06] text-[8px] font-semibold text-white/38 hover:text-white/70 hover:border-white/[0.12] transition-all"
+            >
+              {bottomPanelOpen ? "Replegar panel" : "Abrir panel"}
+              <ChevronDown className={cn("w-3 h-3 transition-transform", bottomPanelOpen && "rotate-180")} />
+            </button>
           </div>
 
+          {bottomPanelOpen && (
           <div className="overflow-x-auto p-4">
 
             {/* ── Matriz de cobertura ── */}
@@ -719,6 +731,7 @@ export default function ContenidoGrounding() {
               </div>
             )}
           </div>
+          )}
         </div>
 
       </div>
