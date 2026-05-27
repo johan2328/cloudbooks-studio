@@ -54,6 +54,12 @@ function stateLabel(status: StudioOutputStatus): string {
   return "Sin output";
 }
 
+function withCacheBust(url: string | null, version: string | null | undefined): string | null {
+  if (!url) return null;
+  const stamp = version ?? String(Date.now());
+  return `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(stamp)}`;
+}
+
 export default function Biblioteca() {
   const [, setLocation] = useLocation();
   const [catalog, setCatalog] = useState<StudioCatalog | null>(null);
@@ -233,6 +239,7 @@ function OutputPanel({ page, setLocation }: { page: StudioCatalogPage; setLocati
   const status = page.outputStatus;
   const runState = computeRunState(status);
   const isRealVisual = runState === "success_with_real_upper_visual";
+  const htmlUrl = withCacheBust(status.htmlPath, status.generatedAt);
 
   return (
     <div className="flex-1 overflow-y-auto p-5">
@@ -288,8 +295,8 @@ function OutputPanel({ page, setLocation }: { page: StudioCatalogPage; setLocati
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
-              {status.htmlPath && (
-                <a href={status.htmlPath} target="_blank" rel="noreferrer"
+              {htmlUrl && (
+                <a href={htmlUrl} target="_blank" rel="noreferrer"
                   className="flex items-center gap-2 h-9 px-4 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 text-white text-[10px] font-bold rounded-sm transition-all shadow-sm">
                   <ExternalLink className="w-3.5 h-3.5" />Abrir tamano real
                 </a>
@@ -308,7 +315,7 @@ function OutputPanel({ page, setLocation }: { page: StudioCatalogPage; setLocati
               </button>
             </div>
 
-            {status.htmlPath && (
+            {htmlUrl && (
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Preview - Golden Master</p>
@@ -321,7 +328,7 @@ function OutputPanel({ page, setLocation }: { page: StudioCatalogPage; setLocati
                 </div>
                 <div className="rounded-sm border border-white/10 overflow-hidden bg-[#edf2f8] relative" style={{ width: 320, height: 480 }}>
                   <iframe
-                    src={status.htmlPath}
+                    src={htmlUrl}
                     title={`Pagina ${page.pageNumber} - golden master`}
                     scrolling="no"
                     style={{

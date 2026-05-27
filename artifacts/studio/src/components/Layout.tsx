@@ -86,10 +86,6 @@ export default function Layout({ children, title }: LayoutProps) {
               draggable={false}
             />
           </Link>
-          <div className="mt-1.5 space-y-1">
-            <span className="text-[8px] font-bold text-white/58 uppercase tracking-[0.18em]">Production Studio</span>
-            <p className="text-[9px] text-white/24">Colecciones, batches, QA y exportacion editorial</p>
-          </div>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-2">

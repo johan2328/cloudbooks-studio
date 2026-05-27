@@ -34,6 +34,12 @@ interface OutputStatus {
   previewPath: string | null;
 }
 
+function withCacheBust(url: string | null, version: string | null | undefined): string | null {
+  if (!url) return null;
+  const stamp = version ?? String(Date.now());
+  return `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(stamp)}`;
+}
+
 const QA_DIMS = [
   { key: "art_direction",         label: "Dirección de arte",       desc: "Composición, grid, jerarquía visual" },
   { key: "editorial_consistency", label: "Consistencia editorial",   desc: "Iconografía, paleta, tipografía" },
@@ -241,6 +247,8 @@ export default function QAPage() {
   const isPlaceholder  = !isRealVisual && hasOutput;
   const approvalBlocked = !isRealVisual;
   const serverApproved = outputStatus?.files.approved === true;
+  const htmlUrl = withCacheBust(outputStatus?.htmlPath ?? null, outputStatus?.generatedAt);
+  const previewUrl = withCacheBust(outputStatus?.previewPath ?? null, outputStatus?.generatedAt);
   const editorialAssessment = buildEditorialAssessment({
     hasOutput,
     isRealVisual,
@@ -437,13 +445,13 @@ export default function QAPage() {
                 </div>
 
                 {/* Acciones de output — T6 */}
-                {outputStatus.htmlPath && (
+                {htmlUrl && (
                   <div className="flex items-center gap-2 flex-wrap">
-                    <a href={outputStatus.htmlPath} target="_blank" rel="noreferrer"
+                    <a href={htmlUrl} target="_blank" rel="noreferrer"
                       className="flex items-center gap-2 h-9 px-4 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 text-white text-[10px] font-bold rounded-sm transition-all shadow-sm">
                       <ExternalLink className="w-3.5 h-3.5" />Abrir tamaño real
                     </a>
-                    <a href={outputStatus.htmlPath} download={`page-${pageNum}.html`}
+                    <a href={htmlUrl} download={`page-${pageNum}.html`}
                       className="flex items-center gap-1.5 h-9 px-3 bg-white/[0.05] hover:bg-white/[0.10] border border-white/[0.12] text-white/60 hover:text-white/90 text-[9px] font-bold rounded-sm transition-all">
                       <Download className="w-3 h-3" />Descargar HTML
                     </a>
@@ -474,11 +482,11 @@ export default function QAPage() {
                       {isRealVisual ? "UPPER VISUAL REAL" : "UPPER VISUAL PLACEHOLDER"}
                     </span>
                   </div>
-                  {outputStatus.htmlPath ? (
+                  {htmlUrl ? (
                     <div className="relative w-full overflow-hidden rounded-sm border border-white/[0.06] bg-white"
                       style={{ paddingBottom: "150%" }}>
                       <iframe
-                        src={outputStatus.htmlPath}
+                        src={htmlUrl}
                         className="absolute inset-0 w-full h-full border-0 origin-top-left"
                         style={{ transform: "scale(1)", transformOrigin: "top left" }}
                         title="Preview página completa"
@@ -506,10 +514,10 @@ export default function QAPage() {
                       </span>
                     )}
                   </div>
-                  {outputStatus.previewPath ? (
+                  {previewUrl ? (
                     <div className="w-full overflow-hidden rounded-sm border border-white/[0.06] bg-[#f8fafc]">
                       <img
-                        src={outputStatus.previewPath}
+                        src={previewUrl}
                         alt="Upper visual 728×494"
                         className="w-full h-auto block"
                         style={{ aspectRatio: "728/494", objectFit: "contain" }}

@@ -90,12 +90,13 @@ export default function Generacion() {
   const [step, setStep]         = useState<RunStep>("idle");
   const [error, setError]       = useState<string | null>(null);
   const [result, setResult]     = useState<GenerationResult | null>(null);
-  const [keyStatus, setKeyStatus] = useState<KeyStatus | null>(null);
+  const [keyStatus, setKeyStatus] = useState<StudioKeyStatus | null>(null);
   const [keyChecked, setKeyChecked] = useState(false);
   const [catalog, setCatalog] = useState<StudioCatalog | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
-  const pageId = getPageIdFromLocation("01");
-  const page: StudioCatalogPage | undefined = catalog?.pages.find((p) => p.pageId === pageId) ?? catalog?.pages[0];
+  const [selectedPageId, setSelectedPageId] = useState(() => getPageIdFromLocation("01"));
+  const pageId = selectedPageId;
+  const page: StudioCatalogPage | undefined = catalog?.pages.find((p) => p.pageId === selectedPageId) ?? catalog?.pages[0];
   const pageOptions = catalog?.pages ?? [];
 
   useEffect(() => {
@@ -107,6 +108,23 @@ export default function Generacion() {
       .then(setCatalog)
       .catch((err) => setCatalogError(err instanceof Error ? err.message : String(err)));
   }, []);
+
+  useEffect(() => {
+    function syncFromUrl() {
+      setSelectedPageId(getPageIdFromLocation("01"));
+    }
+
+    syncFromUrl();
+    window.addEventListener("popstate", syncFromUrl);
+    return () => window.removeEventListener("popstate", syncFromUrl);
+  }, []);
+
+  useEffect(() => {
+    if (!pageOptions.length) return;
+    if (!pageOptions.some((p) => p.pageId === selectedPageId)) {
+      setSelectedPageId(pageOptions[0].pageId);
+    }
+  }, [pageOptions, selectedPageId]);
 
   const isRunning = ["generating_image", "assembling_html", "running_qa", "saving"].includes(step);
   const hasKey    = keyStatus?.hasKey ?? false;
@@ -195,8 +213,12 @@ export default function Generacion() {
             <label className="flex items-center gap-2 h-9 px-2.5 rounded-sm bg-white/[0.03] border border-white/[0.08]">
               <span className="text-[8px] font-bold text-white/25 uppercase tracking-wider">Pagina</span>
               <select
-                value={page?.pageId ?? pageId}
-                onChange={(event) => setLocation(`/generacion?page=${event.target.value}`)}
+                value={selectedPageId}
+                onChange={(event) => {
+                  const nextPageId = event.target.value;
+                  setSelectedPageId(nextPageId);
+                  window.history.pushState({}, "", `/generacion?page=${nextPageId}`);
+                }}
                 disabled={isRunning}
                 className="bg-transparent text-[10px] font-bold text-white/70 outline-none disabled:opacity-40"
               >
