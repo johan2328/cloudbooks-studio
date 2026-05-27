@@ -15,15 +15,16 @@ export function renderVisualAtlasPage(data: VisualAtlasPageData): string {
 
   /* ── Icono de título ─────────────────────────────────────────────────── */
   const titleIconSvg = `<svg class="title-icon" width="${contract.hero.iconWidth}" height="${contract.hero.iconHeight}" viewBox="0 0 180 130" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Soluciones contenerizadas en Azure">
-    <path d="M46 86h89c17 0 30-12 30-28 0-15-12-27-27-28-6-16-22-25-40-22-15 2-27 13-31 27-15-2-29 10-29 25 0 10 4 19 8 26Z" fill="#F8FBFF" stroke="#0969DA" stroke-width="5" stroke-linejoin="round"/>
-    <g transform="translate(73 45)">
-      <path d="M7 12 43 0l36 12v48L43 75 7 60Z" fill="#E8F2FF" stroke="#0B3A75" stroke-width="4" stroke-linejoin="round"/>
-      <path d="M43 0v75M7 12l36 13 36-13" stroke="#0B3A75" stroke-width="3"/>
-      <rect x="20" y="27" width="46" height="30" rx="3" fill="#0078D4" stroke="#0B3A75" stroke-width="3"/>
-      <path d="M29 31v22M41 29v27M53 31v22" stroke="#B9E3FF" stroke-width="3"/>
+    <ellipse cx="104" cy="62" rx="48" ry="43" fill="#F7FBFF" stroke="#D5E6F7" stroke-width="2.5"/>
+    <path d="M66 91h78c15 0 27-10 27-24 0-12-10-22-23-23-5-14-18-22-33-20-12 2-21 10-25 22-13-2-25 8-25 21 0 9 3 16 1 24Z" fill="#FCFEFF" stroke="#4F8FE8" stroke-width="4.5" stroke-linejoin="round"/>
+    <g transform="translate(78 42)">
+      <path d="M8 12 39 1l31 11v42L39 67 8 54Z" fill="#ECF5FF" stroke="#526E97" stroke-width="3.5" stroke-linejoin="round"/>
+      <path d="M39 1v66M8 12l31 11 31-11" stroke="#526E97" stroke-width="2.6"/>
+      <rect x="21" y="24" width="35" height="22" rx="2.5" fill="#2F86E8" stroke="#526E97" stroke-width="2.5"/>
+      <path d="M28 27v16M39 26v18M49 27v16" stroke="#C9E5FF" stroke-width="2.3"/>
     </g>
-    <circle cx="42" cy="88" r="12" fill="#DFF6F2" stroke="#0D9488" stroke-width="4"/>
-    <path d="M35 88h14M42 81v14" stroke="#0D9488" stroke-width="4" stroke-linecap="round"/>
+    <path d="M45 31c13-12 29-18 49-18" stroke="#0E7490" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 7"/>
+    <path d="M47 102c11 7 22 11 39 13" stroke="#0E7490" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 7"/>
   </svg>`;
 
   /* ── Upper visual — imagen real o placeholder claro ──────────────────── */
@@ -148,10 +149,12 @@ h1 {
 .guide > span {
   font-size: ${contract.guide.fontSize}px;
   color: #0d2260;
-  line-height: 1.3;
-  white-space: nowrap;
+  line-height: 1.28;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 .guide strong {
   font-weight: 800;
@@ -244,6 +247,8 @@ section.body {
 }
 .mod.traps .mod-body { background: #fff9f9; }
 .mod.check .mod-body { background: #f8faff; }
+.mod.traps .mod-body,
+.mod.check .mod-body { justify-content: space-between; }
 
 /* Trap items */
 .trap-item { display: flex; gap: 8px; align-items: flex-start; }
@@ -344,7 +349,7 @@ section.body {
   </section>
 
   <section class="guide">
-    <span class="guide-mark"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6.4 5.5a1.8 1.8 0 1 1 3.1 1.2c-.8.7-1.5 1.1-1.5 2.3" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="8" cy="12.2" r="1" fill="white"/></svg></span>
+    <span class="guide-mark"><svg width="12" height="12" viewBox="0 0 18 18" fill="none" aria-hidden="true"><rect x="2" y="5" width="5" height="7" rx="2" stroke="white" stroke-width="2"/><rect x="11" y="5" width="5" height="7" rx="2" stroke="white" stroke-width="2"/><path d="M7 8.5h4M4.5 12.5l-1.2 2M13.5 12.5l1.2 2" stroke="white" stroke-width="2" stroke-linecap="round"/></svg></span>
     <span><strong>PREGUNTA GUÍA:</strong>${data.guideQuestion}</span>
   </section>
 

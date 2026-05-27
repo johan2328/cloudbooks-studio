@@ -61,6 +61,8 @@ export default function Biblioteca() {
   const [tab, setTab] = useState<Tab>("output");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pageRailWidth, setPageRailWidth] = useState(256);
+  const [resizingRail, setResizingRail] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -81,6 +83,26 @@ export default function Biblioteca() {
     return () => { mounted = false; };
   }, []);
 
+  useEffect(() => {
+    if (!resizingRail) return;
+
+    function handleMove(event: MouseEvent) {
+      const next = Math.max(228, Math.min(420, event.clientX - 192));
+      setPageRailWidth(next);
+    }
+
+    function handleUp() {
+      setResizingRail(false);
+    }
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, [resizingRail]);
+
   const pages = catalog?.pages ?? [];
   const page = useMemo(
     () => pages.find((p) => p.pageId === selectedPageId) ?? pages[0],
@@ -90,7 +112,7 @@ export default function Biblioteca() {
   return (
     <Layout title="Visual Atlas">
       <div className="flex h-full overflow-hidden bg-[#0a1220]">
-        <aside className="w-56 bg-[#0d1629] border-r border-white/[0.05] flex flex-col shrink-0 overflow-hidden">
+        <aside className="bg-[#0d1629] border-r border-white/[0.05] flex flex-col shrink-0 overflow-hidden" style={{ width: pageRailWidth }}>
           <div className="px-3 py-2.5 border-b border-white/[0.06]">
             <p className="text-[7px] font-bold text-white/20 uppercase tracking-[0.2em]">Visual Atlas · AI-200</p>
             <p className="text-[8px] text-white/30 mt-0.5">
@@ -145,6 +167,16 @@ export default function Biblioteca() {
             )}
           </div>
         </aside>
+
+        <button
+          type="button"
+          aria-label="Ajustar ancho del listado de paginas"
+          onMouseDown={() => setResizingRail(true)}
+          className={cn(
+            "w-2 shrink-0 bg-[#0d1629] border-r border-white/[0.05] transition-colors",
+            resizingRail ? "bg-blue-500/30" : "hover:bg-white/[0.08]"
+          )}
+        />
 
         <main className="flex-1 flex flex-col overflow-hidden">
           {!page ? (
@@ -326,6 +358,12 @@ function ContentPanel({ page }: { page: StudioCatalogPage }) {
 
         <Section title="Contexto editorial">
           <p className="text-[10px] text-white/55 leading-relaxed">{page.context}</p>
+        </Section>
+
+        <Section title="Icono editorial">
+          <p className="text-[10px] text-white/55 leading-relaxed">
+            El icono del hero superior hoy sigue una familia deterministica por tema. Si no convence, la siguiente estrategia sana es un override por pagina como asset controlado, no un ajuste manual sobre canvas.
+          </p>
         </Section>
 
         <Section title="Modulos visuales">

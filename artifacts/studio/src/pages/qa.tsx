@@ -552,11 +552,14 @@ export default function QAPage() {
 
                 {/* Checklist de defectos */}
                 <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
-                  <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-3">
-                    Checklist de defectos visuales
+                  <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest mb-1">
+                    Notas manuales de revision
                     {checkedDefects.size > 0 && (
                       <span className="ml-2 text-amber-400 normal-case font-normal">· {checkedDefects.size} marcados</span>
                     )}
+                  </p>
+                  <p className="text-[9px] text-white/35 mb-3 max-w-xl leading-relaxed">
+                    Este bloque solo documenta hallazgos del editor. No cambia el contrato ni bloquea aprobacion por si mismo.
                   </p>
                   <div className="grid grid-cols-2 gap-1.5">
                     {DEFECTS.map(d => {

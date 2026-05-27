@@ -61,6 +61,16 @@ const STEPS: { key: RunStep; label: string; sub: string }[] = [
   { key: "done",             label: "Completado",        sub: "page.html listo · static files" },
 ];
 
+const STEP_NUMBERS: Record<RunStep, string> = {
+  idle: "00",
+  generating_image: "01",
+  assembling_html: "02",
+  running_qa: "03",
+  saving: "04",
+  done: "05",
+  error: "!!",
+};
+
 function getToken() { return localStorage.getItem("studio_token") ?? ""; }
 function authHdr() { return { Authorization: `Bearer ${getToken()}` }; }
 
@@ -255,7 +265,7 @@ export default function Generacion() {
           </span>
         </div>
 
-        <div className="p-6 max-w-3xl space-y-5">
+        <div className="p-6 max-w-6xl space-y-5">
 
           {/* ── Config panel (solo en idle) ── */}
           {step === "idle" && (
@@ -358,30 +368,46 @@ export default function Generacion() {
 
           {/* ── Pipeline steps ── */}
           {step !== "idle" && (
-            <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4 space-y-3">
-              <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Pipeline</p>
-              <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-5 space-y-4">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Pipeline editorial</p>
+                  <p className="text-[9px] text-white/35 mt-1 max-w-2xl leading-relaxed">
+                    Orquestacion cerrada por etapas: imagen, ensamblado, QA y salida final. No simula agentes conversando; muestra el flujo real que hoy ejecuta el sistema.
+                  </p>
+                </div>
+                <div className="text-[8px] text-teal-300/55 font-semibold">
+                  {page ? `Pag. ${page.pageNumber} · ${page.domain}` : "Pipeline activo"}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
                 {STEPS.map((s, i) => {
                   const activeIdx = STEPS.findIndex(x => x.key === step);
                   const isDone    = step === "done" ? true : i < activeIdx;
                   const isActive  = s.key === step && step !== "done";
                   return (
-                    <div key={s.key} className="flex items-center gap-1.5">
+                    <div key={s.key} className="relative">
                       <div className={cn(
-                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm text-[9px] font-medium border transition-all",
+                        "h-full min-h-[88px] rounded-sm border px-3 py-3 transition-all",
                         isDone   ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
                         isActive ? "bg-teal-500/15 border-teal-500/30 text-teal-300 animate-pulse" :
                         step === "error" && i === activeIdx
                                  ? "bg-red-500/10 border-red-500/20 text-red-400"
                                  : "bg-white/[0.02] border-white/[0.06] text-white/20"
                       )}>
-                        {isDone   ? <CheckCircle2 className="w-3 h-3" /> :
-                         isActive ? <Loader2 className="w-3 h-3 animate-spin" /> :
-                                    <Clock className="w-3 h-3" />}
-                        {s.label}
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[8px] font-black tracking-[0.18em] opacity-70">{STEP_NUMBERS[s.key]}</span>
+                          {isDone   ? <CheckCircle2 className="w-3.5 h-3.5" /> :
+                           isActive ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
+                                      <Clock className="w-3.5 h-3.5" />}
+                        </div>
+                        <p className="mt-3 text-[10px] font-bold">{s.label}</p>
+                        <p className="mt-1 text-[8px] leading-relaxed opacity-75">{s.sub}</p>
                       </div>
                       {i < STEPS.length - 1 && (
-                        <ChevronRight className="w-3 h-3 text-white/10 shrink-0" />
+                        <span className="hidden md:block absolute -right-2 top-1/2 -translate-y-1/2 text-white/10">
+                          <ChevronRight className="w-3 h-3" />
+                        </span>
                       )}
                     </div>
                   );

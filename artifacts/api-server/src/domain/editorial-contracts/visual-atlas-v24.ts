@@ -19,8 +19,8 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
     background: "#edf2f8",
     guideColor: "#0969DA",
     trapColor: "#D92D20",
-    gridRows: "34px 182px 38px 864px 34px",
-    bodyRows: "524px 1fr",
+    gridRows: "34px 170px 42px 872px 34px",
+    bodyRows: "506px 1fr",
   },
   chrome: {
     topbar: {
@@ -123,10 +123,10 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
     iconHeight: 74,
   },
   guide: {
-    height: 38,
-    fontSize: 10.5,
-    markerSize: 21,
-    markerIcon: "question",
+    height: 42,
+    fontSize: 11.4,
+    markerSize: 22,
+    markerIcon: "binoculars",
   },
   exam: {
     headerPaddingY: 6,
