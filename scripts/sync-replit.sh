@@ -11,6 +11,18 @@ if ! command -v pnpm >/dev/null 2>&1; then
   exit 1
 fi
 
+if git rev-parse --verify REBASE_HEAD >/dev/null 2>&1; then
+  echo "[sync] Hay un rebase en progreso. Abortalo antes de sincronizar:" >&2
+  echo "        git rebase --abort" >&2
+  exit 1
+fi
+
+if git diff --name-only --diff-filter=U | grep -q .; then
+  echo "[sync] Hay archivos en conflicto. Resuelvelos o limpia el workspace antes de sincronizar." >&2
+  git diff --name-only --diff-filter=U
+  exit 1
+fi
+
 stash_name="sync-replit-$(date +%s)"
 created_stash="false"
 
