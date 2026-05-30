@@ -241,10 +241,22 @@ function OutputPanel({ page, setLocation }: { page: StudioCatalogPage; setLocati
   const runState = computeRunState(status);
   const isRealVisual = runState === "success_with_real_upper_visual";
   const htmlUrl = withCacheBust(status.htmlPath, status.generatedAt);
+  const isStaleLayout =
+    !!status.layoutRevision &&
+    !!status.currentLayoutRevision &&
+    status.layoutRevision !== status.currentLayoutRevision;
+  const missingLayoutRevision =
+    !status.layoutRevision && !!status.currentLayoutRevision && status.files.html;
 
   return (
     <div className="flex-1 overflow-y-auto p-5">
       <div className="max-w-3xl space-y-5">
+        {(isStaleLayout || missingLayoutRevision) && (
+          <Notice tone="amber" icon={<AlertTriangle className="w-4 h-4" />} title="Salida anterior al renderer actual">
+            Este HTML fue generado con una revision previa del layout. Para ver los cambios nuevos de composicion editorial, iconografia y rail inferior hay que regenerar esta pagina.
+          </Notice>
+        )}
+
         {runState === "no_output" && (
           <div className="space-y-4">
             <div className="flex items-start gap-3 px-4 py-4 bg-white/[0.02] border border-white/[0.06] rounded-sm">

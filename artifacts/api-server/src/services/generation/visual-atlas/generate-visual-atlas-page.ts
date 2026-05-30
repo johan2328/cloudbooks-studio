@@ -87,6 +87,7 @@ export async function generateVisualAtlasPage(
     batch:            pageData.batchLabel,
     certificationId:  "ai-200",
     contractVersion:  VISUAL_ATLAS_V24_CONTRACT.version,
+    layoutRevision:   VISUAL_ATLAS_V24_CONTRACT.renderRevision,
     generatedAt,
     templateApproach: "golden_master_v24",
     textModel:        TEXT_MODEL,

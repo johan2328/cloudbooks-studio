@@ -5,6 +5,8 @@ export interface StudioOutputStatus {
   hasOutput: boolean;
   generationMode: GenerationMode;
   templateApproach: string | null;
+  layoutRevision: string | null;
+  currentLayoutRevision: string;
   generatedAt: string | null;
   approvedAt: string | null;
   files: {
