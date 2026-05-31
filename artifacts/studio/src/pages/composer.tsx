@@ -123,6 +123,86 @@ function scoreToHundred(score: number) {
   return Math.round(score * 10);
 }
 
+function estimateBlockHeight(block: ComposerBlock): number {
+  switch (block.type) {
+    case "hero_title":
+      return block.variant === "full" ? 126 : 108;
+    case "context_deck":
+      return block.variant === "expanded" ? 118 : 82;
+    case "guide_question":
+      return 42;
+    case "comparison_panel":
+      return 240;
+    case "diagram_panel":
+      return block.variant === "multi_step" ? 224 : 208;
+    case "decision_tree":
+      return 214;
+    case "map_panel":
+      return 198;
+    case "exam_traps":
+      return block.variant === "compact" ? 120 : 154;
+    case "autocheck":
+      return block.variant === "short" ? 124 : 162;
+    case "exam_signal":
+      return 90;
+    default:
+      return block.minHeight;
+  }
+}
+
+function computeSpacePlan(blocks: ComposerBlock[]) {
+  const introHeight = blocks
+    .filter((block) => ["hero_title", "context_deck", "guide_question"].includes(block.type))
+    .reduce((sum, block) => sum + estimateBlockHeight(block), 0);
+  const technicalHeight = blocks
+    .filter((block) => ["diagram_panel", "comparison_panel", "decision_tree", "map_panel"].includes(block.type))
+    .reduce((sum, block) => sum + estimateBlockHeight(block), 0);
+  const examHeight = blocks
+    .filter((block) => ["exam_traps", "autocheck", "exam_signal"].includes(block.type))
+    .reduce((sum, block) => sum + estimateBlockHeight(block), 0);
+  const total = Math.max(1, introHeight + technicalHeight + examHeight);
+  const technicalShare = Math.round((technicalHeight / total) * 100);
+  const examShare = Math.round((examHeight / total) * 100);
+  const introShare = Math.round((introHeight / total) * 100);
+  const railMode = examShare >= 31 ? "compactar" : examShare <= 24 ? "estable" : "vigilar";
+  const visualPressure = technicalShare >= 46 ? "fuerte" : technicalShare >= 39 ? "correcta" : "timida";
+  const guidance =
+    railMode === "compactar"
+      ? "El rail inferior esta absorbiendo demasiada altura: conviene compactar traps o pasar autocheck a short."
+      : visualPressure === "timida"
+        ? "El cuerpo central aun no domina la pagina: conviene ampliar bloque tecnico o reducir chrome editorial."
+        : "La pagina tiene un reparto de espacio razonable para seguir refinando detalles.";
+
+  return { introHeight, technicalHeight, examHeight, introShare, technicalShare, examShare, railMode, visualPressure, guidance };
+}
+
+function blockAccent(type: ComposerBlock["type"]) {
+  switch (type) {
+    case "hero_title":
+      return "from-slate-400/80 to-slate-500/50";
+    case "context_deck":
+      return "from-blue-400/80 to-cyan-400/50";
+    case "guide_question":
+      return "from-blue-500/80 to-sky-400/50";
+    case "comparison_panel":
+      return "from-violet-400/80 to-fuchsia-400/50";
+    case "diagram_panel":
+      return "from-blue-500/80 to-indigo-400/50";
+    case "decision_tree":
+      return "from-amber-400/80 to-orange-400/50";
+    case "map_panel":
+      return "from-teal-400/80 to-cyan-400/50";
+    case "exam_traps":
+      return "from-rose-400/80 to-red-400/50";
+    case "autocheck":
+      return "from-emerald-400/80 to-green-400/50";
+    case "exam_signal":
+      return "from-yellow-400/80 to-amber-400/50";
+    default:
+      return "from-slate-400/80 to-slate-500/50";
+  }
+}
+
 function inferFamilyFromPage(page: StudioCatalogPage): ComposerProposal["draft"]["family"] {
   const text = `${page.title} ${page.domain} ${page.context} ${page.guideQuestion}`.toLowerCase();
   if (/(tier|sku|compar|replic)/.test(text)) return "comparison";
@@ -392,6 +472,7 @@ export default function ComposerPage() {
   }, [studioCatalog, pageIdFromRoute]);
 
   const scoreGap = proposal ? Math.max(0, 9.5 - proposal.draft.editorialValidation.total) : null;
+  const spacePlan = useMemo(() => (proposal ? computeSpacePlan(proposal.draft.blocks) : null), [proposal]);
 
   return (
     <Layout title="Composer">
@@ -456,9 +537,9 @@ export default function ComposerPage() {
 
         <div className="flex-1 overflow-y-auto p-5">
           {!loading && error && (
-            <div className="max-w-5xl mx-auto bg-red-500/8 border border-red-500/20 rounded-sm p-4">
-              <p className="text-[11px] font-bold text-red-300">No se pudo construir la vista Composer</p>
-              <p className="text-[10px] text-red-200/70 mt-1">{error}</p>
+            <div className="max-w-5xl mx-auto bg-amber-500/8 border border-amber-400/20 rounded-sm p-4">
+              <p className="text-[11px] font-bold text-amber-200">Composer usando propuesta local</p>
+              <p className="text-[10px] text-amber-100/70 mt-1">{error}</p>
             </div>
           )}
 
@@ -542,6 +623,103 @@ export default function ComposerPage() {
                   </div>
                 </section>
               </div>
+
+              {spacePlan && (
+                <div className="grid xl:grid-cols-[0.95fr_1.05fr] gap-4">
+                  <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Huella espacial</p>
+                        <p className="text-[12px] font-bold text-white/78 mt-0.5">Que tan dominante es el cuerpo visual frente al rail de examen</p>
+                      </div>
+                      <div className="w-10 h-10 rounded-sm border border-white/[0.08] bg-white/[0.02] flex items-center justify-center">
+                        <Layers3 className="w-4 h-4 text-white/35" />
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-3 mt-4">
+                      <div className="bg-white/[0.02] border border-white/[0.05] rounded-sm p-3">
+                        <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Apertura</p>
+                        <p className="text-lg font-black text-white/88 mt-1">{spacePlan.introShare}%</p>
+                        <p className="text-[10px] text-white/45 mt-1">{spacePlan.introHeight}px estimados</p>
+                      </div>
+                      <div className="bg-white/[0.02] border border-white/[0.05] rounded-sm p-3">
+                        <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Cuerpo visual</p>
+                        <p className="text-lg font-black text-emerald-300 mt-1">{spacePlan.technicalShare}%</p>
+                        <p className="text-[10px] text-white/45 mt-1">Presion {spacePlan.visualPressure}</p>
+                      </div>
+                      <div className="bg-white/[0.02] border border-white/[0.05] rounded-sm p-3">
+                        <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Rail inferior</p>
+                        <p className="text-lg font-black text-amber-300 mt-1">{spacePlan.examShare}%</p>
+                        <p className="text-[10px] text-white/45 mt-1">Modo {spacePlan.railMode}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 px-3 py-3 rounded-sm bg-white/[0.02] border border-white/[0.05]">
+                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Recomendacion</p>
+                      <p className="text-[11px] text-white/68 leading-relaxed mt-2">{spacePlan.guidance}</p>
+                    </div>
+                  </section>
+
+                  <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Mini layout</p>
+                        <p className="text-[12px] font-bold text-white/78 mt-0.5">Wireframe rapido para detectar monotonia, rail pesado o foco timido</p>
+                      </div>
+                      <div className="w-10 h-10 rounded-sm border border-white/[0.08] bg-white/[0.02] flex items-center justify-center">
+                        <Blocks className="w-4 h-4 text-white/35" />
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-sm border border-white/[0.06] bg-[#09111e] p-3">
+                      <div className="w-full aspect-[768/1152] rounded-sm border border-white/[0.06] bg-[#f7fbff] overflow-hidden p-[10px]">
+                        <div className="h-full w-full flex flex-col gap-[8px]">
+                          <div className="h-[10px] rounded-[2px] bg-[#0d1f57]" />
+                          {proposal.draft.blocks
+                            .slice()
+                            .sort((a, b) => a.priority - b.priority)
+                            .map((block) => {
+                              const blockHeight = estimateBlockHeight(block);
+                              const relativeHeight = Math.max(18, Math.min(92, Math.round(blockHeight / 3)));
+                              const isTechnical = ["diagram_panel", "comparison_panel", "decision_tree", "map_panel"].includes(block.type);
+                              const isExam = ["exam_traps", "autocheck", "exam_signal"].includes(block.type);
+                              return (
+                                <div
+                                  key={`wire:${block.id}`}
+                                  className={cn(
+                                    "rounded-[6px] border border-[#d8e4f4] bg-white px-2 py-1 shadow-[0_1px_0_rgba(9,30,66,0.04)]",
+                                    isTechnical ? "grid grid-cols-2 gap-2 items-stretch" : "flex items-center gap-2",
+                                    isExam && "bg-[#fffdfd]"
+                                  )}
+                                  style={{ minHeight: `${relativeHeight}px` }}
+                                >
+                                  {isTechnical ? (
+                                    <>
+                                      <div className={cn("rounded-[4px] bg-gradient-to-r opacity-85", blockAccent(block.type))} />
+                                      <div className={cn("rounded-[4px] bg-gradient-to-r opacity-55", blockAccent(block.type))} />
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className={cn("w-[26%] h-full min-h-[14px] rounded-[4px] bg-gradient-to-r opacity-85", blockAccent(block.type))} />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-[7px] leading-none font-bold text-[#18305f] uppercase tracking-[0.08em] truncate">
+                                          {labelBlockType(block.type)}
+                                        </div>
+                                        <div className="text-[6px] text-[#607192] mt-1 truncate">{block.variant}</div>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          <div className="h-[10px] rounded-[2px] bg-[#0d1f57]" />
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              )}
 
               <div className="grid xl:grid-cols-[0.95fr_1.05fr] gap-4">
                 <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">

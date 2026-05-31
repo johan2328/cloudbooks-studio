@@ -243,14 +243,15 @@ section.body {
   border-bottom: 1px solid #dde3ed;
   overflow: hidden;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 0 ${(contract.page.width - contract.upperVisual.slotWidth) / 2}px;
+  padding: 10px ${(contract.page.width - contract.upperVisual.slotWidth) / 2}px 8px;
 }
 .upper img {
   width: ${contract.upperVisual.slotWidth}px;
   height: ${contract.upperVisual.slotHeight}px;
   object-fit: contain;
+  object-position: center top;
   display: block;
 }
 .upper-placeholder {

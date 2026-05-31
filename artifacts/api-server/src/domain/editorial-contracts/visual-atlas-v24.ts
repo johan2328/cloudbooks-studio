@@ -4,7 +4,7 @@ import { IMAGE_MODEL, IMAGE_QUALITY, TEMPLATE_VERSION, TEXT_MODEL } from "../../
 export const VISUAL_ATLAS_V24_CONTRACT = {
   id: "visual-atlas-v24",
   version: TEMPLATE_VERSION,
-  renderRevision: "visual-atlas-2026-05-30-b",
+  renderRevision: "visual-atlas-2026-05-31-d",
   name: "Visual Atlas v24",
   generation: {
     textModel: TEXT_MODEL,
@@ -21,7 +21,7 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
     guideColor: "#0969DA",
     trapColor: "#D92D20",
     gridRows: "34px 170px 42px 872px 34px",
-    bodyRows: "540px 1fr",
+    bodyRows: "584px 1fr",
   },
   chrome: {
     topbar: {
@@ -69,12 +69,12 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
     ],
   },
   upperVisual: {
-    slotWidth: 724,
+    slotWidth: 752,
     slotHeight: 520,
     requiredCardCount: 4,
     requiredGrid: "2x2",
     role: "upper_visual_asset_only",
-    safeMargin: "keep all important content inside a visible safe margin",
+    safeMargin: "keep all important content inside a thin production-safe margin",
     style: [
       "premium editorial technical diagram",
       "white background",
@@ -130,22 +130,22 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
     markerIcon: "focus_lens",
   },
   exam: {
-    headerPaddingY: 6,
-    headerFontSize: 8.2,
-    bodyPaddingY: 7,
-    bodyGap: 5,
-    trapItemGap: 5,
+    headerPaddingY: 4,
+    headerFontSize: 7.8,
+    bodyPaddingY: 5,
+    bodyGap: 3,
+    trapItemGap: 3,
     trapNumberSize: 15,
     trapWrongLabel: "Mito",
     trapCorrectionLabel: "Correccion",
     trapWrongTextDecoration: "none",
-    trapWrongFontSize: 8.4,
-    trapCorrectionFontSize: 8.1,
-    autocheckQuestionFontSize: 8.8,
-    optionFontSize: 8.4,
+    trapWrongFontSize: 7.8,
+    trapCorrectionFontSize: 7.5,
+    autocheckQuestionFontSize: 8.1,
+    optionFontSize: 7.8,
     optionPaddingY: 3,
-    explanationFontSize: 8.1,
-    discardFontSize: 7.1,
+    explanationFontSize: 7.8,
+    discardFontSize: 6.8,
   },
   qa: {
     structuralRequiredScore: 10,
@@ -181,10 +181,14 @@ Canvas and composition:
 - Landscape technical infographic asset.
 - Target HTML slot: ${contract.upperVisual.slotWidth}x${contract.upperVisual.slotHeight}px.
 - Requested render size: ${contract.generation.imageSize}; keep safe margins because the HTML slot will fit the image with object-fit: contain.
-- Reserve a visible internal white border on all four edges of the image; no important shape, label, arrow or icon may touch the outer frame.
+- Reserve only a very thin internal safety edge on all four sides of the image; no important shape, label, arrow or icon may touch the crop edge.
+- The four concept cards should visually occupy most of the canvas. Avoid a timid composition floating in too much white space.
+- Push the 2x2 card composition close to the available frame. Do not add a generous white moat around the grid.
 - Use exactly ${contract.upperVisual.requiredCardCount} internal concept cards in a balanced ${contract.upperVisual.requiredGrid} grid.
 - Each internal card may have a small number badge (${data.visualModules.map((m) => m.num).join(", ")}) and a short card title.
 - No global header above the cards. No book/page title. No footer.
+- Do not wrap all four cards inside one extra outer master frame or giant container box. The cards should read as the primary composition themselves.
+- Avoid an enclosing poster-like border that makes the 2x2 layout look shrunken inside the asset.
 - Internal text must be easy to read after the image is inserted into a ${contract.upperVisual.slotWidth}x${contract.upperVisual.slotHeight}px slot.
 - Prefer fewer labels with larger type rather than many tiny labels.
 - Never use spreadsheet-like microtext. Aim for bold, editorial microcopy that remains readable when the full page is viewed at normal screen size.
