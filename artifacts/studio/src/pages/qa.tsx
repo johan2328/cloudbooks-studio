@@ -9,7 +9,7 @@ import {
   type ComposerDraftRecord,
   type StudioCatalogPage,
 } from "@/lib/studio-api";
-import { resolveQaScoreSource } from "@/lib/qa-score-source";
+import { normalizeQaScoreToTen, qaScoreToHundred, resolveQaScoreSource } from "@/lib/qa-score-source";
 import {
   CheckCircle2, RotateCcw, AlertTriangle, ChevronLeft, ChevronRight, ChevronDown,
   Shield, Loader2, ExternalLink, XCircle, Download, FileText,
@@ -44,15 +44,6 @@ function withCacheBust(url: string | null, version: string | null | undefined): 
   if (!url) return null;
   const stamp = version ?? String(Date.now());
   return `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(stamp)}`;
-}
-
-function scoreTenToHundred(raw: number): number {
-  if (!Number.isFinite(raw)) return 0;
-  let value = raw;
-  while (value > 10) value /= 10;
-  if (value < 0) value = 0;
-  if (value > 10) value = 10;
-  return Math.round(value * 10);
 }
 
 type ComposerProjectedScores = Record<string, number> & { total: number };
@@ -341,7 +332,11 @@ export default function QAPage() {
   const serverApproved = outputStatus?.files.approved === true;
   const htmlUrl = withCacheBust(outputStatus?.htmlPath ?? null, outputStatus?.generatedAt);
   const previewUrl = withCacheBust(outputStatus?.previewPath ?? null, outputStatus?.generatedAt);
-  const composerScores = buildComposerProjectedScores(composerDraft, realQA?.scores?.technical_accuracy ?? null);
+  const lockedTechnicalAccuracy = realQA?.scores?.technical_accuracy;
+  const composerScores = buildComposerProjectedScores(
+    composerDraft,
+    lockedTechnicalAccuracy == null ? null : normalizeQaScoreToTen(lockedTechnicalAccuracy),
+  );
   const qaResolution = resolveQaScoreSource({
     serverScores: realQA?.scores ?? null,
     composerScores,
@@ -657,7 +652,7 @@ export default function QAPage() {
                         </div>
                       </div>
                       {QA_DIMS.map(dim => {
-                        const val = scoreTenToHundred(activeScores[dim.key] ?? 0);
+                        const val = qaScoreToHundred(activeScores[dim.key] ?? 0);
                         return (
                           <div key={dim.key}>
                             <div className="flex justify-between mb-0.5">

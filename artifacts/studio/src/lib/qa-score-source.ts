@@ -22,33 +22,55 @@ export interface QaScoreResolution {
   composerTotal: number | null;
 }
 
+export function normalizeQaScoreToTen(raw: number): number {
+  if (!Number.isFinite(raw)) return 0;
+  let value = raw;
+  while (value > 10) value /= 10;
+  while (value < -10) value /= 10;
+  value = Math.max(0, Math.min(10, value));
+  return Number(value.toFixed(1));
+}
+
+export function qaScoreToHundred(raw: number): number {
+  return Math.round(normalizeQaScoreToTen(raw) * 10);
+}
+
+export function normalizeQaScoreMap(scores: QaScoreMap | null): QaScoreMap | null {
+  if (!scores) return null;
+  const normalizedEntries = Object.entries(scores).map(([key, value]) => [key, normalizeQaScoreToTen(value)]);
+  return Object.fromEntries(normalizedEntries) as QaScoreMap;
+}
+
 export function resolveQaScoreSource(input: QaScoreResolutionInput): QaScoreResolution {
+  const normalizedServerScores = normalizeQaScoreMap(input.serverScores);
+  const normalizedComposerScores = normalizeQaScoreMap(input.composerScores);
+
   const generatedAtMs = input.generatedAt ? Date.parse(input.generatedAt) : NaN;
   const composerUpdatedAtMs = input.composerUpdatedAt ? Date.parse(input.composerUpdatedAt) : NaN;
 
   const composerIsNewer = Number.isFinite(generatedAtMs) && Number.isFinite(composerUpdatedAtMs)
     ? composerUpdatedAtMs > generatedAtMs
-    : Boolean(input.composerScores);
+    : Boolean(normalizedComposerScores);
 
-  const useComposerProjection = Boolean(input.composerScores)
-    && (!input.serverScores || composerIsNewer);
+  const useComposerProjection = Boolean(normalizedComposerScores)
+    && (!normalizedServerScores || composerIsNewer);
 
   const source: QaScoreSource = useComposerProjection
     ? "composer"
-    : input.serverScores
+    : normalizedServerScores
       ? "server"
-      : input.composerScores
+      : normalizedComposerScores
         ? "composer"
         : "none";
 
   const activeScores = source === "composer"
-    ? (input.composerScores ?? null)
+    ? (normalizedComposerScores ?? null)
     : source === "server"
-      ? (input.serverScores ?? null)
+      ? (normalizedServerScores ?? null)
       : null;
 
-  const serverTotal = input.serverScores?.total ?? null;
-  const composerTotal = input.composerScores?.total ?? null;
+  const serverTotal = normalizedServerScores?.total ?? null;
+  const composerTotal = normalizedComposerScores?.total ?? null;
 
   const hasDivergence = composerIsNewer
     && serverTotal != null
@@ -64,12 +86,11 @@ export function resolveQaScoreSource(input: QaScoreResolutionInput): QaScoreReso
         ? "El draft del Composer es mas nuevo que la ultima generacion. Regenera para consolidar este score."
         : "No hay score disponible todavia para esta pagina.",
     activeScores,
-    serverScores: input.serverScores,
-    composerScores: input.composerScores,
+    serverScores: normalizedServerScores,
+    composerScores: normalizedComposerScores,
     composerIsNewer,
     hasDivergence,
     serverTotal,
     composerTotal,
   };
 }
-

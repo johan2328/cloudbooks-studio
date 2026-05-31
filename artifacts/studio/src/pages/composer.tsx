@@ -23,7 +23,7 @@ import {
 import Layout from "@/components/Layout";
 import { cn, scoreColorDark } from "@/lib/utils";
 import { evaluateComposerBenchmark } from "@/lib/editorial-benchmark";
-import { resolveQaScoreSource } from "@/lib/qa-score-source";
+import { normalizeQaScoreToTen, qaScoreToHundred, resolveQaScoreSource } from "@/lib/qa-score-source";
 import {
   fetchComposerDraft,
   fetchComposerProposal,
@@ -167,10 +167,6 @@ function summarizeBlockContent(block: ComposerBlock): string {
     return `${content.options.length} opciones de validacion`;
   }
   return "Bloque listo para composicion editorial";
-}
-
-function scoreToHundred(score: number) {
-  return Math.round(score * 10);
 }
 
 function withCacheBust(url: string | null, version: string | null | undefined): string | null {
@@ -786,10 +782,17 @@ export default function ComposerPage() {
   }, [studioCatalog, pageIdFromRoute]);
 
   const spacePlan = useMemo(() => (editableDraft ? computeSpacePlan(editableDraft.blocks) : null), [editableDraft]);
-  const lockedTotal = lockedQa?.scores?.total ?? null;
+  const lockedTotal = lockedQa?.scores?.total == null ? null : normalizeQaScoreToTen(lockedQa.scores.total);
   const lockedGap = lockedTotal != null ? Math.max(0, 9.5 - lockedTotal) : null;
   const projectedQaScores = useMemo(
-    () => (editableDraft ? buildProjectedQaScores(editableDraft, lockedQa?.scores?.technical_accuracy ?? null) : null),
+    () => {
+      if (!editableDraft) return null;
+      const lockedTechnicalAccuracy = lockedQa?.scores?.technical_accuracy;
+      return buildProjectedQaScores(
+        editableDraft,
+        lockedTechnicalAccuracy == null ? null : normalizeQaScoreToTen(lockedTechnicalAccuracy),
+      );
+    },
     [editableDraft, lockedQa],
   );
   const qaResolution = useMemo(
@@ -818,14 +821,16 @@ export default function ComposerPage() {
   const lockedWeakDims = useMemo(() => {
     if (!lockedQa?.scores) return [];
     return LOCKED_DIM_LABELS
-      .map((dim) => ({ ...dim, value: Number(lockedQa.scores[dim.key] ?? 0) }))
+      .map((dim) => ({ ...dim, value: normalizeQaScoreToTen(Number(lockedQa.scores[dim.key] ?? 0)) }))
       .filter((dim) => Number.isFinite(dim.value))
       .sort((a, b) => a.value - b.value)
       .slice(0, 3);
   }, [lockedQa]);
   const composerReadiness = useMemo(() => {
     const projectedTotal = projectedQaScores?.total ?? null;
-    const lockedTotalScore = lockedQa?.scores?.total ?? null;
+    const lockedTotalScore = lockedQa?.scores?.total == null
+      ? null
+      : normalizeQaScoreToTen(lockedQa.scores.total);
     const hasRealOutput = lockedStatus?.hasOutput === true;
     const hasFourTechnical = technicalBlockCount >= 4;
     const targetReached = projectedTotal != null && projectedTotal >= 9.5;
@@ -1060,7 +1065,11 @@ export default function ComposerPage() {
       setAutofixFeedback("No hubo ajustes automaticos: el draft ya estaba dentro de los parametros premium.");
       return;
     }
-    const afterScores = buildProjectedQaScores(nextDraft, lockedQa?.scores?.technical_accuracy ?? null);
+    const afterLockedTechnicalAccuracy = lockedQa?.scores?.technical_accuracy;
+    const afterScores = buildProjectedQaScores(
+      nextDraft,
+      afterLockedTechnicalAccuracy == null ? null : normalizeQaScoreToTen(afterLockedTechnicalAccuracy),
+    );
     const afterTotal = afterScores?.total ?? null;
     setAutofixFeedback(`Autocorreccion aplicada: ${actionsApplied.join(" | ")}.`);
 
@@ -1430,9 +1439,10 @@ export default function ComposerPage() {
                   <div className="space-y-3 mt-4">
                     {QA_ALIGNMENT_DIMS.map((dimension) => {
                       const score = projectedQaScores?.[dimension.key] ?? 0;
-                      const hundred = scoreToHundred(score);
+                      const hundred = qaScoreToHundred(score);
                       const locked = lockedQa?.scores?.[dimension.key];
-                      const delta = locked != null ? Number((score - locked).toFixed(1)) : null;
+                      const lockedNormalized = locked == null ? null : normalizeQaScoreToTen(locked);
+                      const delta = lockedNormalized != null ? Number((score - lockedNormalized).toFixed(1)) : null;
                       return (
                         <div key={dimension.key}>
                           <div className="flex items-center justify-between gap-3">
