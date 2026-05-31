@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
   Clock,
   Loader2,
+  RefreshCw,
   Save,
   ShieldAlert,
   Sparkles,
@@ -67,37 +68,41 @@ export default function Contrato() {
     flexibleStorytelling: "",
     stableComponents: "",
   });
+  const [isDirty, setIsDirty] = useState(false);
+
+  const loadContract = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await fetchStudioContract();
+      setContract(data);
+      setVersion(data.version);
+      setSections({
+        nonNegotiable: toMultiline(data.nonNegotiable),
+        flexibleStorytelling: toMultiline(data.flexibleStorytelling),
+        stableComponents: toMultiline(data.stableComponents),
+      });
+      setIsDirty(false);
+    } catch (err) {
+      toast({
+        title: "No se pudo cargar contrato",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
     let mounted = true;
-    setLoading(true);
-    fetchStudioContract()
-      .then((data) => {
-        if (!mounted) return;
-        setContract(data);
-        setVersion(data.version);
-        setSections({
-          nonNegotiable: toMultiline(data.nonNegotiable),
-          flexibleStorytelling: toMultiline(data.flexibleStorytelling),
-          stableComponents: toMultiline(data.stableComponents),
-        });
-      })
-      .catch((err) => {
-        if (!mounted) return;
-        toast({
-          title: "No se pudo cargar contrato",
-          description: err instanceof Error ? err.message : String(err),
-          variant: "destructive",
-        });
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
+    loadContract().catch(() => {
+      if (!mounted) return;
+    });
 
     return () => {
       mounted = false;
     };
-  }, [toast]);
+  }, [loadContract]);
 
   const totals = useMemo(() => {
     if (!contract) return { active: 0, rules: 0, revisions: 0 };
@@ -132,6 +137,7 @@ export default function Contrato() {
         stableComponents: toMultiline(updated.stableComponents),
       });
       setChangeNote("");
+      setIsDirty(false);
       toast({
         title: "Contrato actualizado en BD",
         description: `Version ${updated.version} guardada correctamente.`,
@@ -171,6 +177,13 @@ export default function Contrato() {
               <p className="text-xl font-black tabular-nums text-blue-300">{totals.revisions}</p>
               <p className="text-[8px] text-white/20">Revisiones</p>
             </div>
+            <button
+              type="button"
+              onClick={() => loadContract()}
+              className="h-8 px-3 rounded-sm border border-white/[0.12] bg-white/[0.04] text-white/65 hover:text-white hover:bg-white/[0.08] text-[9px] font-semibold flex items-center gap-1.5 transition-all self-center"
+            >
+              <RefreshCw className="w-3 h-3" /> Recargar
+            </button>
           </div>
         </div>
 
@@ -198,7 +211,10 @@ export default function Contrato() {
                     <span className="text-[8px] text-white/30 uppercase tracking-widest font-bold">Version</span>
                     <input
                       value={version}
-                      onChange={(event) => setVersion(event.target.value)}
+                      onChange={(event) => {
+                        setVersion(event.target.value);
+                        setIsDirty(true);
+                      }}
                       className="bg-transparent text-[10px] font-semibold text-white/75 outline-none w-24"
                     />
                   </label>
@@ -218,10 +234,13 @@ export default function Contrato() {
                       <textarea
                         value={sections[key]}
                         onChange={(event) =>
-                          setSections((prev) => ({
-                            ...prev,
-                            [key]: event.target.value,
-                          }))
+                          {
+                            setSections((prev) => ({
+                              ...prev,
+                              [key]: event.target.value,
+                            }));
+                            setIsDirty(true);
+                          }
                         }
                         className={cn(
                           "w-full h-52 resize-none rounded-sm border px-2.5 py-2 text-[9px] leading-relaxed",
@@ -239,29 +258,57 @@ export default function Contrato() {
                 <p className="text-[9px] font-bold text-white/25 uppercase tracking-widest mb-2">Registrar revision</p>
                 <textarea
                   value={changeNote}
-                  onChange={(event) => setChangeNote(event.target.value)}
+                  onChange={(event) => {
+                    setChangeNote(event.target.value);
+                    setIsDirty(true);
+                  }}
                   placeholder="Describe la razon editorial de este cambio para el changelog..."
                   className="w-full h-20 resize-none rounded-sm border border-white/[0.08] bg-white/[0.02] px-2.5 py-2 text-[9px] text-white/65 placeholder:text-white/20 focus:outline-none focus:border-blue-500/35"
                 />
                 <div className="mt-3 flex items-center justify-between gap-3">
                   <div className="text-[8px] text-white/25 flex items-center gap-1.5">
                     <Clock className="w-3 h-3" />
-                    Los cambios se guardan en base de datos via `/api/contract`.
+                    {isDirty ? "Cambios pendientes de guardar en BD." : "Contrato sincronizado con BD via /api/contract."}
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={saving}
-                    className={cn(
-                      "h-8 px-3 rounded-sm text-[10px] font-bold border flex items-center gap-1.5 transition-all",
-                      saving
-                        ? "bg-white/5 border-white/10 text-white/30 cursor-not-allowed"
-                        : "bg-blue-600/20 hover:bg-blue-600/30 border-blue-500/30 text-blue-200"
-                    )}
-                  >
-                    {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                    Guardar contrato
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!contract) return;
+                        setVersion(contract.version);
+                        setSections({
+                          nonNegotiable: toMultiline(contract.nonNegotiable),
+                          flexibleStorytelling: toMultiline(contract.flexibleStorytelling),
+                          stableComponents: toMultiline(contract.stableComponents),
+                        });
+                        setChangeNote("");
+                        setIsDirty(false);
+                      }}
+                      disabled={!isDirty || saving}
+                      className={cn(
+                        "h-8 px-3 rounded-sm text-[10px] font-bold border transition-all",
+                        !isDirty || saving
+                          ? "bg-white/5 border-white/10 text-white/30 cursor-not-allowed"
+                          : "bg-white/[0.05] hover:bg-white/[0.09] border-white/[0.18] text-white/70",
+                      )}
+                    >
+                      Reset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={saving || !isDirty}
+                      className={cn(
+                        "h-8 px-3 rounded-sm text-[10px] font-bold border flex items-center gap-1.5 transition-all",
+                        saving || !isDirty
+                          ? "bg-white/5 border-white/10 text-white/30 cursor-not-allowed"
+                          : "bg-blue-600/20 hover:bg-blue-600/30 border-blue-500/30 text-blue-200"
+                      )}
+                    >
+                      {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                      Guardar contrato
+                    </button>
+                  </div>
                 </div>
               </div>
 
