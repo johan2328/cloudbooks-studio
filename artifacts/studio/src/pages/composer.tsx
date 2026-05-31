@@ -654,6 +654,7 @@ export default function ComposerPage() {
   const [generatingFromComposer, setGeneratingFromComposer] = useState(false);
   const [generationFeedback, setGenerationFeedback] = useState<string | null>(null);
   const [qaDelta, setQaDelta] = useState<{ before: number | null; after: number | null; delta: number | null } | null>(null);
+  const [autofixFeedback, setAutofixFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -757,6 +758,7 @@ export default function ComposerPage() {
   useEffect(() => {
     setGenerationFeedback(null);
     setQaDelta(null);
+    setAutofixFeedback(null);
   }, [pageIdFromRoute]);
 
   const pageSummary = useMemo(() => {
@@ -943,6 +945,72 @@ export default function ComposerPage() {
       }
       return normalizePriorities(next);
     });
+  }
+
+  function handleAutofixComposer() {
+    if (!editableDraft) return;
+    const actionsApplied: string[] = [];
+    updateDraftBlocks((blocks) => {
+      let next = [...blocks];
+      const initialBenchmark = evaluateComposerBenchmark(next);
+      const checkById = new Map(initialBenchmark.checks.map((check) => [check.id, check]));
+
+      if (!checkById.get("technical-dominance")?.passed) {
+        actionsApplied.push("estructura 4 tarjetas");
+        const intro = next.filter((block) => ["hero_title", "context_deck", "guide_question"].includes(block.type));
+        const examTail = next.filter((block) => ["exam_traps", "autocheck", "exam_signal"].includes(block.type));
+        const technicalByType = new Map(
+          next.filter((block) => TECHNICAL_BLOCK_TYPES.includes(block.type)).map((block) => [block.type, block]),
+        );
+        const modules = pageSummary?.visualModules ?? [];
+        const rebuiltTechnical: ComposerBlock[] = [
+          technicalByType.get("diagram_panel") ??
+            makeBlock("diagram_panel", "two_column", 40, { modules: modules.slice(0, 2) }),
+          technicalByType.get("comparison_panel") ??
+            makeBlock("comparison_panel", "sku_matrix", 50, { modules: modules.slice(0, 3) }),
+          technicalByType.get("decision_tree") ??
+            makeBlock("decision_tree", "binary_path", 60, { modules: modules.slice(1, 3) }),
+          technicalByType.get("map_panel") ??
+            makeBlock("map_panel", "replication_path", 70, { modules: modules.slice(2, 4) }),
+        ];
+        next = [...intro, ...rebuiltTechnical, ...examTail];
+      }
+
+      if (!checkById.get("exam-rail-balance")?.passed || !checkById.get("variant-discipline")?.passed) {
+        actionsApplied.push("compactar rail");
+        next = next.map((block) => {
+          if (block.type === "exam_traps") return { ...block, variant: "compact" };
+          if (block.type === "autocheck") return { ...block, variant: "short" };
+          return block;
+        });
+      }
+
+      if (!checkById.get("flow-continuity")?.passed) {
+        const guideIndex = next.findIndex((block) => block.type === "guide_question");
+        const firstTechnicalIndex = next.findIndex((block) => TECHNICAL_BLOCK_TYPES.includes(block.type));
+        if (guideIndex >= 0 && firstTechnicalIndex >= 0 && guideIndex > firstTechnicalIndex) {
+          actionsApplied.push("reorden narrativo");
+          const reordered = [...next];
+          const [guide] = reordered.splice(guideIndex, 1);
+          reordered.splice(firstTechnicalIndex, 0, guide);
+          next = reordered;
+        }
+      }
+
+      const contextBlock = next.find((block) => block.type === "context_deck");
+      if (contextBlock && contextBlock.variant !== "expanded") {
+        actionsApplied.push("contexto expandido");
+        next = next.map((block) => (block.type === "context_deck" ? { ...block, variant: "expanded" } : block));
+      }
+
+      return normalizePriorities(next);
+    });
+
+    if (actionsApplied.length === 0) {
+      setAutofixFeedback("No hubo ajustes automaticos: el draft ya estaba dentro de los parametros premium.");
+      return;
+    }
+    setAutofixFeedback(`Autocorreccion aplicada: ${actionsApplied.join(" | ")}.`);
   }
 
   async function handleSaveDraft() {
@@ -1295,6 +1363,13 @@ export default function ComposerPage() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
+                    onClick={handleAutofixComposer}
+                    className="px-3 py-1.5 rounded-sm border border-violet-400/25 bg-violet-500/10 text-[10px] font-semibold text-violet-100 hover:bg-violet-500/15 transition-colors"
+                  >
+                    Autocorregir premium
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => applyComposerAction("compact_rail")}
                     className="px-3 py-1.5 rounded-sm border border-amber-400/25 bg-amber-500/10 text-[10px] font-semibold text-amber-100 hover:bg-amber-500/15 transition-colors"
                   >
@@ -1315,6 +1390,9 @@ export default function ComposerPage() {
                     Elevar nucleo tecnico
                   </button>
                 </div>
+                {autofixFeedback ? (
+                  <p className="text-[10px] text-violet-200/80 mt-3 leading-relaxed">{autofixFeedback}</p>
+                ) : null}
                   </section>
                 </>
               )}
