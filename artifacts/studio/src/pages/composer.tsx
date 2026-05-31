@@ -9,6 +9,7 @@ import {
   Loader2,
   Lock,
   MapPinned,
+  Save,
   ShieldCheck,
   Sparkles,
   Waypoints,
@@ -17,9 +18,12 @@ import {
 import Layout from "@/components/Layout";
 import { cn, scoreColorDark } from "@/lib/utils";
 import {
+  fetchComposerDraft,
   fetchComposerProposal,
+  saveComposerDraft,
   fetchStudioCatalog,
   type ComposerBlock,
+  type ComposerDraftRecord,
   type ComposerProposal,
   type StudioCatalogPage,
   type StudioCatalog,
@@ -422,6 +426,9 @@ export default function ComposerPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectorOpen, setSelectorOpen] = useState(false);
+  const [draftRecord, setDraftRecord] = useState<ComposerDraftRecord | null>(null);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -467,12 +474,51 @@ export default function ComposerPage() {
     };
   }, [pageIdFromRoute, studioCatalog]);
 
+  useEffect(() => {
+    let mounted = true;
+    setSaveMessage(null);
+    setDraftRecord(null);
+    fetchComposerDraft(pageIdFromRoute)
+      .then((record) => {
+        if (!mounted) return;
+        setDraftRecord(record);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setDraftRecord(null);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [pageIdFromRoute]);
+
   const pageSummary = useMemo(() => {
     return studioCatalog?.pages.find((page) => page.pageId === pageIdFromRoute) ?? studioCatalog?.pages[0] ?? null;
   }, [studioCatalog, pageIdFromRoute]);
 
   const scoreGap = proposal ? Math.max(0, 9.5 - proposal.draft.editorialValidation.total) : null;
   const spacePlan = useMemo(() => (proposal ? computeSpacePlan(proposal.draft.blocks) : null), [proposal]);
+
+  async function handleSaveDraft() {
+    if (!proposal || savingDraft) return;
+    setSavingDraft(true);
+    setSaveMessage(null);
+    try {
+      const saved = await saveComposerDraft(proposal.pageId, {
+        pageNumber: proposal.lockedReference.pageNumber,
+        family: proposal.draft.family,
+        transitionLevel: proposal.recommendedTransition.level,
+        draft: proposal.draft,
+        note: "Draft guardado desde vista Composer",
+      });
+      setDraftRecord(saved);
+      setSaveMessage(`Draft guardado por ${saved.updatedByName}`);
+    } catch (err) {
+      setSaveMessage(err instanceof Error ? err.message : "No se pudo guardar el draft");
+    } finally {
+      setSavingDraft(false);
+    }
+  }
 
   return (
     <Layout title="Composer">
@@ -533,9 +579,34 @@ export default function ComposerPage() {
               </div>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={handleSaveDraft}
+            disabled={!proposal || savingDraft}
+            className={cn(
+              "h-9 px-3 rounded-sm border text-[10px] font-semibold transition-all flex items-center gap-2",
+              !proposal || savingDraft
+                ? "border-white/[0.08] bg-white/[0.02] text-white/30 cursor-not-allowed"
+                : "border-emerald-500/25 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/16"
+            )}
+          >
+            {savingDraft ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            {savingDraft ? "Guardando..." : "Guardar draft"}
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
+          {!loading && (draftRecord || saveMessage) && (
+            <div className="max-w-6xl mx-auto mb-3 px-3 py-2 rounded-sm border border-white/[0.08] bg-white/[0.02]">
+              <p className="text-[10px] text-white/70">
+                {saveMessage
+                  ? saveMessage
+                  : `Draft activo: ${draftRecord?.updatedByName ?? "Sistema"} · ${new Date(draftRecord?.updatedAt ?? "").toLocaleString("es-AR")}`}
+              </p>
+            </div>
+          )}
+
           {!loading && error && (
             <div className="max-w-5xl mx-auto bg-amber-500/8 border border-amber-400/20 rounded-sm p-4">
               <p className="text-[11px] font-bold text-amber-200">Composer usando propuesta local</p>

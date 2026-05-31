@@ -160,6 +160,17 @@ export interface ComposerProposal {
   nextActions: string[];
 }
 
+export interface ComposerDraftRecord {
+  pageId: string;
+  pageNumber: string;
+  family: string;
+  transitionLevel: string;
+  draft: ComposerProposal["draft"];
+  note: string | null;
+  updatedByName: string;
+  updatedAt: string;
+}
+
 export function getStudioToken(): string {
   return localStorage.getItem("studio_token") ?? "";
 }
@@ -203,6 +214,34 @@ export async function fetchComposerProposal(pageId: string): Promise<ComposerPro
   });
   if (!res.ok) throw new Error(`No se pudo cargar la propuesta composer para ${pageId} (${res.status})`);
   return res.json() as Promise<ComposerProposal>;
+}
+
+export async function fetchComposerDraft(pageId: string): Promise<ComposerDraftRecord> {
+  const res = await fetch(`/api/studio/composer/draft/${pageId}`, {
+    headers: authHeaders(),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`No se pudo cargar el draft composer para ${pageId} (${res.status})`);
+  return res.json() as Promise<ComposerDraftRecord>;
+}
+
+export async function saveComposerDraft(pageId: string, payload: {
+  pageNumber: string;
+  family: string;
+  transitionLevel: string;
+  draft: ComposerProposal["draft"];
+  note?: string | null;
+}): Promise<ComposerDraftRecord> {
+  const res = await fetch(`/api/studio/composer/draft/${pageId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`No se pudo guardar el draft composer para ${pageId} (${res.status})`);
+  return res.json() as Promise<ComposerDraftRecord>;
 }
 
 export function getPageIdFromLocation(defaultPageId = "01"): string {
