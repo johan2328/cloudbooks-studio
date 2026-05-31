@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import {
   ArrowRightLeft,
+  ArrowUp,
+  ArrowDown,
   Blocks,
   ChevronLeft,
   ChevronsUpDown,
@@ -9,6 +11,7 @@ import {
   Loader2,
   Lock,
   MapPinned,
+  GripVertical,
   Save,
   ShieldCheck,
   Sparkles,
@@ -20,22 +23,40 @@ import { cn, scoreColorDark } from "@/lib/utils";
 import {
   fetchComposerDraft,
   fetchComposerProposal,
-  saveComposerDraft,
   fetchStudioCatalog,
+  fetchStudioOutputStatus,
+  fetchStudioQaReport,
+  saveComposerDraft,
   type ComposerBlock,
   type ComposerDraftRecord,
   type ComposerProposal,
   type StudioCatalogPage,
   type StudioCatalog,
+  type StudioOutputStatus,
+  type StudioQaReport,
 } from "@/lib/studio-api";
 
-const DIMENSIONS = [
-  { key: "coverageScore", label: "Cobertura" },
-  { key: "readabilityScore", label: "Legibilidad" },
-  { key: "usefulDensityScore", label: "Densidad util" },
-  { key: "examUtilityScore", label: "Utilidad de examen" },
-  { key: "consistencyScore", label: "Consistencia" },
+const TECHNICAL_BLOCK_TYPES = ["diagram_panel", "comparison_panel", "decision_tree", "map_panel"];
+const QA_ALIGNMENT_DIMS = [
+  { key: "art_direction", label: "Direccion de arte" },
+  { key: "editorial_consistency", label: "Consistencia editorial" },
+  { key: "readability", label: "Legibilidad" },
+  { key: "technical_accuracy", label: "Precision tecnica" },
+  { key: "useful_density", label: "Densidad util" },
+  { key: "commercial_risk", label: "Seguridad comercial" },
 ] as const;
+const BLOCK_VARIANTS: Record<string, string[]> = {
+  hero_title: ["full", "compact"],
+  context_deck: ["short", "expanded"],
+  guide_question: ["editorial_bar", "icon_bar"],
+  diagram_panel: ["single_focus", "two_column", "multi_step"],
+  comparison_panel: ["sku_matrix", "decision_matrix"],
+  decision_tree: ["binary_path", "multi_branch"],
+  map_panel: ["replication_path", "network_boundary"],
+  exam_traps: ["compact", "standard"],
+  autocheck: ["short", "full"],
+  exam_signal: ["rule", "memory_hook", "warning"],
+};
 
 function labelFamily(family: ComposerProposal["draft"]["family"]) {
   switch (family) {
@@ -180,6 +201,118 @@ function computeSpacePlan(blocks: ComposerBlock[]) {
   return { introHeight, technicalHeight, examHeight, introShare, technicalShare, examShare, railMode, visualPressure, guidance };
 }
 
+function normalizePriorities(blocks: ComposerBlock[]): ComposerBlock[] {
+  return blocks.map((block, index) => ({ ...block, priority: (index + 1) * 10 }));
+}
+
+function roundToOne(value: number): number {
+  return Number(value.toFixed(1));
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function recalculateDraft(draft: ComposerProposal["draft"]): ComposerProposal["draft"] {
+  const blocks = normalizePriorities([...draft.blocks].sort((a, b) => a.priority - b.priority));
+  const technicalCoreCount = blocks.filter((block) => TECHNICAL_BLOCK_TYPES.includes(block.type)).length;
+  const technicalCore = technicalCoreCount >= 2;
+  const examSignals = blocks.some((block) => block.type === "exam_traps" || block.type === "exam_signal");
+  const validationPresent = blocks.filter((block) => block.type === "autocheck").length === 1;
+
+  const missing: string[] = [];
+  if (!blocks.some((block) => block.type === "hero_title")) missing.push("Falta un bloque Hero.");
+  if (blocks.filter((block) => block.type === "guide_question").length !== 1) missing.push("La pagina debe tener exactamente una pregunta guia.");
+  if (technicalCoreCount < 2) missing.push("El nucleo tecnico requiere al menos dos bloques visuales.");
+  if (!validationPresent) missing.push("La pagina debe tener exactamente un bloque de autocheck.");
+
+  const warnings: string[] = [];
+  const spacePlan = computeSpacePlan(blocks);
+  if (spacePlan.examShare >= 33) warnings.push("El rail inferior esta pesado: conviene compactar traps/autocheck.");
+  if (spacePlan.technicalShare < 40) warnings.push("El cuerpo visual tecnico aun se ve timido.");
+  if (blocks.filter((block) => block.type === "exam_signal").length > 1) warnings.push("Hay mas de una senal de examen; revisar saturacion.");
+
+  const weakAreas: string[] = [];
+  if (!technicalCore) weakAreas.push("El nucleo tecnico no domina la pagina.");
+  if (!examSignals) weakAreas.push("No hay senal de examen explicita.");
+  if (!validationPresent) weakAreas.push("Falta cierre de validacion final.");
+
+  const compactExam = blocks.some((block) => block.type === "exam_traps" && block.variant === "compact")
+    && blocks.some((block) => block.type === "autocheck" && block.variant === "short");
+  const hasExpandedContext = blocks.some((block) => block.type === "context_deck" && block.variant === "expanded");
+  const hasExamSignal = blocks.some((block) => block.type === "exam_signal");
+
+  const coverageScore = clamp(7.1 + technicalCoreCount * 0.75 + (validationPresent ? 0.4 : 0), 6.8, 9.8);
+  const readabilityScore = clamp(7.6 + (hasExpandedContext ? 0.5 : 0.2) + (compactExam ? 0.35 : 0), 6.8, 9.6);
+  const usefulDensityScore = clamp(7.4 + (spacePlan.technicalShare >= 44 ? 0.7 : 0.2) + (compactExam ? 0.55 : 0), 6.8, 9.7);
+  const examUtilityScore = clamp(7.7 + (hasExamSignal ? 0.8 : 0.2) + (validationPresent ? 0.5 : 0), 6.8, 9.8);
+  const consistencyScore = clamp(7.8 + (missing.length === 0 ? 0.55 : 0) + (warnings.length <= 1 ? 0.35 : 0), 6.8, 9.7);
+  const total = roundToOne((coverageScore + readabilityScore + usefulDensityScore + examUtilityScore + consistencyScore) / 5);
+
+  return {
+    ...draft,
+    blocks,
+    coverage: {
+      technicalCore,
+      examSignals,
+      validationPresent,
+      weakAreas,
+    },
+    structuralValidation: {
+      passed: missing.length === 0,
+      missing,
+      warnings,
+    },
+    editorialValidation: {
+      coverageScore: roundToOne(coverageScore),
+      readabilityScore: roundToOne(readabilityScore),
+      usefulDensityScore: roundToOne(usefulDensityScore),
+      examUtilityScore: roundToOne(examUtilityScore),
+      consistencyScore: roundToOne(consistencyScore),
+      total,
+    },
+  };
+}
+
+function nextVariantForBlock(block: ComposerBlock): ComposerBlock {
+  const variants = BLOCK_VARIANTS[block.type];
+  if (!variants || variants.length < 2) return block;
+  const currentIndex = variants.indexOf(block.variant);
+  const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % variants.length : 0;
+  return { ...block, variant: variants[nextIndex] };
+}
+
+function buildProjectedQaScores(draft: ComposerProposal["draft"], lockedTechnicalAccuracy: number | null) {
+  const density = draft.editorialValidation.usefulDensityScore;
+  const readability = draft.editorialValidation.readabilityScore;
+  const consistency = draft.editorialValidation.consistencyScore;
+  const utility = draft.editorialValidation.examUtilityScore;
+  const coverage = draft.editorialValidation.coverageScore;
+  const technicalAccuracy = lockedTechnicalAccuracy != null
+    ? lockedTechnicalAccuracy
+    : Math.min(10, Math.max(7.8, (coverage + readability) / 2));
+
+  const scores = {
+    art_direction: Number(Math.min(10, Math.max(6.8, (coverage + consistency) / 2)).toFixed(1)),
+    editorial_consistency: Number(consistency.toFixed(1)),
+    readability: Number(readability.toFixed(1)),
+    technical_accuracy: Number(technicalAccuracy.toFixed(1)),
+    useful_density: Number(density.toFixed(1)),
+    commercial_risk: Number(Math.min(10, Math.max(7, (utility + consistency) / 2)).toFixed(1)),
+  };
+  const total = Number(
+    (
+      (scores.art_direction
+        + scores.editorial_consistency
+        + scores.readability
+        + scores.technical_accuracy
+        + scores.useful_density
+        + scores.commercial_risk) / 6
+    ).toFixed(1),
+  );
+  return { ...scores, total };
+}
+
 function blockAccent(type: ComposerBlock["type"]) {
   switch (type) {
     case "hero_title":
@@ -204,6 +337,41 @@ function blockAccent(type: ComposerBlock["type"]) {
       return "from-yellow-400/80 to-amber-400/50";
     default:
       return "from-slate-400/80 to-slate-500/50";
+  }
+}
+
+const LOCKED_DIM_LABELS: Array<{ key: string; label: string }> = [
+  { key: "art_direction", label: "Direccion de arte" },
+  { key: "editorial_consistency", label: "Consistencia editorial" },
+  { key: "readability", label: "Legibilidad" },
+  { key: "technical_accuracy", label: "Precision tecnica" },
+  { key: "useful_density", label: "Densidad util" },
+  { key: "commercial_risk", label: "Seguridad comercial" },
+];
+
+function scoreFromLockedDim(key: string, value: number): string {
+  if (value >= 9) return `${key}: mantener linea actual y consolidar.`;
+  if (value >= 8) return `${key}: pequenos ajustes para empujar a rango premium.`;
+  if (value >= 7) return `${key}: hay mejora visible posible en la siguiente iteracion.`;
+  return `${key}: requiere intervencion editorial prioritaria.`;
+}
+
+function lockedActionHint(key: string): string {
+  switch (key) {
+    case "art_direction":
+      return "Reforzar jerarquia visual y protagonismo del nucleo tecnico.";
+    case "editorial_consistency":
+      return "Unificar familia de iconos y grosor de bordes en todos los modulos.";
+    case "readability":
+      return "Reducir microtexto y aumentar tamano util de labels internos.";
+    case "technical_accuracy":
+      return "Refrescar grounding puntual de este tema antes de regenerar.";
+    case "useful_density":
+      return "Compactar rail inferior y mover carga util al bloque visual central.";
+    case "commercial_risk":
+      return "Eliminar rasgos escolares y sostener acabado premium consistente.";
+    default:
+      return "Aplicar ajuste editorial dirigido en la proxima regeneracion.";
   }
 }
 
@@ -429,6 +597,11 @@ export default function ComposerPage() {
   const [draftRecord, setDraftRecord] = useState<ComposerDraftRecord | null>(null);
   const [savingDraft, setSavingDraft] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [lockedStatus, setLockedStatus] = useState<StudioOutputStatus | null>(null);
+  const [lockedQa, setLockedQa] = useState<StudioQaReport | null>(null);
+  const [editableDraft, setEditableDraft] = useState<ComposerProposal["draft"] | null>(null);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -454,16 +627,20 @@ export default function ComposerPage() {
       .then((data) => {
         if (!mounted) return;
         setProposal(data);
+        setEditableDraft(recalculateDraft(data.draft));
       })
       .catch((err) => {
         if (!mounted) return;
         const fallbackPage = studioCatalog?.pages.find((page) => page.pageId === pageIdFromRoute);
         if (fallbackPage) {
-          setProposal(buildClientProposal(fallbackPage));
+          const fallbackProposal = buildClientProposal(fallbackPage);
+          setProposal(fallbackProposal);
+          setEditableDraft(recalculateDraft(fallbackProposal.draft));
           setError("La ruta Composer del API aun no esta disponible en este runtime. Se mostro una propuesta local equivalente para no frenar la evaluacion editorial.");
         } else {
           setError(err instanceof Error ? err.message : String(err));
           setProposal(null);
+          setEditableDraft(null);
         }
       })
       .finally(() => {
@@ -482,6 +659,9 @@ export default function ComposerPage() {
       .then((record) => {
         if (!mounted) return;
         setDraftRecord(record);
+        if (record?.draft) {
+          setEditableDraft(recalculateDraft(record.draft));
+        }
       })
       .catch(() => {
         if (!mounted) return;
@@ -492,23 +672,170 @@ export default function ComposerPage() {
     };
   }, [pageIdFromRoute]);
 
+  useEffect(() => {
+    let mounted = true;
+    setLockedStatus(null);
+    setLockedQa(null);
+    Promise.all([
+      fetchStudioOutputStatus(pageIdFromRoute),
+      fetchStudioQaReport(pageIdFromRoute),
+    ]).then(([status, qa]) => {
+      if (!mounted) return;
+      setLockedStatus(status);
+      setLockedQa(qa);
+    }).catch(() => {
+      if (!mounted) return;
+      setLockedStatus(null);
+      setLockedQa(null);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [pageIdFromRoute]);
+
   const pageSummary = useMemo(() => {
     return studioCatalog?.pages.find((page) => page.pageId === pageIdFromRoute) ?? studioCatalog?.pages[0] ?? null;
   }, [studioCatalog, pageIdFromRoute]);
 
-  const scoreGap = proposal ? Math.max(0, 9.5 - proposal.draft.editorialValidation.total) : null;
-  const spacePlan = useMemo(() => (proposal ? computeSpacePlan(proposal.draft.blocks) : null), [proposal]);
+  const spacePlan = useMemo(() => (editableDraft ? computeSpacePlan(editableDraft.blocks) : null), [editableDraft]);
+  const lockedTotal = lockedQa?.scores?.total ?? null;
+  const lockedGap = lockedTotal != null ? Math.max(0, 9.5 - lockedTotal) : null;
+  const projectedQaScores = useMemo(
+    () => (editableDraft ? buildProjectedQaScores(editableDraft, lockedQa?.scores?.technical_accuracy ?? null) : null),
+    [editableDraft, lockedQa],
+  );
+  const projectedGap = projectedQaScores ? Math.max(0, 9.5 - projectedQaScores.total) : null;
+  const sortedBlocks = useMemo(
+    () => (editableDraft?.blocks ?? []).slice().sort((a, b) => a.priority - b.priority),
+    [editableDraft],
+  );
+  const selectedBlock = useMemo(
+    () => sortedBlocks.find((block) => block.id === selectedBlockId) ?? sortedBlocks[0] ?? null,
+    [sortedBlocks, selectedBlockId],
+  );
+  const lockedWeakDims = useMemo(() => {
+    if (!lockedQa?.scores) return [];
+    return LOCKED_DIM_LABELS
+      .map((dim) => ({ ...dim, value: Number(lockedQa.scores[dim.key] ?? 0) }))
+      .filter((dim) => Number.isFinite(dim.value))
+      .sort((a, b) => a.value - b.value)
+      .slice(0, 3);
+  }, [lockedQa]);
+
+  useEffect(() => {
+    if (!selectedBlockId && sortedBlocks.length > 0) {
+      setSelectedBlockId(sortedBlocks[0].id);
+      return;
+    }
+    if (selectedBlockId && sortedBlocks.every((block) => block.id !== selectedBlockId)) {
+      setSelectedBlockId(sortedBlocks[0]?.id ?? null);
+    }
+  }, [selectedBlockId, sortedBlocks]);
+
+  function updateDraftBlocks(mutator: (blocks: ComposerBlock[]) => ComposerBlock[]) {
+    setEditableDraft((current) => {
+      if (!current) return current;
+      const nextBlocks = mutator([...current.blocks].sort((a, b) => a.priority - b.priority));
+      return recalculateDraft({ ...current, blocks: nextBlocks });
+    });
+  }
+
+  function moveBlock(blockId: string, direction: "up" | "down") {
+    updateDraftBlocks((blocks) => {
+      const index = blocks.findIndex((block) => block.id === blockId);
+      if (index < 0) return blocks;
+      const target = direction === "up" ? index - 1 : index + 1;
+      if (target < 0 || target >= blocks.length) return blocks;
+      const swapped = [...blocks];
+      const [item] = swapped.splice(index, 1);
+      swapped.splice(target, 0, item);
+      return normalizePriorities(swapped);
+    });
+  }
+
+  function rotateVariant(blockId: string) {
+    updateDraftBlocks((blocks) => normalizePriorities(
+      blocks.map((block) => (block.id === blockId ? nextVariantForBlock(block) : block))
+    ));
+  }
+
+  function setBlockVariant(blockId: string, variant: string) {
+    updateDraftBlocks((blocks) => normalizePriorities(
+      blocks.map((block) => (block.id === blockId ? { ...block, variant } : block))
+    ));
+  }
+
+  function moveBlockByOffset(blockId: string, offset: number) {
+    updateDraftBlocks((blocks) => {
+      const index = blocks.findIndex((block) => block.id === blockId);
+      if (index < 0) return blocks;
+      const target = index + offset;
+      if (target < 0 || target >= blocks.length) return blocks;
+      const next = [...blocks];
+      const [item] = next.splice(index, 1);
+      next.splice(target, 0, item);
+      return normalizePriorities(next);
+    });
+  }
+
+  function reorderFromCanvas(dragBlockId: string, targetBlockId: string, place: "before" | "after") {
+    updateDraftBlocks((blocks) => {
+      const dragIndex = blocks.findIndex((block) => block.id === dragBlockId);
+      const targetIndex = blocks.findIndex((block) => block.id === targetBlockId);
+      if (dragIndex < 0 || targetIndex < 0 || dragIndex === targetIndex) return blocks;
+      const next = [...blocks];
+      const [dragged] = next.splice(dragIndex, 1);
+      const adjustedTarget = dragIndex < targetIndex ? targetIndex - 1 : targetIndex;
+      const insertIndex = place === "before" ? adjustedTarget : adjustedTarget + 1;
+      next.splice(insertIndex, 0, dragged);
+      return normalizePriorities(next);
+    });
+  }
+
+  function applyComposerAction(action: "compact_rail" | "expand_context" | "boost_technical") {
+    updateDraftBlocks((blocks) => {
+      let next = [...blocks];
+      if (action === "compact_rail") {
+        next = next.map((block) => {
+          if (block.type === "exam_traps") return { ...block, variant: "compact" };
+          if (block.type === "autocheck") return { ...block, variant: "short" };
+          return block;
+        });
+      }
+      if (action === "expand_context") {
+        next = next.map((block) => (block.type === "context_deck" ? { ...block, variant: "expanded" } : block));
+      }
+      if (action === "boost_technical") {
+        const hasTechnical = next.some((block) => TECHNICAL_BLOCK_TYPES.includes(block.type));
+        if (!hasTechnical) {
+          next.push(
+            makeBlock("diagram_panel", "two_column", 55, {
+              modules: pageSummary?.visualModules?.slice(0, 2) ?? [],
+            })
+          );
+        } else {
+          next = next.map((block) => {
+            if (block.type === "diagram_panel" && block.variant !== "multi_step") {
+              return { ...block, variant: "multi_step" };
+            }
+            return block;
+          });
+        }
+      }
+      return normalizePriorities(next);
+    });
+  }
 
   async function handleSaveDraft() {
-    if (!proposal || savingDraft) return;
+    if (!proposal || !editableDraft || savingDraft) return;
     setSavingDraft(true);
     setSaveMessage(null);
     try {
       const saved = await saveComposerDraft(proposal.pageId, {
-        pageNumber: proposal.lockedReference.pageNumber,
-        family: proposal.draft.family,
+        pageNumber: editableDraft.pageNumber,
+        family: editableDraft.family,
         transitionLevel: proposal.recommendedTransition.level,
-        draft: proposal.draft,
+        draft: editableDraft,
         note: "Draft guardado desde vista Composer",
       });
       setDraftRecord(saved);
@@ -537,7 +864,7 @@ export default function ComposerPage() {
               {pageSummary ? `${pageSummary.title}` : `Pagina ${pageIdFromRoute}`}
             </p>
             <p className="text-[10px] text-white/35 mt-0.5 truncate">
-              {proposal ? `${labelFamily(proposal.draft.family)} · ${labelTransition(proposal.recommendedTransition.level)}` : "Cargando propuesta compositiva"}
+              {proposal && editableDraft ? `${labelFamily(editableDraft.family)} · ${labelTransition(proposal.recommendedTransition.level)}` : "Cargando propuesta compositiva"}
             </p>
           </div>
 
@@ -659,12 +986,12 @@ export default function ComposerPage() {
                 <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Puntaje editorial Composer</p>
+                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Puntaje Composer alineado a QA</p>
                       <p className="text-sm font-black text-white/88 mt-1">
-                        {proposal.draft.editorialValidation.total.toFixed(1)}/10
+                        {projectedQaScores?.total.toFixed(1) ?? "0.0"}/10
                       </p>
                       <p className="text-[10px] text-white/45 mt-1">
-                        Brecha hacia 9.5: <span className="text-amber-300/85 font-semibold">{scoreGap?.toFixed(1) ?? "0.0"}</span>
+                        Brecha hacia 9.5: <span className="text-amber-300/85 font-semibold">{projectedGap?.toFixed(1) ?? "0.0"}</span>
                       </p>
                     </div>
                     <div className="w-10 h-10 rounded-sm border border-white/[0.08] bg-white/[0.02] flex items-center justify-center">
@@ -673,14 +1000,23 @@ export default function ComposerPage() {
                   </div>
 
                   <div className="space-y-3 mt-4">
-                    {DIMENSIONS.map((dimension) => {
-                      const score = proposal.draft.editorialValidation[dimension.key];
+                    {QA_ALIGNMENT_DIMS.map((dimension) => {
+                      const score = projectedQaScores?.[dimension.key] ?? 0;
                       const hundred = scoreToHundred(score);
+                      const locked = lockedQa?.scores?.[dimension.key];
+                      const delta = locked != null ? Number((score - locked).toFixed(1)) : null;
                       return (
                         <div key={dimension.key}>
                           <div className="flex items-center justify-between gap-3">
                             <span className="text-[10px] text-white/70 font-semibold">{dimension.label}</span>
-                            <span className={cn("text-[11px] font-bold", scoreColorDark(hundred))}>{hundred}/100</span>
+                            <div className="text-right">
+                              <span className={cn("text-[11px] font-bold", scoreColorDark(hundred))}>{hundred}/100</span>
+                              {delta != null && (
+                                <p className={cn("text-[8px] mt-0.5", delta >= 0 ? "text-emerald-300/85" : "text-amber-300/85")}>
+                                  {delta >= 0 ? "+" : ""}{delta.toFixed(1)} vs QA
+                                </p>
+                              )}
+                            </div>
                           </div>
                           <div className="mt-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
                             <div
@@ -694,6 +1030,262 @@ export default function ComposerPage() {
                   </div>
                 </section>
               </div>
+
+              <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Baseline locked real</p>
+                    <p className="text-[12px] font-bold text-white/78 mt-0.5">
+                      {lockedQa?.scores
+                        ? `Puntaje real ${lockedTotal?.toFixed(1) ?? "0.0"}/10`
+                        : "Todavia sin baseline real para esta pagina"}
+                    </p>
+                    <p className="text-[10px] text-white/50 mt-1">
+                      {lockedStatus?.hasOutput
+                        ? `Output detectado: ${lockedStatus.generationMode}`
+                        : "Genera la pagina y ejecuta QA para heredar metrica fija al Composer."}
+                    </p>
+                  </div>
+                  <div className="w-10 h-10 rounded-sm border border-white/[0.08] bg-white/[0.02] flex items-center justify-center">
+                    <Lock className="w-4 h-4 text-white/35" />
+                  </div>
+                </div>
+
+                {lockedQa?.scores ? (
+                  <div className="grid lg:grid-cols-[0.46fr_0.54fr] gap-4 mt-4">
+                    <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">
+                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Brecha a 9.5</p>
+                      <p className="text-lg font-black text-amber-300 mt-1">{lockedGap?.toFixed(1) ?? "0.0"}</p>
+                      <p className="text-[10px] text-white/55 mt-2">
+                        {lockedGap && lockedGap > 0
+                          ? "Usa estas dimensiones debiles para dirigir la siguiente regeneracion."
+                          : "La pagina ya esta en rango objetivo del baseline editorial."}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      {lockedWeakDims.map((dim) => {
+                        const pct = Math.round((dim.value / 10) * 100);
+                        return (
+                          <div key={dim.key} className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[10px] font-semibold text-white/78">{dim.label}</p>
+                              <p className={cn("text-[11px] font-bold", scoreColorDark(pct))}>{pct}/100</p>
+                            </div>
+                            <div className="mt-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                              <div
+                                className={cn("h-full rounded-full", pct >= 90 ? "bg-emerald-400" : pct >= 80 ? "bg-cyan-400" : "bg-amber-400")}
+                                style={{ width: `${Math.min(100, pct)}%` }}
+                              />
+                            </div>
+                            <p className="text-[10px] text-white/55 mt-2">{scoreFromLockedDim(dim.label, dim.value)}</p>
+                            <p className="text-[10px] text-blue-200/80 mt-1">{lockedActionHint(dim.key)}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 px-3 py-3 rounded-sm bg-white/[0.02] border border-white/[0.05] text-[10px] text-white/65">
+                    Composer ya esta listo, pero para cerrar brecha real necesitamos una corrida con output + QA de esta misma pagina.
+                  </div>
+                )}
+              </section>
+
+              <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Acciones Composer</p>
+                    <p className="text-[12px] font-bold text-white/78 mt-0.5">Ajustes directos sobre el draft actual</p>
+                  </div>
+                  <span className="text-[10px] text-white/45">Impacta score proyectado al instante</span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => applyComposerAction("compact_rail")}
+                    className="px-3 py-1.5 rounded-sm border border-amber-400/25 bg-amber-500/10 text-[10px] font-semibold text-amber-100 hover:bg-amber-500/15 transition-colors"
+                  >
+                    Compactar rail inferior
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyComposerAction("expand_context")}
+                    className="px-3 py-1.5 rounded-sm border border-sky-400/25 bg-sky-500/10 text-[10px] font-semibold text-sky-100 hover:bg-sky-500/15 transition-colors"
+                  >
+                    Expandir contexto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyComposerAction("boost_technical")}
+                    className="px-3 py-1.5 rounded-sm border border-emerald-400/25 bg-emerald-500/10 text-[10px] font-semibold text-emerald-100 hover:bg-emerald-500/15 transition-colors"
+                  >
+                    Elevar nucleo tecnico
+                  </button>
+                </div>
+              </section>
+
+              <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Canvas Composer</p>
+                    <p className="text-[12px] font-bold text-white/78 mt-0.5">Editor compositivo: arrastra, suelta y ajusta variantes en contexto</p>
+                  </div>
+                  <p className="text-[10px] text-white/40">Formato 768x1152 simulado</p>
+                </div>
+
+                <div className="grid xl:grid-cols-[0.68fr_0.32fr] gap-4 mt-4">
+                  <div className="rounded-sm border border-white/[0.06] bg-[#09111e] p-3">
+                    <div className="w-full aspect-[768/1152] rounded-sm border border-white/[0.06] bg-[#f7fbff] overflow-y-auto p-[10px]">
+                      <div className="h-full w-full flex flex-col gap-[8px]">
+                        {sortedBlocks.map((block, index) => {
+                          const selected = selectedBlock?.id === block.id;
+                          const blockHeight = Math.max(36, Math.min(170, Math.round(estimateBlockHeight(block) * 0.52)));
+                          const isDragging = draggingBlockId === block.id;
+                          return (
+                            <div key={`canvas-wrap:${block.id}`} className="space-y-[6px]">
+                              {draggingBlockId && draggingBlockId !== block.id && (
+                                <div
+                                  className="h-[8px] rounded-full border border-dashed border-[#69a1ff]/45 bg-[#69a1ff]/10"
+                                  onDragOver={(event) => event.preventDefault()}
+                                  onDrop={(event) => {
+                                    event.preventDefault();
+                                    if (!draggingBlockId) return;
+                                    reorderFromCanvas(draggingBlockId, block.id, "before");
+                                    setDraggingBlockId(null);
+                                  }}
+                                />
+                              )}
+                              <button
+                                type="button"
+                                draggable
+                                onDragStart={() => setDraggingBlockId(block.id)}
+                                onDragEnd={() => setDraggingBlockId(null)}
+                                onClick={() => setSelectedBlockId(block.id)}
+                                className={cn(
+                                  "w-full text-left rounded-[6px] border px-2 py-2 transition-all",
+                                  selected
+                                    ? "border-[#1f6fff] bg-[#eaf3ff] shadow-[0_0_0_1px_rgba(31,111,255,0.35)]"
+                                    : "border-[#d8e4f4] bg-white hover:border-[#9bb8ea]",
+                                  isDragging && "opacity-45"
+                                )}
+                                style={{ minHeight: `${blockHeight}px` }}
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <GripVertical className="w-3 h-3 text-[#4369a8] shrink-0" />
+                                    <span className="text-[7px] font-black text-[#10336d] uppercase tracking-[0.09em]">{String(index + 1).padStart(2, "0")}</span>
+                                    <span className="text-[9px] font-bold text-[#1b3360] truncate">{labelBlockType(block.type)}</span>
+                                  </div>
+                                  <span className="text-[8px] text-[#5071a6] bg-[#e8f0fc] border border-[#d4e2f8] rounded-[4px] px-1.5 py-0.5">{block.variant}</span>
+                                </div>
+                                <p className="text-[8px] text-[#405c8f] leading-snug mt-2 line-clamp-3">{summarizeBlockContent(block)}</p>
+                              </button>
+                              {draggingBlockId && draggingBlockId !== block.id && (
+                                <div
+                                  className="h-[8px] rounded-full border border-dashed border-[#69a1ff]/45 bg-[#69a1ff]/10"
+                                  onDragOver={(event) => event.preventDefault()}
+                                  onDrop={(event) => {
+                                    event.preventDefault();
+                                    if (!draggingBlockId) return;
+                                    reorderFromCanvas(draggingBlockId, block.id, "after");
+                                    setDraggingBlockId(null);
+                                  }}
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
+                        {draggingBlockId && sortedBlocks.length > 0 && (
+                          <div
+                            className="h-[8px] rounded-full border border-dashed border-[#69a1ff]/45 bg-[#69a1ff]/10"
+                            onDragOver={(event) => event.preventDefault()}
+                            onDrop={(event) => {
+                              event.preventDefault();
+                              const lastBlockId = sortedBlocks[sortedBlocks.length - 1]?.id;
+                              if (!draggingBlockId || !lastBlockId) return;
+                              reorderFromCanvas(draggingBlockId, lastBlockId, "after");
+                              setDraggingBlockId(null);
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">
+                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Bloque seleccionado</p>
+                      {selectedBlock ? (
+                        <>
+                          <p className="text-[11px] font-bold text-white/78 mt-2">{labelBlockType(selectedBlock.type)}</p>
+                          <p className="text-[9px] text-white/45 mt-1">{summarizeBlockContent(selectedBlock)}</p>
+
+                          <div className="mt-3 space-y-2">
+                            <label className="text-[8px] text-white/30 uppercase tracking-widest font-bold">Variante</label>
+                            <select
+                              value={selectedBlock.variant}
+                              onChange={(event) => setBlockVariant(selectedBlock.id, event.target.value)}
+                              className="w-full h-8 rounded-sm bg-[#0b1a31] border border-white/[0.1] text-[9px] text-white/75 px-2 outline-none"
+                            >
+                              {(BLOCK_VARIANTS[selectedBlock.type] ?? [selectedBlock.variant]).map((variant) => (
+                                <option key={variant} value={variant} className="bg-[#0b1a31] text-white">
+                                  {variant}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 mt-3">
+                            <button
+                              type="button"
+                              onClick={() => moveBlockByOffset(selectedBlock.id, -1)}
+                              className="h-8 rounded-sm border border-white/[0.1] text-[9px] font-semibold text-white/70 hover:bg-white/[0.04] flex items-center justify-center gap-1"
+                            >
+                              <ArrowUp className="w-3 h-3" /> Subir
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveBlockByOffset(selectedBlock.id, 1)}
+                              className="h-8 rounded-sm border border-white/[0.1] text-[9px] font-semibold text-white/70 hover:bg-white/[0.04] flex items-center justify-center gap-1"
+                            >
+                              <ArrowDown className="w-3 h-3" /> Bajar
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-[9px] text-white/45 mt-2">Selecciona un bloque para editarlo.</p>
+                      )}
+                    </div>
+
+                    <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">
+                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Atajos editoriales</p>
+                      <div className="space-y-2 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => applyComposerAction("compact_rail")}
+                          className="w-full h-8 rounded-sm border border-amber-400/25 bg-amber-500/10 text-[9px] font-semibold text-amber-100 hover:bg-amber-500/15"
+                        >
+                          Compactar rail
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyComposerAction("expand_context")}
+                          className="w-full h-8 rounded-sm border border-sky-400/25 bg-sky-500/10 text-[9px] font-semibold text-sky-100 hover:bg-sky-500/15"
+                        >
+                          Expandir contexto
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyComposerAction("boost_technical")}
+                          className="w-full h-8 rounded-sm border border-emerald-400/25 bg-emerald-500/10 text-[9px] font-semibold text-emerald-100 hover:bg-emerald-500/15"
+                        >
+                          Reforzar nucleo tecnico
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
 
               {spacePlan && (
                 <div className="grid xl:grid-cols-[0.95fr_1.05fr] gap-4">
@@ -747,7 +1339,7 @@ export default function ComposerPage() {
                       <div className="w-full aspect-[768/1152] rounded-sm border border-white/[0.06] bg-[#f7fbff] overflow-hidden p-[10px]">
                         <div className="h-full w-full flex flex-col gap-[8px]">
                           <div className="h-[10px] rounded-[2px] bg-[#0d1f57]" />
-                          {proposal.draft.blocks
+                          {(editableDraft?.blocks ?? [])
                             .slice()
                             .sort((a, b) => a.priority - b.priority)
                             .map((block) => {
@@ -831,22 +1423,22 @@ export default function ComposerPage() {
                     <div>
                       <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Cobertura y validacion</p>
                       <p className="text-[12px] font-bold text-white/78 mt-0.5">
-                        {proposal.draft.structuralValidation.passed ? "Minimos cubiertos" : "Faltan minimos estructurales"}
+                        {editableDraft?.structuralValidation.passed ? "Minimos cubiertos" : "Faltan minimos estructurales"}
                       </p>
                     </div>
                   </div>
 
                   <div className="grid sm:grid-cols-3 gap-3 mt-4">
-                    <CoverageCard title="Nucleo tecnico" ok={proposal.draft.coverage.technicalCore} />
-                    <CoverageCard title="Senal de examen" ok={proposal.draft.coverage.examSignals} />
-                    <CoverageCard title="Validacion final" ok={proposal.draft.coverage.validationPresent} />
+                    <CoverageCard title="Nucleo tecnico" ok={Boolean(editableDraft?.coverage.technicalCore)} />
+                    <CoverageCard title="Senal de examen" ok={Boolean(editableDraft?.coverage.examSignals)} />
+                    <CoverageCard title="Validacion final" ok={Boolean(editableDraft?.coverage.validationPresent)} />
                   </div>
 
-                  {proposal.draft.structuralValidation.missing.length > 0 && (
+                  {(editableDraft?.structuralValidation.missing.length ?? 0) > 0 && (
                     <div className="mt-4">
                       <p className="text-[8px] font-bold text-red-300/80 uppercase tracking-widest mb-2">Faltantes</p>
                       <div className="space-y-2">
-                        {proposal.draft.structuralValidation.missing.map((item) => (
+                        {editableDraft?.structuralValidation.missing.map((item) => (
                           <div key={item} className="px-3 py-2 rounded-sm bg-red-500/8 border border-red-500/15 text-[10px] text-red-200/80">
                             {item}
                           </div>
@@ -858,8 +1450,8 @@ export default function ComposerPage() {
                   <div className="mt-4">
                     <p className="text-[8px] font-bold text-amber-300/80 uppercase tracking-widest mb-2">Advertencias / weak areas</p>
                     <div className="space-y-2">
-                      {[...proposal.draft.structuralValidation.warnings, ...proposal.draft.coverage.weakAreas].length > 0 ? (
-                        [...proposal.draft.structuralValidation.warnings, ...proposal.draft.coverage.weakAreas].map((item) => (
+                      {editableDraft && [...editableDraft.structuralValidation.warnings, ...editableDraft.coverage.weakAreas].length > 0 ? (
+                        [...editableDraft.structuralValidation.warnings, ...editableDraft.coverage.weakAreas].map((item) => (
                           <div key={item} className="px-3 py-2 rounded-sm bg-white/[0.02] border border-white/[0.05] text-[10px] text-white/65">
                             {item}
                           </div>
@@ -880,13 +1472,13 @@ export default function ComposerPage() {
                   <div>
                     <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Composicion propuesta</p>
                     <p className="text-[12px] font-bold text-white/78 mt-0.5">
-                      {proposal.draft.blocks.length} bloques · familia {labelFamily(proposal.draft.family)}
+                      {(editableDraft?.blocks.length ?? 0)} bloques · familia {labelFamily(editableDraft?.family ?? proposal.draft.family)}
                     </p>
                   </div>
                 </div>
 
                 <div className="grid lg:grid-cols-2 gap-3 mt-4">
-                  {proposal.draft.blocks
+                  {(editableDraft?.blocks ?? [])
                     .slice()
                     .sort((a, b) => a.priority - b.priority)
                     .map((block) => (
@@ -912,6 +1504,31 @@ export default function ComposerPage() {
                           <div className="text-right shrink-0">
                             <p className="text-[8px] text-white/20 uppercase tracking-widest">Altura</p>
                             <p className="text-[9px] text-white/55 mt-1">{block.minHeight}-{block.maxHeight}px</p>
+                            <div className="mt-2 flex items-center justify-end gap-1">
+                              <button
+                                type="button"
+                                onClick={() => moveBlock(block.id, "up")}
+                                className="w-6 h-6 rounded-sm border border-white/[0.08] bg-white/[0.02] text-white/65 hover:text-white hover:bg-white/[0.05] transition-colors flex items-center justify-center"
+                                aria-label={`Subir bloque ${labelBlockType(block.type)}`}
+                              >
+                                <ArrowUp className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveBlock(block.id, "down")}
+                                className="w-6 h-6 rounded-sm border border-white/[0.08] bg-white/[0.02] text-white/65 hover:text-white hover:bg-white/[0.05] transition-colors flex items-center justify-center"
+                                aria-label={`Bajar bloque ${labelBlockType(block.type)}`}
+                              >
+                                <ArrowDown className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => rotateVariant(block.id)}
+                                className="h-6 px-2 rounded-sm border border-blue-400/20 bg-blue-500/10 text-[8px] font-semibold text-blue-100 hover:bg-blue-500/15 transition-colors"
+                              >
+                                Variante
+                              </button>
+                            </div>
                           </div>
                         </div>
 

@@ -22,6 +22,14 @@ export interface StudioOutputStatus {
   previewPath: string | null;
 }
 
+export interface StudioQaReport {
+  verdict: "approved" | "needs_revision";
+  scores: Record<string, number>;
+  observations: string[];
+  redTeamLog: string[];
+  raw?: string;
+}
+
 export interface StudioVisualModule {
   num: string;
   title: string;
@@ -171,6 +179,30 @@ export interface ComposerDraftRecord {
   updatedAt: string;
 }
 
+export interface StudioContractChangelogEntry {
+  version: string;
+  note: string;
+  at: string;
+}
+
+export interface StudioVisualContract {
+  id: number;
+  version: string;
+  nonNegotiable: string[];
+  flexibleStorytelling: string[];
+  stableComponents: string[];
+  changelog: StudioContractChangelogEntry[];
+  updatedAt: string;
+}
+
+export interface StudioVisualContractUpdateInput {
+  version?: string;
+  nonNegotiable?: string[];
+  flexibleStorytelling?: string[];
+  stableComponents?: string[];
+  changeNote?: string;
+}
+
 export function getStudioToken(): string {
   return localStorage.getItem("studio_token") ?? "";
 }
@@ -187,6 +219,24 @@ export async function fetchStudioCatalog(): Promise<StudioCatalog> {
   });
   if (!res.ok) throw new Error(`No se pudo cargar el catalogo operativo (${res.status})`);
   return res.json() as Promise<StudioCatalog>;
+}
+
+export async function fetchStudioOutputStatus(pageId: string): Promise<StudioOutputStatus | null> {
+  const res = await fetch(`/api/studio/output-status/${pageId}`, {
+    headers: authHeaders(),
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  return res.json() as Promise<StudioOutputStatus>;
+}
+
+export async function fetchStudioQaReport(pageId: string): Promise<StudioQaReport | null> {
+  const res = await fetch(`/api/studio/qa-report/${pageId}`, {
+    headers: authHeaders(),
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  return res.json() as Promise<StudioQaReport>;
 }
 
 export async function fetchStudioKeyStatus(): Promise<StudioKeyStatus> {
@@ -242,6 +292,28 @@ export async function saveComposerDraft(pageId: string, payload: {
   });
   if (!res.ok) throw new Error(`No se pudo guardar el draft composer para ${pageId} (${res.status})`);
   return res.json() as Promise<ComposerDraftRecord>;
+}
+
+export async function fetchStudioContract(): Promise<StudioVisualContract> {
+  const res = await fetch("/api/contract", {
+    headers: authHeaders(),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`No se pudo cargar el contrato visual (${res.status})`);
+  return res.json() as Promise<StudioVisualContract>;
+}
+
+export async function updateStudioContract(payload: StudioVisualContractUpdateInput): Promise<StudioVisualContract> {
+  const res = await fetch("/api/contract", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`No se pudo actualizar el contrato visual (${res.status})`);
+  return res.json() as Promise<StudioVisualContract>;
 }
 
 export function getPageIdFromLocation(defaultPageId = "01"): string {

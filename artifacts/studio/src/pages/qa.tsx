@@ -40,6 +40,15 @@ function withCacheBust(url: string | null, version: string | null | undefined): 
   return `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(stamp)}`;
 }
 
+function scoreTenToHundred(raw: number): number {
+  if (!Number.isFinite(raw)) return 0;
+  let value = raw;
+  while (value > 10) value /= 10;
+  if (value < 0) value = 0;
+  if (value > 10) value = 10;
+  return Math.round(value * 10);
+}
+
 const QA_DIMS = [
   { key: "art_direction",         label: "Dirección de arte",       desc: "Composición, grid, jerarquía visual" },
   { key: "editorial_consistency", label: "Consistencia editorial",   desc: "Iconografía, paleta, tipografía" },
@@ -553,7 +562,7 @@ export default function QAPage() {
                         </div>
                       </div>
                       {QA_DIMS.map(dim => {
-                        const val = (realQA.scores[dim.key] ?? 0) * 10;
+                        const val = scoreTenToHundred(realQA.scores[dim.key] ?? 0);
                         return (
                           <div key={dim.key}>
                             <div className="flex justify-between mb-0.5">
