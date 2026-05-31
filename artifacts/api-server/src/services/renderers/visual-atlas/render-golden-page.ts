@@ -5,21 +5,52 @@ function clampNumber(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function estimateExamRailHeight(data: VisualAtlasPageData): number {
+function estimateTrapRailHeight(data: VisualAtlasPageData): number {
   const trapChars = data.traps
     .slice(0, 3)
     .reduce((sum, item) => sum + item.wrong.length + item.correction.length, 0);
+  return Math.round(clampNumber(102 + trapChars * 0.14, 130, 208));
+}
+
+function estimateAutocheckRailHeight(data: VisualAtlasPageData): number {
   const autocheckChars =
     data.autocheck.question.length
     + data.autocheck.explanation.length
     + data.autocheck.options.join(" ").length
     + data.autocheck.discardNotes.join(" ").length;
+  return Math.round(clampNumber(108 + autocheckChars * 0.09, 136, 216));
+}
 
-  const trapDemand = 92 + trapChars * 0.14;
-  const checkDemand = 96 + autocheckChars * 0.09;
+function estimateExamRailHeight(data: VisualAtlasPageData): number {
+  const trapDemand = estimateTrapRailHeight(data);
+  const checkDemand = estimateAutocheckRailHeight(data);
   const dominantDemand = Math.max(trapDemand, checkDemand);
+  return Math.round(clampNumber(dominantDemand + 8, 146, 220));
+}
 
-  return Math.round(clampNumber(dominantDemand, 138, 210));
+function firstSentence(value: string): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  const matched = normalized.match(/^.{1,140}?[.!?](\s|$)/)?.[0]?.trim();
+  return matched ?? normalized.slice(0, 120).trim();
+}
+
+function buildTrapFillerNotes(data: VisualAtlasPageData): string[] {
+  const notes: string[] = [];
+  const moduleHint = data.visualModules[0]?.title;
+  if (moduleHint) notes.push(`Señal rápida: conecta este mito con ${moduleHint.toLowerCase()}.`);
+  notes.push(`Clave de examen: ${firstSentence(data.context).toLowerCase()}`);
+  notes.push(`Regla operativa: valida siempre permisos + red + referencia inmutable antes de aprobar.`);
+  return notes.slice(0, 2);
+}
+
+function buildAutocheckFillerNotes(data: VisualAtlasPageData): string[] {
+  const notes: string[] = [];
+  if (data.autocheck.discardNotes[0]) {
+    notes.push(data.autocheck.discardNotes[0].replace(/^[-•]\s*/, ""));
+  }
+  notes.push(`Hint técnico: ${firstSentence(data.autocheck.explanation).toLowerCase()}`);
+  notes.push(`Patrón de decisión: elimina primero opciones sin permiso o sin ruta de red válida.`);
+  return notes.slice(0, 2);
 }
 
 function inferTopicFamily(data: VisualAtlasPageData): "containers" | "identity" | "networking" | "security" | "lifecycle" | "generic" {
@@ -113,6 +144,12 @@ export function renderVisualAtlasPage(data: VisualAtlasPageData): string {
   const bodyTotalHeight = 872;
   const examRailHeight = estimateExamRailHeight(data);
   const upperVisualHeight = bodyTotalHeight - examRailHeight;
+  const trapDemand = estimateTrapRailHeight(data);
+  const checkDemand = estimateAutocheckRailHeight(data);
+  const trapFillEnabled = examRailHeight - trapDemand >= 24;
+  const checkFillEnabled = examRailHeight - checkDemand >= 24;
+  const trapFillerNotes = trapFillEnabled ? buildTrapFillerNotes(data) : [];
+  const checkFillerNotes = checkFillEnabled ? buildAutocheckFillerNotes(data) : [];
 
   /* ── Icono de título ─────────────────────────────────────────────────── */
   const titleIconSvg = renderHeroIcon(data);
@@ -376,6 +413,28 @@ section.body {
   color: #047857;
   font-weight: 900;
 }
+.rail-fill {
+  margin-top: auto;
+  padding: 5px 7px;
+  border-radius: 3px;
+  border: 1px solid #d7e2f0;
+  background: #f8fbff;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.rail-fill-label {
+  font-size: 6.9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0d2260;
+}
+.rail-fill-note {
+  font-size: 6.9px;
+  color: #334155;
+  line-height: 1.32;
+}
 
 /* Autocheck items */
 .autocheck-question { font-size: ${contract.exam.autocheckQuestionFontSize}px; font-weight: 700; color: #06133E; line-height: 1.28; }
@@ -464,6 +523,10 @@ section.body {
               <div class="trap-correction">${t.correction}</div>
             </div>
           </div>`).join("\n          ")}
+          ${trapFillerNotes.length > 0 ? `<div class="rail-fill">
+            <div class="rail-fill-label">Tips de cierre</div>
+            ${trapFillerNotes.map((note) => `<div class="rail-fill-note">• ${note}</div>`).join("\n            ")}
+          </div>` : ""}
         </div>
       </section>
 
@@ -484,6 +547,10 @@ section.body {
           <div class="discard-notes">
             ${discardNotes.map(n => `<div class="discard-note">• ${n}</div>`).join("\n            ")}
           </div>
+          ${checkFillerNotes.length > 0 ? `<div class="rail-fill">
+            <div class="rail-fill-label">Decisión rápida</div>
+            ${checkFillerNotes.map((note) => `<div class="rail-fill-note">• ${note}</div>`).join("\n            ")}
+          </div>` : ""}
         </div>
       </section>
 
