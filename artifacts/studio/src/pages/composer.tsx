@@ -1296,7 +1296,7 @@ export default function ComposerPage() {
                 : "border-white/[0.08] bg-white/[0.02] text-white/65 hover:bg-white/[0.04] hover:text-white",
             )}
           >
-            {focusMode ? "Modo enfoque" : "Mostrar diagnostico"}
+            {focusMode ? "Vista operativa" : "Vista avanzada"}
           </button>
 
           <button
@@ -1832,8 +1832,12 @@ export default function ComposerPage() {
                       </div>
                     </div>
 
-                    <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">
-                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Bloque seleccionado</p>
+                    <details className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3 group" open>
+                      <summary className="list-none cursor-pointer flex items-center justify-between">
+                        <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Bloque seleccionado</p>
+                        <ChevronDown className="w-3.5 h-3.5 text-white/30 transition-transform group-open:rotate-180" />
+                      </summary>
+                      <div className="mt-2">
                       {selectedBlock ? (
                         <>
                           <p className="text-[11px] font-bold text-white/78 mt-2">{labelBlockType(selectedBlock.type)}</p>
@@ -1874,11 +1878,17 @@ export default function ComposerPage() {
                       ) : (
                         <p className="text-[9px] text-white/45 mt-2">Selecciona un bloque para editarlo.</p>
                       )}
-                    </div>
+                      </div>
+                    </details>
 
-                    <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">
-                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Atajos editoriales</p>
-                      <p className="text-[9px] text-white/48 mt-1 leading-relaxed">Cada atajo aplica cambios al draft y dispara regeneracion real.</p>
+                    <details className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3 group" open>
+                      <summary className="list-none cursor-pointer flex items-center justify-between">
+                        <div>
+                          <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Atajos editoriales</p>
+                          <p className="text-[9px] text-white/48 mt-1 leading-relaxed">Cada atajo aplica cambios al draft y dispara regeneracion real.</p>
+                        </div>
+                        <ChevronDown className="w-3.5 h-3.5 text-white/30 transition-transform group-open:rotate-180" />
+                      </summary>
                       <div className="space-y-2 mt-2">
                         <button
                           type="button"
@@ -1929,10 +1939,14 @@ export default function ComposerPage() {
                       {quickActionFeedback ? (
                         <p className="text-[9px] text-cyan-200/85 mt-2 leading-relaxed">{quickActionFeedback}</p>
                       ) : null}
-                    </div>
+                      </div>
+                    </details>
 
-                    <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">
-                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Salida y validacion</p>
+                    <details className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3 group" open>
+                      <summary className="list-none cursor-pointer flex items-center justify-between">
+                        <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Salida y validacion</p>
+                        <ChevronDown className="w-3.5 h-3.5 text-white/30 transition-transform group-open:rotate-180" />
+                      </summary>
                       <div className="space-y-2 mt-2">
                         <button
                           type="button"
@@ -1994,7 +2008,7 @@ export default function ComposerPage() {
                           </div>
                         )}
                       </div>
-                    </div>
+                    </details>
                   </div>
                 </div>
               </section>
@@ -2112,6 +2126,7 @@ export default function ComposerPage() {
                 </div>
               )}
 
+              {!focusMode && advancedOpen && (
               <div className="grid xl:grid-cols-[0.95fr_1.05fr] gap-4">
                 <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
                   <div className="flex items-center gap-2">
@@ -2193,7 +2208,9 @@ export default function ComposerPage() {
                   </div>
                 </section>
               </div>
+              )}
 
+              {!focusMode && advancedOpen && (
               <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
                 <div className="flex items-center gap-2">
                   <Blocks className="w-4 h-4 text-white/30" />
@@ -2270,7 +2287,9 @@ export default function ComposerPage() {
                     ))}
                 </div>
               </section>
+              )}
 
+              {!focusMode && advancedOpen && (
               <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-4">
                 <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
                   <button
@@ -2329,6 +2348,7 @@ export default function ComposerPage() {
                   )}
                 </section>
               </div>
+              )}
             </div>
           ) : null}
         </div>
