@@ -85,6 +85,7 @@ export async function persistGenerationResult(args: {
   userId: number | null;
   userName: string;
   imageGenerated: boolean;
+  generationSource: "locked_seed" | "composer_draft";
   textModel: string;
   imageModel: string | null;
   promptTokens?: number | null;
@@ -148,8 +149,12 @@ export async function persistGenerationResult(args: {
     userId: args.userId,
     userName: args.userName,
     result: args.imageGenerated
-      ? `Generacion completada con imagen real y QA ${(args.qa.total * 10).toFixed(0)}/100`
-      : `Generacion completada con placeholder por falla de imagen; QA ${(args.qa.total * 10).toFixed(0)}/100`,
-    note: args.error ?? undefined,
+      ? `Generacion completada (${args.generationSource === "composer_draft" ? "fuente: Composer draft" : "fuente: Locked seed"}) con imagen real y QA servidor ${(args.qa.total * 10).toFixed(0)}/100`
+      : `Generacion completada (${args.generationSource === "composer_draft" ? "fuente: Composer draft" : "fuente: Locked seed"}) con placeholder por falla de imagen; QA servidor ${(args.qa.total * 10).toFixed(0)}/100`,
+    note: [
+      args.error ? `error=${args.error}` : null,
+      `qa_source=server`,
+      `generation_source=${args.generationSource}`,
+    ].filter(Boolean).join(" · "),
   });
 }

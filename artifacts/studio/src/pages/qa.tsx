@@ -9,6 +9,7 @@ import {
   type ComposerDraftRecord,
   type StudioCatalogPage,
 } from "@/lib/studio-api";
+import { resolveQaScoreSource } from "@/lib/qa-score-source";
 import {
   CheckCircle2, RotateCcw, AlertTriangle, ChevronLeft, ChevronRight, ChevronDown,
   Shield, Loader2, ExternalLink, XCircle, Download, FileText,
@@ -341,34 +342,20 @@ export default function QAPage() {
   const htmlUrl = withCacheBust(outputStatus?.htmlPath ?? null, outputStatus?.generatedAt);
   const previewUrl = withCacheBust(outputStatus?.previewPath ?? null, outputStatus?.generatedAt);
   const composerScores = buildComposerProjectedScores(composerDraft, realQA?.scores?.technical_accuracy ?? null);
-  const generatedAtMs = outputStatus?.generatedAt ? Date.parse(outputStatus.generatedAt) : NaN;
-  const draftUpdatedAtMs = composerDraft?.updatedAt ? Date.parse(composerDraft.updatedAt) : NaN;
-  const composerDraftIsNewer = Number.isFinite(generatedAtMs) && Number.isFinite(draftUpdatedAtMs)
-    ? draftUpdatedAtMs > generatedAtMs
-    : Boolean(composerDraft);
-  const useComposerProjection = Boolean(composerScores)
-    && (!realQA?.scores || composerDraftIsNewer);
-  const activeScores = useComposerProjection
-    ? composerScores
-    : (realQA?.scores ?? composerScores ?? null);
-  const serverScores = realQA?.scores ?? null;
-  const serverTotal = serverScores?.total ?? null;
-  const composerTotal = composerScores?.total ?? null;
-  const hasScoreDivergence = composerDraftIsNewer
-    && serverTotal != null
-    && composerTotal != null
-    && Math.abs(composerTotal - serverTotal) >= 0.1;
-  const qaScoreSource = useComposerProjection
-    ? "composer"
-    : realQA
-      ? "server"
-      : composerScores
-        ? "composer"
-        : "none";
-  const scoreSourceLabel = qaScoreSource === "server" ? "QA SERVIDOR" : "DRAFT PENDIENTE";
-  const scoreSourceHint = qaScoreSource === "server"
-    ? "Lectura consolidada desde el ultimo QA persistido en servidor."
-    : "El draft del Composer es mas nuevo que la ultima generacion. Regenera para consolidar este score.";
+  const qaResolution = resolveQaScoreSource({
+    serverScores: realQA?.scores ?? null,
+    composerScores,
+    generatedAt: outputStatus?.generatedAt ?? null,
+    composerUpdatedAt: composerDraft?.updatedAt ?? null,
+  });
+  const activeScores = qaResolution.activeScores;
+  const serverScores = qaResolution.serverScores;
+  const serverTotal = qaResolution.serverTotal;
+  const composerTotal = qaResolution.composerTotal;
+  const hasScoreDivergence = qaResolution.hasDivergence;
+  const qaScoreSource = qaResolution.source;
+  const scoreSourceLabel = qaResolution.sourceLabel;
+  const scoreSourceHint = qaResolution.sourceHint;
   const totalScore = activeScores?.total ?? null;
   const gapToTarget = totalScore != null ? Math.max(0, 9.5 - totalScore) : null;
   const assessmentQa: RealQA | null = qaScoreSource === "composer" && activeScores

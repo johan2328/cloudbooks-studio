@@ -23,12 +23,14 @@ import {
 import Layout from "@/components/Layout";
 import { cn, scoreColorDark } from "@/lib/utils";
 import { evaluateComposerBenchmark } from "@/lib/editorial-benchmark";
+import { resolveQaScoreSource } from "@/lib/qa-score-source";
 import {
   fetchComposerDraft,
   fetchComposerProposal,
   fetchStudioCatalog,
   fetchStudioOutputStatus,
   fetchStudioQaReport,
+  logComposerAutofix,
   saveComposerDraft,
   type ComposerBlock,
   type ComposerDraftRecord,
@@ -336,7 +338,7 @@ function buildProjectedQaScores(draft: ComposerProposal["draft"], lockedTechnica
   const coverage = draft.editorialValidation.coverageScore;
   const technicalAccuracy = lockedTechnicalAccuracy != null
     ? lockedTechnicalAccuracy
-    : Math.min(10, Math.max(7.8, (coverage + readability) / 2));
+    : 8.7;
 
   const scores = {
     art_direction: Number(Math.min(10, Math.max(6.8, (coverage + consistency) / 2)).toFixed(1)),
@@ -344,7 +346,7 @@ function buildProjectedQaScores(draft: ComposerProposal["draft"], lockedTechnica
     readability: Number(readability.toFixed(1)),
     technical_accuracy: Number(technicalAccuracy.toFixed(1)),
     useful_density: Number(density.toFixed(1)),
-    commercial_risk: Number(Math.min(10, Math.max(7, (utility + consistency) / 2)).toFixed(1)),
+    commercial_risk: Number(Math.min(10, Math.max(6.8, (coverage + utility) / 2)).toFixed(1)),
   };
   const total = Number(
     (
@@ -776,6 +778,15 @@ export default function ComposerPage() {
     () => (editableDraft ? buildProjectedQaScores(editableDraft, lockedQa?.scores?.technical_accuracy ?? null) : null),
     [editableDraft, lockedQa],
   );
+  const qaResolution = useMemo(
+    () => resolveQaScoreSource({
+      serverScores: lockedQa?.scores ?? null,
+      composerScores: projectedQaScores,
+      generatedAt: lockedStatus?.generatedAt ?? null,
+      composerUpdatedAt: draftRecord?.updatedAt ?? null,
+    }),
+    [lockedQa?.scores, projectedQaScores, lockedStatus?.generatedAt, draftRecord?.updatedAt],
+  );
   const projectedGap = projectedQaScores ? Math.max(0, 9.5 - projectedQaScores.total) : null;
   const sortedBlocks = useMemo(
     () => (editableDraft?.blocks ?? []).slice().sort((a, b) => a.priority - b.priority),
@@ -951,70 +962,83 @@ export default function ComposerPage() {
     });
   }
 
-  function handleAutofixComposer() {
+  async function handleAutofixComposer() {
     if (!editableDraft) return;
     const actionsApplied: string[] = [];
-    updateDraftBlocks((blocks) => {
-      let next = [...blocks];
-      const initialBenchmark = evaluateComposerBenchmark(next);
-      const checkById = new Map(initialBenchmark.checks.map((check) => [check.id, check]));
+    const beforeTotal = projectedQaScores?.total ?? null;
+    let nextBlocks = [...editableDraft.blocks].sort((a, b) => a.priority - b.priority);
+    const initialBenchmark = evaluateComposerBenchmark(nextBlocks);
+    const checkById = new Map(initialBenchmark.checks.map((check) => [check.id, check]));
 
-      if (!checkById.get("technical-dominance")?.passed) {
-        actionsApplied.push("estructura 4 tarjetas");
-        const intro = next.filter((block) => ["hero_title", "context_deck", "guide_question"].includes(block.type));
-        const examTail = next.filter((block) => ["exam_traps", "autocheck", "exam_signal"].includes(block.type));
-        const technicalByType = new Map(
-          next.filter((block) => TECHNICAL_BLOCK_TYPES.includes(block.type)).map((block) => [block.type, block]),
-        );
-        const modules = pageSummary?.visualModules ?? [];
-        const rebuiltTechnical: ComposerBlock[] = [
-          technicalByType.get("diagram_panel") ??
-            makeBlock("diagram_panel", "two_column", 40, { modules: modules.slice(0, 2) }),
-          technicalByType.get("comparison_panel") ??
-            makeBlock("comparison_panel", "sku_matrix", 50, { modules: modules.slice(0, 3) }),
-          technicalByType.get("decision_tree") ??
-            makeBlock("decision_tree", "binary_path", 60, { modules: modules.slice(1, 3) }),
-          technicalByType.get("map_panel") ??
-            makeBlock("map_panel", "replication_path", 70, { modules: modules.slice(2, 4) }),
-        ];
-        next = [...intro, ...rebuiltTechnical, ...examTail];
+    if (!checkById.get("technical-dominance")?.passed) {
+      actionsApplied.push("estructura 4 tarjetas");
+      const intro = nextBlocks.filter((block) => ["hero_title", "context_deck", "guide_question"].includes(block.type));
+      const examTail = nextBlocks.filter((block) => ["exam_traps", "autocheck", "exam_signal"].includes(block.type));
+      const technicalByType = new Map(
+        nextBlocks.filter((block) => TECHNICAL_BLOCK_TYPES.includes(block.type)).map((block) => [block.type, block]),
+      );
+      const modules = pageSummary?.visualModules ?? [];
+      const rebuiltTechnical: ComposerBlock[] = [
+        technicalByType.get("diagram_panel") ??
+          makeBlock("diagram_panel", "two_column", 40, { modules: modules.slice(0, 2) }),
+        technicalByType.get("comparison_panel") ??
+          makeBlock("comparison_panel", "sku_matrix", 50, { modules: modules.slice(0, 3) }),
+        technicalByType.get("decision_tree") ??
+          makeBlock("decision_tree", "binary_path", 60, { modules: modules.slice(1, 3) }),
+        technicalByType.get("map_panel") ??
+          makeBlock("map_panel", "replication_path", 70, { modules: modules.slice(2, 4) }),
+      ];
+      nextBlocks = [...intro, ...rebuiltTechnical, ...examTail];
+    }
+
+    if (!checkById.get("exam-rail-balance")?.passed || !checkById.get("variant-discipline")?.passed) {
+      actionsApplied.push("compactar rail");
+      nextBlocks = nextBlocks.map((block) => {
+        if (block.type === "exam_traps") return { ...block, variant: "compact" };
+        if (block.type === "autocheck") return { ...block, variant: "short" };
+        return block;
+      });
+    }
+
+    if (!checkById.get("flow-continuity")?.passed) {
+      const guideIndex = nextBlocks.findIndex((block) => block.type === "guide_question");
+      const firstTechnicalIndex = nextBlocks.findIndex((block) => TECHNICAL_BLOCK_TYPES.includes(block.type));
+      if (guideIndex >= 0 && firstTechnicalIndex >= 0 && guideIndex > firstTechnicalIndex) {
+        actionsApplied.push("reorden narrativo");
+        const reordered = [...nextBlocks];
+        const [guide] = reordered.splice(guideIndex, 1);
+        reordered.splice(firstTechnicalIndex, 0, guide);
+        nextBlocks = reordered;
       }
+    }
 
-      if (!checkById.get("exam-rail-balance")?.passed || !checkById.get("variant-discipline")?.passed) {
-        actionsApplied.push("compactar rail");
-        next = next.map((block) => {
-          if (block.type === "exam_traps") return { ...block, variant: "compact" };
-          if (block.type === "autocheck") return { ...block, variant: "short" };
-          return block;
-        });
-      }
+    const contextBlock = nextBlocks.find((block) => block.type === "context_deck");
+    if (contextBlock && contextBlock.variant !== "expanded") {
+      actionsApplied.push("contexto expandido");
+      nextBlocks = nextBlocks.map((block) => (block.type === "context_deck" ? { ...block, variant: "expanded" } : block));
+    }
 
-      if (!checkById.get("flow-continuity")?.passed) {
-        const guideIndex = next.findIndex((block) => block.type === "guide_question");
-        const firstTechnicalIndex = next.findIndex((block) => TECHNICAL_BLOCK_TYPES.includes(block.type));
-        if (guideIndex >= 0 && firstTechnicalIndex >= 0 && guideIndex > firstTechnicalIndex) {
-          actionsApplied.push("reorden narrativo");
-          const reordered = [...next];
-          const [guide] = reordered.splice(guideIndex, 1);
-          reordered.splice(firstTechnicalIndex, 0, guide);
-          next = reordered;
-        }
-      }
-
-      const contextBlock = next.find((block) => block.type === "context_deck");
-      if (contextBlock && contextBlock.variant !== "expanded") {
-        actionsApplied.push("contexto expandido");
-        next = next.map((block) => (block.type === "context_deck" ? { ...block, variant: "expanded" } : block));
-      }
-
-      return normalizePriorities(next);
-    });
+    const normalizedBlocks = normalizePriorities(nextBlocks);
+    const nextDraft = recalculateDraft({ ...editableDraft, blocks: normalizedBlocks });
+    setEditableDraft(nextDraft);
 
     if (actionsApplied.length === 0) {
       setAutofixFeedback("No hubo ajustes automaticos: el draft ya estaba dentro de los parametros premium.");
       return;
     }
+    const afterScores = buildProjectedQaScores(nextDraft, lockedQa?.scores?.technical_accuracy ?? null);
+    const afterTotal = afterScores?.total ?? null;
     setAutofixFeedback(`Autocorreccion aplicada: ${actionsApplied.join(" | ")}.`);
+
+    try {
+      await logComposerAutofix(pageIdFromRoute, {
+        actions: actionsApplied,
+        beforeTotal,
+        afterTotal,
+      });
+    } catch {
+      // El autofix aplica igual aunque falle la bitacora.
+    }
   }
 
   async function handleSaveDraft() {
@@ -1270,18 +1294,42 @@ export default function ComposerPage() {
                 <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Proyeccion Composer (draft)</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Proyeccion Composer (draft)</p>
+                        {qaResolution.source !== "none" && (
+                          <span className={cn(
+                            "text-[7px] px-1.5 py-px rounded-sm border font-bold",
+                            qaResolution.source === "server"
+                              ? "border-teal-500/20 bg-teal-500/8 text-teal-300/80"
+                              : "border-violet-500/20 bg-violet-500/10 text-violet-200/85"
+                          )}>
+                            {qaResolution.sourceLabel}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm font-black text-white/88 mt-1">
                         {projectedQaScores?.total.toFixed(1) ?? "0.0"}/10
                       </p>
                       <p className="text-[10px] text-white/45 mt-1">
                         Brecha hacia 9.5: <span className="text-amber-300/85 font-semibold">{projectedGap?.toFixed(1) ?? "0.0"}</span>
                       </p>
+                      <p className={cn(
+                        "text-[9px] mt-2",
+                        qaResolution.source === "server" ? "text-teal-300/75" : "text-violet-300/80",
+                      )}>
+                        {qaResolution.sourceHint}
+                      </p>
                     </div>
                     <div className="w-10 h-10 rounded-sm border border-white/[0.08] bg-white/[0.02] flex items-center justify-center">
                       <Sparkles className="w-4 h-4 text-white/35" />
                     </div>
                   </div>
+                  {qaResolution.hasDivergence && (
+                    <div className="mt-3 px-3 py-2 rounded-sm border border-violet-500/20 bg-violet-500/10 text-[9px] text-violet-200/85 leading-relaxed">
+                      Diferencia detectada: servidor <span className="font-semibold">{qaResolution.serverTotal?.toFixed(1)}/10</span> vs composer{" "}
+                      <span className="font-semibold">{qaResolution.composerTotal?.toFixed(1)}/10</span>. Para consolidar trazabilidad, genera desde draft y valida en QA.
+                    </div>
+                  )}
 
                   <div className="space-y-3 mt-4">
                     {QA_ALIGNMENT_DIMS.map((dimension) => {

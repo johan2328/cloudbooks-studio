@@ -162,7 +162,8 @@ export type ActionType =
   | "asset_linked"
   | "asset_approved"
   | "asset_replaced"
-  | "composer_draft_saved";
+  | "composer_draft_saved"
+  | "composer_autofix_applied";
 
 export interface UserActionLog {
   id: string;

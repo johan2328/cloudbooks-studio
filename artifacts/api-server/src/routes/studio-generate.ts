@@ -262,6 +262,7 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
         userId: authUser.id,
         userName: authUser.displayName,
         imageGenerated: result.imageGenerated,
+        generationSource: useComposerDraft ? "composer_draft" : "locked_seed",
         textModel: result.textModel,
         imageModel: result.imageModel,
         outputPath: result.outputs.html,
@@ -308,9 +309,13 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
         userId: authUser.id,
         userName: authUser.displayName,
         result: result.imageGenerated
-          ? `Generacion completada con imagen real y QA ${(qaDims.avg * 10).toFixed(0)}/100`
-          : `Generacion completada con placeholder por falla de imagen; QA ${(qaDims.avg * 10).toFixed(0)}/100`,
-        note: result.imageError,
+          ? `Generacion completada (${useComposerDraft ? "fuente: Composer draft" : "fuente: Locked seed"}) con imagen real y QA servidor ${(qaDims.avg * 10).toFixed(0)}/100`
+          : `Generacion completada (${useComposerDraft ? "fuente: Composer draft" : "fuente: Locked seed"}) con placeholder por falla de imagen; QA servidor ${(qaDims.avg * 10).toFixed(0)}/100`,
+        note: [
+          result.imageError ? `error=${result.imageError}` : null,
+          "qa_source=server",
+          `generation_source=${useComposerDraft ? "composer_draft" : "locked_seed"}`,
+        ].filter(Boolean).join(" · "),
       });
     }
 

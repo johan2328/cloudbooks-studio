@@ -155,4 +155,50 @@ router.put("/studio/composer/draft/:pageId", async (req, res): Promise<void> => 
   });
 });
 
+router.post("/studio/composer/autofix/:pageId", async (req, res): Promise<void> => {
+  const pageId = String(req.params.pageId).padStart(2, "0");
+  const seed = getSeed(pageId);
+
+  if (!seed.found) {
+    res.status(404).json({
+      error: "composer_seed_missing",
+      pageId,
+      availableSeeds: seed.availableSeeds,
+    });
+    return;
+  }
+
+  const payload = req.body as {
+    actions?: unknown;
+    beforeTotal?: unknown;
+    afterTotal?: unknown;
+  };
+  const actions = Array.isArray(payload?.actions)
+    ? payload.actions.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : [];
+
+  const beforeTotal = typeof payload?.beforeTotal === "number" && Number.isFinite(payload.beforeTotal)
+    ? payload.beforeTotal
+    : null;
+  const afterTotal = typeof payload?.afterTotal === "number" && Number.isFinite(payload.afterTotal)
+    ? payload.afterTotal
+    : null;
+
+  const authUser = await getAuthUserFromHeader(req.headers.authorization);
+  const delta = beforeTotal != null && afterTotal != null ? Number((afterTotal - beforeTotal).toFixed(1)) : null;
+  const actionList = actions.length > 0 ? actions.join(" | ") : "sin cambios";
+
+  await insertEditorialEvent({
+    actionType: "composer_autofix_applied",
+    pageNumber: pageId,
+    pageTitle: seed.data.title,
+    userId: authUser.id,
+    userName: authUser.displayName,
+    result: `Autocorreccion Composer aplicada (${actionList})`,
+    note: `qa_source=composer_projection; before=${beforeTotal ?? "-"}; after=${afterTotal ?? "-"}; delta=${delta ?? "-"}`,
+  });
+
+  res.status(200).json({ success: true, pageId, actions, beforeTotal, afterTotal, delta });
+});
+
 export default router;

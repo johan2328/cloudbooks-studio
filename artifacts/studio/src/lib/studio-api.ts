@@ -30,6 +30,39 @@ export interface StudioQaReport {
   raw?: string;
 }
 
+export interface StudioActivityLog {
+  id: string;
+  actionType: string;
+  pageId: number | null;
+  pageNumber: string | null;
+  pageTitle: string | null;
+  userId: number | null;
+  userName: string;
+  result: string;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface StudioTimeToApprovableItem {
+  pageNumber: string;
+  startedAt: string;
+  approvedAt: string;
+  minutes: number;
+}
+
+export interface StudioActivitySummary {
+  timeToApprovable: {
+    samples: number;
+    avgMinutes: number | null;
+    byPage: StudioTimeToApprovableItem[];
+  };
+}
+
+export interface StudioActivityResponse {
+  logs: StudioActivityLog[];
+  summary: StudioActivitySummary;
+}
+
 export interface StudioVisualModule {
   num: string;
   title: string;
@@ -292,6 +325,21 @@ export async function saveComposerDraft(pageId: string, payload: {
   });
   if (!res.ok) throw new Error(`No se pudo guardar el draft composer para ${pageId} (${res.status})`);
   return res.json() as Promise<ComposerDraftRecord>;
+}
+
+export async function logComposerAutofix(pageId: string, payload: {
+  actions: string[];
+  beforeTotal: number | null;
+  afterTotal: number | null;
+}): Promise<void> {
+  await fetch(`/api/studio/composer/autofix/${pageId}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function fetchStudioContract(): Promise<StudioVisualContract> {

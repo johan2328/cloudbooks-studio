@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Search,
   Shield,
+  Sparkles,
   Upload,
   Zap,
 } from "lucide-react";
@@ -35,6 +36,7 @@ const ACTION_ICONS: Record<ActionType, React.ComponentType<{ className?: string 
   asset_approved: Package,
   asset_replaced: RefreshCw,
   composer_draft_saved: FileEdit,
+  composer_autofix_applied: Sparkles,
 };
 
 const FILTER_OPTIONS: { value: ActionType | "all"; label: string }[] = [
@@ -53,6 +55,7 @@ const FILTER_OPTIONS: { value: ActionType | "all"; label: string }[] = [
   { value: "asset_approved", label: "Asset aprobado" },
   { value: "asset_replaced", label: "Asset reemplazado" },
   { value: "composer_draft_saved", label: "Composer guardado" },
+  { value: "composer_autofix_applied", label: "Composer autofix" },
 ];
 
 const USER_FILTERS = ["Todos los usuarios", "Ana García", "Carlos Méndez", "Laura Vidal", "Sistema"];
@@ -64,6 +67,8 @@ export default function Actividad() {
   const [search, setSearch] = useState("");
   const [serverLogs, setServerLogs] = useState<UserActionLog[] | null>(null);
   const [serverReachable, setServerReachable] = useState(false);
+  const [timeToApprovableAvg, setTimeToApprovableAvg] = useState<number | null>(null);
+  const [timeToApprovableSamples, setTimeToApprovableSamples] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem("studio_token") ?? "";
@@ -75,6 +80,16 @@ export default function Actividad() {
         if (data?.logs && Array.isArray(data.logs)) {
           setServerLogs(data.logs);
           setServerReachable(true);
+          setTimeToApprovableAvg(
+            typeof data?.summary?.timeToApprovable?.avgMinutes === "number"
+              ? data.summary.timeToApprovable.avgMinutes
+              : null,
+          );
+          setTimeToApprovableSamples(
+            typeof data?.summary?.timeToApprovable?.samples === "number"
+              ? data.summary.timeToApprovable.samples
+              : 0,
+          );
         }
       })
       .catch(() => {
@@ -128,12 +143,17 @@ export default function Actividad() {
           </p>
         </div>
 
-        <div className="grid grid-cols-4 gap-px bg-white/[0.04] border-b border-white/[0.04]">
+        <div className="grid grid-cols-5 gap-px bg-white/[0.04] border-b border-white/[0.04]">
           {[
             { label: "Acciones totales", value: sourceLogs.length, color: "text-white" },
             { label: "Paginas aprobadas", value: approvals, color: "text-emerald-400" },
             { label: "Generaciones completadas", value: generations, color: "text-violet-400" },
             { label: "Correcciones solicitadas", value: revisions, color: "text-amber-400" },
+            {
+              label: `Tiempo a aprobable${timeToApprovableSamples > 0 ? ` (${timeToApprovableSamples})` : ""}`,
+              value: timeToApprovableAvg != null ? `${timeToApprovableAvg}m` : "—",
+              color: "text-cyan-300",
+            },
           ].map((kpi) => (
             <div key={kpi.label} className="bg-[#0d1629] px-5 py-3">
               <p className={cn("text-xl font-black tabular-nums", kpi.color)}>{kpi.value}</p>
