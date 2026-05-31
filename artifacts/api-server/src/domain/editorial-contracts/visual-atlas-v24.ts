@@ -4,7 +4,7 @@ import { IMAGE_MODEL, IMAGE_QUALITY, TEMPLATE_VERSION, TEXT_MODEL } from "../../
 export const VISUAL_ATLAS_V24_CONTRACT = {
   id: "visual-atlas-v24",
   version: TEMPLATE_VERSION,
-  renderRevision: "visual-atlas-2026-05-31-d",
+  renderRevision: "visual-atlas-2026-05-31-e",
   name: "Visual Atlas v24",
   generation: {
     textModel: TEXT_MODEL,
@@ -81,6 +81,9 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
       "quiet separators",
       "flat Azure-like line icon family",
       "navy, Azure blue and teal accents",
+      "cards should feel like the approved ACR reference style with clean hierarchy",
+      "subtle card boundaries, not heavy comic-like outlines",
+      "avoid forced two-color alternation between cards",
       "restrained orange or red only when semantically useful",
       "no 3D",
       "no glossy app icons",
@@ -189,6 +192,8 @@ Canvas and composition:
 - No global header above the cards. No book/page title. No footer.
 - Do not wrap all four cards inside one extra outer master frame or giant container box. The cards should read as the primary composition themselves.
 - Avoid an enclosing poster-like border that makes the 2x2 layout look shrunken inside the asset.
+- Keep card strokes light and editorial. Avoid thick dark borders around every card.
+- Avoid making cards look like two hard color families split by columns. Keep one coherent Azure editorial palette.
 - Internal text must be easy to read after the image is inserted into a ${contract.upperVisual.slotWidth}x${contract.upperVisual.slotHeight}px slot.
 - Prefer fewer labels with larger type rather than many tiny labels.
 - Never use spreadsheet-like microtext. Aim for bold, editorial microcopy that remains readable when the full page is viewed at normal screen size.

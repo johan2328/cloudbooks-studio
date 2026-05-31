@@ -246,7 +246,7 @@ export default function QAPage() {
       const data = await res.json() as { approvedAt: string };
       approvePage(pageNum, data.approvedAt);
       toast({
-        title: "Página aprobada ✓",
+        title: "Página aprobada",
         description: `Pág. ${pageNum} aprobada · ${data.approvedAt.slice(0, 10)} · lista para exportación`,
       });
       setOutputStatus(prev => prev ? { ...prev, files: { ...prev.files, approved: true }, approvedAt: data.approvedAt } : prev);
@@ -347,7 +347,7 @@ export default function QAPage() {
                 <span className="text-[10px] text-white/30">Verificando output real…</span>
               </div>
             ) : !hasOutput ? (
-              /* ── Sin output real ── */
+              /* -- Sin output real -- */
               <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-6 text-center space-y-3">
                 <Shield className="w-8 h-8 text-white/10 mx-auto" />
                 <div>
@@ -362,42 +362,8 @@ export default function QAPage() {
                 </button>
               </div>
             ) : (
-              /* ── Con output real ── */
+              /* -- Con output real -- */
               <>
-                <div className={cn(
-                  "bg-[#0d1629] border rounded-sm p-4",
-                  editorialAssessment.tone === "danger" && "border-red-500/25",
-                  editorialAssessment.tone === "warning" && "border-amber-500/20",
-                  editorialAssessment.tone === "success" && "border-emerald-500/20",
-                  editorialAssessment.tone === "neutral" && "border-white/[0.08]"
-                )}>
-                  <div className="flex items-start gap-3">
-                    <div className={cn(
-                      "w-8 h-8 rounded-sm flex items-center justify-center shrink-0 border",
-                      editorialAssessment.tone === "danger" && "bg-red-500/10 border-red-500/25 text-red-300",
-                      editorialAssessment.tone === "warning" && "bg-amber-500/10 border-amber-500/20 text-amber-300",
-                      editorialAssessment.tone === "success" && "bg-emerald-500/10 border-emerald-500/20 text-emerald-300",
-                      editorialAssessment.tone === "neutral" && "bg-white/[0.03] border-white/[0.08] text-white/35"
-                    )}>
-                      <Shield className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Dictamen editorial</p>
-                      <p className="text-sm font-black text-white/80 mt-1">{editorialAssessment.verdict}</p>
-                      <div className="grid md:grid-cols-2 gap-3 mt-3">
-                        <div className="bg-white/[0.02] border border-white/[0.05] rounded-sm p-3">
-                          <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Riesgo</p>
-                          <p className="text-[10px] text-white/55 leading-relaxed mt-1">{editorialAssessment.risk}</p>
-                        </div>
-                        <div className="bg-white/[0.02] border border-white/[0.05] rounded-sm p-3">
-                          <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Siguiente accion</p>
-                          <p className="text-[10px] text-white/55 leading-relaxed mt-1">{editorialAssessment.next}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Bloque de bloqueo — visible cuando hay placeholder */}
                 {isPlaceholder && (
                   <div className="bg-red-950/30 border border-red-500/30 rounded-sm px-4 py-3 flex items-start gap-3">
@@ -615,10 +581,10 @@ export default function QAPage() {
                             : "bg-amber-500/10 border-amber-500/25 text-amber-300"
                       )}>
                         {isPlaceholder
-                          ? "🔴 Bloqueado — upper visual no premium"
+                          ? "Bloqueado - upper visual no premium"
                           : realQA.verdict === "approved"
-                            ? "✓ Lista para aprobación editorial"
-                            : "⚠ Requiere revisión visual antes de aprobar"}
+                            ? "Lista para aprobación editorial"
+                            : "Requiere revisión visual antes de aprobar"}
                       </div>
                     </div>
                   ) : (
@@ -627,6 +593,40 @@ export default function QAPage() {
                       <p className="text-[9px] text-white/25">QA report no disponible — genera la página primero</p>
                     </div>
                   )}
+                </div>
+
+                <div className={cn(
+                  "bg-[#0d1629] border rounded-sm p-4",
+                  editorialAssessment.tone === "danger" && "border-red-500/25",
+                  editorialAssessment.tone === "warning" && "border-amber-500/20",
+                  editorialAssessment.tone === "success" && "border-emerald-500/20",
+                  editorialAssessment.tone === "neutral" && "border-white/[0.08]"
+                )}>
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      "w-8 h-8 rounded-sm flex items-center justify-center shrink-0 border",
+                      editorialAssessment.tone === "danger" && "bg-red-500/10 border-red-500/25 text-red-300",
+                      editorialAssessment.tone === "warning" && "bg-amber-500/10 border-amber-500/20 text-amber-300",
+                      editorialAssessment.tone === "success" && "bg-emerald-500/10 border-emerald-500/20 text-emerald-300",
+                      editorialAssessment.tone === "neutral" && "bg-white/[0.03] border-white/[0.08] text-white/35"
+                    )}>
+                      <Shield className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Dictamen editorial</p>
+                      <p className="text-sm font-black text-white/80 mt-1">{editorialAssessment.verdict}</p>
+                      <div className="grid md:grid-cols-2 gap-3 mt-3">
+                        <div className="bg-white/[0.02] border border-white/[0.05] rounded-sm p-3">
+                          <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Riesgo</p>
+                          <p className="text-[10px] text-white/55 leading-relaxed mt-1">{editorialAssessment.risk}</p>
+                        </div>
+                        <div className="bg-white/[0.02] border border-white/[0.05] rounded-sm p-3">
+                          <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Siguiente accion</p>
+                          <p className="text-[10px] text-white/55 leading-relaxed mt-1">{editorialAssessment.next}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Checklist de defectos */}
@@ -682,6 +682,7 @@ export default function QAPage() {
     </Layout>
   );
 }
+
 
 
 
