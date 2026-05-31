@@ -657,6 +657,8 @@ export default function ComposerPage() {
   const [generationFeedback, setGenerationFeedback] = useState<string | null>(null);
   const [qaDelta, setQaDelta] = useState<{ before: number | null; after: number | null; delta: number | null } | null>(null);
   const [autofixFeedback, setAutofixFeedback] = useState<string | null>(null);
+  const [quickActionBusy, setQuickActionBusy] = useState<string | null>(null);
+  const [quickActionFeedback, setQuickActionFeedback] = useState<string | null>(null);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [editorialReadOpen, setEditorialReadOpen] = useState(false);
 
@@ -763,6 +765,8 @@ export default function ComposerPage() {
     setGenerationFeedback(null);
     setQaDelta(null);
     setAutofixFeedback(null);
+    setQuickActionBusy(null);
+    setQuickActionFeedback(null);
     setActionsOpen(false);
     setEditorialReadOpen(false);
   }, [pageIdFromRoute]);
@@ -909,57 +913,62 @@ export default function ComposerPage() {
     });
   }
 
-  function applyComposerAction(action: "compact_rail" | "expand_context" | "boost_technical" | "enforce_four_cards") {
-    updateDraftBlocks((blocks) => {
-      let next = [...blocks];
-      if (action === "compact_rail") {
+  function applyComposerActionToBlocks(
+    action: "compact_rail" | "expand_context" | "boost_technical" | "enforce_four_cards",
+    blocks: ComposerBlock[],
+  ): ComposerBlock[] {
+    let next = [...blocks];
+    if (action === "compact_rail") {
+      next = next.map((block) => {
+        if (block.type === "exam_traps") return { ...block, variant: "compact" };
+        if (block.type === "autocheck") return { ...block, variant: "short" };
+        return block;
+      });
+    }
+    if (action === "expand_context") {
+      next = next.map((block) => (block.type === "context_deck" ? { ...block, variant: "expanded" } : block));
+    }
+    if (action === "boost_technical") {
+      const hasTechnical = next.some((block) => TECHNICAL_BLOCK_TYPES.includes(block.type));
+      if (!hasTechnical) {
+        next.push(
+          makeBlock("diagram_panel", "two_column", 55, {
+            modules: pageSummary?.visualModules?.slice(0, 2) ?? [],
+          }),
+        );
+      } else {
         next = next.map((block) => {
-          if (block.type === "exam_traps") return { ...block, variant: "compact" };
-          if (block.type === "autocheck") return { ...block, variant: "short" };
+          if (block.type === "diagram_panel" && block.variant !== "multi_step") {
+            return { ...block, variant: "multi_step" };
+          }
           return block;
         });
       }
-      if (action === "expand_context") {
-        next = next.map((block) => (block.type === "context_deck" ? { ...block, variant: "expanded" } : block));
-      }
-      if (action === "boost_technical") {
-        const hasTechnical = next.some((block) => TECHNICAL_BLOCK_TYPES.includes(block.type));
-        if (!hasTechnical) {
-          next.push(
-            makeBlock("diagram_panel", "two_column", 55, {
-              modules: pageSummary?.visualModules?.slice(0, 2) ?? [],
-            })
-          );
-        } else {
-          next = next.map((block) => {
-            if (block.type === "diagram_panel" && block.variant !== "multi_step") {
-              return { ...block, variant: "multi_step" };
-            }
-            return block;
-          });
-        }
-      }
-      if (action === "enforce_four_cards") {
-        const intro = next.filter((block) => ["hero_title", "context_deck", "guide_question"].includes(block.type));
-        const examTail = next.filter((block) => ["exam_traps", "autocheck", "exam_signal"].includes(block.type));
-        const technicalByType = new Map(
-          next.filter((block) => TECHNICAL_BLOCK_TYPES.includes(block.type)).map((block) => [block.type, block]),
-        );
-        const modules = pageSummary?.visualModules ?? [];
-        const rebuiltTechnical: ComposerBlock[] = [
-          technicalByType.get("diagram_panel") ??
-            makeBlock("diagram_panel", "two_column", 40, { modules: modules.slice(0, 2) }),
-          technicalByType.get("comparison_panel") ??
-            makeBlock("comparison_panel", "sku_matrix", 50, { modules: modules.slice(0, 3) }),
-          technicalByType.get("decision_tree") ??
-            makeBlock("decision_tree", "binary_path", 60, { modules: modules.slice(1, 3) }),
-          technicalByType.get("map_panel") ??
-            makeBlock("map_panel", "replication_path", 70, { modules: modules.slice(2, 4) }),
-        ];
-        next = [...intro, ...rebuiltTechnical, ...examTail];
-      }
-      return normalizePriorities(next);
-    });
+    }
+    if (action === "enforce_four_cards") {
+      const intro = next.filter((block) => ["hero_title", "context_deck", "guide_question"].includes(block.type));
+      const examTail = next.filter((block) => ["exam_traps", "autocheck", "exam_signal"].includes(block.type));
+      const technicalByType = new Map(
+        next.filter((block) => TECHNICAL_BLOCK_TYPES.includes(block.type)).map((block) => [block.type, block]),
+      );
+      const modules = pageSummary?.visualModules ?? [];
+      const rebuiltTechnical: ComposerBlock[] = [
+        technicalByType.get("diagram_panel")
+          ?? makeBlock("diagram_panel", "two_column", 40, { modules: modules.slice(0, 2) }),
+        technicalByType.get("comparison_panel")
+          ?? makeBlock("comparison_panel", "sku_matrix", 50, { modules: modules.slice(0, 3) }),
+        technicalByType.get("decision_tree")
+          ?? makeBlock("decision_tree", "binary_path", 60, { modules: modules.slice(1, 3) }),
+        technicalByType.get("map_panel")
+          ?? makeBlock("map_panel", "replication_path", 70, { modules: modules.slice(2, 4) }),
+      ];
+      next = [...intro, ...rebuiltTechnical, ...examTail];
+    }
+    return normalizePriorities(next);
+  }
+
+  function applyComposerAction(action: "compact_rail" | "expand_context" | "boost_technical" | "enforce_four_cards") {
+    updateDraftBlocks((blocks) => applyComposerActionToBlocks(action, blocks));
   }
 
   async function handleAutofixComposer() {
@@ -1062,42 +1071,82 @@ export default function ComposerPage() {
     }
   }
 
+  async function generateFromDraft(
+    draft: ComposerProposal["draft"],
+    note: string,
+  ): Promise<void> {
+    if (!proposal) return;
+    const saved = await saveComposerDraft(proposal.pageId, {
+      pageNumber: draft.pageNumber,
+      family: draft.family,
+      transitionLevel: proposal.recommendedTransition.level,
+      draft,
+      note,
+    });
+    setDraftRecord(saved);
+
+    const response = await fetch("/api/studio/generate-visual-atlas-page", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...composerAuthHeaders() },
+      body: JSON.stringify({
+        certificationId: "ai-200",
+        pageId: proposal.pageId,
+        useComposerDraft: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await readJsonOrThrow<ComposerGenerationResponse>(response, "generate-from-composer");
+      throw new Error(err.error ?? err.detail ?? `No se pudo generar (${response.status})`);
+    }
+
+    const data = await readJsonOrThrow<ComposerGenerationResponse>(response, "generate-from-composer");
+    if (data.qaDelta) {
+      setQaDelta(data.qaDelta);
+    }
+    await refreshLockedArtifacts(proposal.pageId);
+    setCanvasMode("real");
+  }
+
+  async function runShortcutAction(
+    action: "compact_rail" | "expand_context" | "boost_technical" | "enforce_four_cards",
+    label: string,
+  ) {
+    if (!editableDraft || !proposal || quickActionBusy || generatingFromComposer) return;
+    setQuickActionBusy(action);
+    setQuickActionFeedback(null);
+    setGenerationFeedback(null);
+    setQaDelta(null);
+    try {
+      const beforeSerialized = JSON.stringify(editableDraft.blocks);
+      const updatedBlocks = applyComposerActionToBlocks(action, editableDraft.blocks);
+      const nextDraft = recalculateDraft({ ...editableDraft, blocks: updatedBlocks });
+      const afterSerialized = JSON.stringify(nextDraft.blocks);
+
+      if (beforeSerialized === afterSerialized) {
+        setQuickActionFeedback(`Atajo "${label}" no produjo cambios efectivos en esta pagina.`);
+        return;
+      }
+
+      setEditableDraft(nextDraft);
+      setGeneratingFromComposer(true);
+      await generateFromDraft(nextDraft, `Atajo operativo aplicado: ${label}`);
+      setQuickActionFeedback(`Atajo "${label}" aplicado + regeneracion completada.`);
+    } catch (err) {
+      setQuickActionFeedback(err instanceof Error ? err.message : `Fallo al ejecutar atajo "${label}".`);
+    } finally {
+      setGeneratingFromComposer(false);
+      setQuickActionBusy(null);
+    }
+  }
+
   async function handleGenerateWithDraft() {
     if (!proposal || !editableDraft || generatingFromComposer) return;
     setGeneratingFromComposer(true);
     setGenerationFeedback(null);
     setQaDelta(null);
     try {
-      const saved = await saveComposerDraft(proposal.pageId, {
-        pageNumber: editableDraft.pageNumber,
-        family: editableDraft.family,
-        transitionLevel: proposal.recommendedTransition.level,
-        draft: editableDraft,
-        note: "Draft aplicado para generacion desde Composer",
-      });
-      setDraftRecord(saved);
-
-      const response = await fetch("/api/studio/generate-visual-atlas-page", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...composerAuthHeaders() },
-        body: JSON.stringify({
-          certificationId: "ai-200",
-          pageId: proposal.pageId,
-          useComposerDraft: true,
-        }),
-      });
-
-      if (!response.ok) {
-        const err = await readJsonOrThrow<ComposerGenerationResponse>(response, "generate-from-composer");
-        throw new Error(err.error ?? err.detail ?? `No se pudo generar (${response.status})`);
-      }
-
-      const data = await readJsonOrThrow<ComposerGenerationResponse>(response, "generate-from-composer");
-      if (data.qaDelta) {
-        setQaDelta(data.qaDelta);
-      }
-      await refreshLockedArtifacts(proposal.pageId);
-      setCanvasMode("real");
+      await generateFromDraft(editableDraft, "Draft aplicado para generacion desde Composer");
       setGenerationFeedback("Generacion completada desde Composer y QA recargado.");
     } catch (err) {
       setGenerationFeedback(err instanceof Error ? err.message : "No se pudo generar desde Composer");
@@ -1441,22 +1490,25 @@ export default function ComposerPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => applyComposerAction("compact_rail")}
-                    className="px-3 py-1.5 rounded-sm border border-amber-400/25 bg-amber-500/10 text-[10px] font-semibold text-amber-100 hover:bg-amber-500/15 transition-colors"
+                    onClick={() => runShortcutAction("compact_rail", "Compactar rail")}
+                    disabled={Boolean(quickActionBusy) || generatingFromComposer}
+                    className="px-3 py-1.5 rounded-sm border border-amber-400/25 bg-amber-500/10 text-[10px] font-semibold text-amber-100 hover:bg-amber-500/15 transition-colors disabled:opacity-55 disabled:cursor-not-allowed"
                   >
                     Compactar rail inferior
                   </button>
                   <button
                     type="button"
-                    onClick={() => applyComposerAction("expand_context")}
-                    className="px-3 py-1.5 rounded-sm border border-sky-400/25 bg-sky-500/10 text-[10px] font-semibold text-sky-100 hover:bg-sky-500/15 transition-colors"
+                    onClick={() => runShortcutAction("expand_context", "Expandir contexto")}
+                    disabled={Boolean(quickActionBusy) || generatingFromComposer}
+                    className="px-3 py-1.5 rounded-sm border border-sky-400/25 bg-sky-500/10 text-[10px] font-semibold text-sky-100 hover:bg-sky-500/15 transition-colors disabled:opacity-55 disabled:cursor-not-allowed"
                   >
                     Expandir contexto
                   </button>
                   <button
                     type="button"
-                    onClick={() => applyComposerAction("boost_technical")}
-                    className="px-3 py-1.5 rounded-sm border border-emerald-400/25 bg-emerald-500/10 text-[10px] font-semibold text-emerald-100 hover:bg-emerald-500/15 transition-colors"
+                    onClick={() => runShortcutAction("boost_technical", "Reforzar nucleo tecnico")}
+                    disabled={Boolean(quickActionBusy) || generatingFromComposer}
+                    className="px-3 py-1.5 rounded-sm border border-emerald-400/25 bg-emerald-500/10 text-[10px] font-semibold text-emerald-100 hover:bg-emerald-500/15 transition-colors disabled:opacity-55 disabled:cursor-not-allowed"
                   >
                     Elevar nucleo tecnico
                   </button>
@@ -1752,33 +1804,40 @@ export default function ComposerPage() {
                       <div className="space-y-2 mt-2">
                         <button
                           type="button"
-                          onClick={() => applyComposerAction("compact_rail")}
-                          className="w-full h-8 rounded-sm border border-amber-400/25 bg-amber-500/10 text-[9px] font-semibold text-amber-100 hover:bg-amber-500/15"
+                          onClick={() => runShortcutAction("compact_rail", "Compactar rail")}
+                          disabled={Boolean(quickActionBusy) || generatingFromComposer}
+                          className="w-full h-8 rounded-sm border border-amber-400/25 bg-amber-500/10 text-[9px] font-semibold text-amber-100 hover:bg-amber-500/15 disabled:opacity-55 disabled:cursor-not-allowed"
                         >
-                          Compactar rail
+                          {quickActionBusy === "compact_rail" ? "Aplicando..." : "Compactar rail"}
                         </button>
                         <button
                           type="button"
-                          onClick={() => applyComposerAction("expand_context")}
-                          className="w-full h-8 rounded-sm border border-sky-400/25 bg-sky-500/10 text-[9px] font-semibold text-sky-100 hover:bg-sky-500/15"
+                          onClick={() => runShortcutAction("expand_context", "Expandir contexto")}
+                          disabled={Boolean(quickActionBusy) || generatingFromComposer}
+                          className="w-full h-8 rounded-sm border border-sky-400/25 bg-sky-500/10 text-[9px] font-semibold text-sky-100 hover:bg-sky-500/15 disabled:opacity-55 disabled:cursor-not-allowed"
                         >
-                          Expandir contexto
+                          {quickActionBusy === "expand_context" ? "Aplicando..." : "Expandir contexto"}
                         </button>
                         <button
                           type="button"
-                          onClick={() => applyComposerAction("boost_technical")}
-                          className="w-full h-8 rounded-sm border border-emerald-400/25 bg-emerald-500/10 text-[9px] font-semibold text-emerald-100 hover:bg-emerald-500/15"
+                          onClick={() => runShortcutAction("boost_technical", "Reforzar nucleo tecnico")}
+                          disabled={Boolean(quickActionBusy) || generatingFromComposer}
+                          className="w-full h-8 rounded-sm border border-emerald-400/25 bg-emerald-500/10 text-[9px] font-semibold text-emerald-100 hover:bg-emerald-500/15 disabled:opacity-55 disabled:cursor-not-allowed"
                         >
-                          Reforzar nucleo tecnico
+                          {quickActionBusy === "boost_technical" ? "Aplicando..." : "Reforzar nucleo tecnico"}
                         </button>
                         <button
                           type="button"
-                          onClick={() => applyComposerAction("enforce_four_cards")}
-                          className="w-full h-8 rounded-sm border border-violet-400/25 bg-violet-500/10 text-[9px] font-semibold text-violet-100 hover:bg-violet-500/15"
+                          onClick={() => runShortcutAction("enforce_four_cards", "Estructura 4 tarjetas")}
+                          disabled={Boolean(quickActionBusy) || generatingFromComposer}
+                          className="w-full h-8 rounded-sm border border-violet-400/25 bg-violet-500/10 text-[9px] font-semibold text-violet-100 hover:bg-violet-500/15 disabled:opacity-55 disabled:cursor-not-allowed"
                         >
-                          Estructura 4 tarjetas
+                          {quickActionBusy === "enforce_four_cards" ? "Aplicando..." : "Estructura 4 tarjetas"}
                         </button>
                       </div>
+                      {quickActionFeedback ? (
+                        <p className="text-[9px] text-cyan-200/85 mt-2 leading-relaxed">{quickActionFeedback}</p>
+                      ) : null}
                     </div>
 
                     <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">

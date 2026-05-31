@@ -21,7 +21,7 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
     guideColor: "#0969DA",
     trapColor: "#D92D20",
     gridRows: "34px 170px 42px 872px 34px",
-    bodyRows: "584px 1fr",
+    bodyRows: "646px 1fr",
   },
   chrome: {
     topbar: {

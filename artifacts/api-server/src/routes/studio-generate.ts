@@ -47,6 +47,16 @@ function pickBlock(blocks: Array<Record<string, unknown>>, blockType: string): R
   return blocks.find((block) => block.type === blockType) ?? null;
 }
 
+function compactText(value: string, maxChars: number): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxChars) return normalized;
+  const firstSentence = normalized.match(/^.{1,220}?[.!?](\s|$)/)?.[0]?.trim();
+  if (firstSentence && firstSentence.length >= Math.floor(maxChars * 0.55)) {
+    return firstSentence.slice(0, maxChars).trim();
+  }
+  return `${normalized.slice(0, maxChars).trim()}...`;
+}
+
 function mergeComposerDraftIntoSeed(seed: VisualAtlasPageData, draftPayload: unknown): VisualAtlasPageData {
   const blocks = readComposerBlocks(draftPayload);
   if (!blocks.length) return seed;
@@ -55,13 +65,24 @@ function mergeComposerDraftIntoSeed(seed: VisualAtlasPageData, draftPayload: unk
 
   const contextBlock = pickBlock(blocks, "context_deck");
   const contextValue = asString(asRecord(contextBlock?.content)?.context);
+  const contextVariant = asString(contextBlock?.variant);
   if (contextValue) next.context = contextValue;
+  if (contextVariant === "expanded") {
+    const appendix = [
+      next.traps[0]?.wrong ? `Prioriza ${next.traps[0].wrong.toLowerCase()}.` : null,
+      next.guideQuestion ? `La pregunta guia orienta la decision de examen.` : null,
+    ].filter(Boolean).join(" ");
+    if (appendix && next.context.length < 280) {
+      next.context = `${next.context} ${appendix}`.trim();
+    }
+  }
 
   const guideBlock = pickBlock(blocks, "guide_question");
   const guideValue = asString(asRecord(guideBlock?.content)?.question);
   if (guideValue) next.guideQuestion = guideValue;
 
   const trapsBlock = pickBlock(blocks, "exam_traps");
+  const trapsVariant = asString(trapsBlock?.variant);
   const trapsRaw = asRecord(trapsBlock?.content)?.traps;
   if (Array.isArray(trapsRaw)) {
     const parsed = trapsRaw
@@ -74,11 +95,14 @@ function mergeComposerDraftIntoSeed(seed: VisualAtlasPageData, draftPayload: unk
       .filter((item) => item.wrong.length > 0 && item.correction.length > 0)
       .slice(0, 3);
     if (parsed.length > 0) {
-      next.traps = parsed;
+      next.traps = trapsVariant === "compact"
+        ? parsed.map((item) => ({ ...item, correction: compactText(item.correction, 118) }))
+        : parsed;
     }
   }
 
   const autocheckBlock = pickBlock(blocks, "autocheck");
+  const autocheckVariant = asString(autocheckBlock?.variant);
   const autocheckContent = asRecord(autocheckBlock?.content);
   if (autocheckContent) {
     const question = asString(autocheckContent.question);
@@ -101,10 +125,56 @@ function mergeComposerDraftIntoSeed(seed: VisualAtlasPageData, draftPayload: unk
       ...seed.autocheck,
       question: question ?? seed.autocheck.question,
       options: options.length >= 2 ? options : seed.autocheck.options,
-      explanation: explanation ?? seed.autocheck.explanation,
-      discardNotes: discardNotes.length > 0 ? discardNotes : seed.autocheck.discardNotes,
+      explanation: autocheckVariant === "short"
+        ? compactText(explanation ?? seed.autocheck.explanation, 140)
+        : (explanation ?? seed.autocheck.explanation),
+      discardNotes: autocheckVariant === "short"
+        ? (discardNotes.length > 0 ? discardNotes.slice(0, 1) : seed.autocheck.discardNotes.slice(0, 1))
+        : (discardNotes.length > 0 ? discardNotes : seed.autocheck.discardNotes),
       correctOption,
     };
+  }
+
+  const technicalBlocks = blocks
+    .filter((block) => {
+      const type = asString(block.type);
+      return type === "diagram_panel" || type === "comparison_panel" || type === "decision_tree" || type === "map_panel";
+    })
+    .sort((a, b) => (asFiniteNumber(a.priority) ?? 999) - (asFiniteNumber(b.priority) ?? 999));
+  const moduleCandidates = technicalBlocks
+    .flatMap((block) => {
+      const modules = asRecord(block.content)?.modules;
+      if (!Array.isArray(modules)) return [];
+      return modules
+        .map((item) => asRecord(item))
+        .filter((item): item is Record<string, unknown> => Boolean(item))
+        .map((item) => ({
+          num: asString(item.num) ?? "",
+          title: asString(item.title) ?? "",
+          description: asString(item.description) ?? "",
+        }))
+        .filter((item) => item.title.length > 0);
+    });
+  if (moduleCandidates.length > 0) {
+    const unique = new Map<string, { title: string; description: string }>();
+    for (const moduleItem of moduleCandidates) {
+      const key = moduleItem.title.toLowerCase();
+      if (!unique.has(key)) {
+        unique.set(key, {
+          title: moduleItem.title,
+          description: moduleItem.description || "Bloque tecnico de referencia para examen.",
+        });
+      }
+      if (unique.size >= 4) break;
+    }
+    const remapped = Array.from(unique.values()).slice(0, 4).map((item, idx) => ({
+      num: String(idx + 1).padStart(2, "0"),
+      title: item.title,
+      description: item.description,
+    }));
+    if (remapped.length === 4) {
+      next.visualModules = remapped;
+    }
   }
 
   return next;

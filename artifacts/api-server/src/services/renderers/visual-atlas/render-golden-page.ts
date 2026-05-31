@@ -70,9 +70,9 @@ function renderHeroIcon(data: VisualAtlasPageData): string {
 function renderGuideIcon(size: number): string {
   const iconSize = Math.max(14, size - 8);
   return `<svg width="${iconSize}" height="${iconSize}" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <circle cx="12" cy="12" r="8.5" stroke="white" stroke-width="2.2"/>
-    <circle cx="12" cy="12" r="2.3" fill="white"/>
-    <path d="M12 1.8v3.2M12 19v3.2M1.8 12H5M19 12h3.2" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+    <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2"/>
+    <path d="M9.3 9.2c0-1.7 1.3-3 3.1-3 1.7 0 3.1 1.2 3.1 2.8 0 1.1-.6 1.9-1.5 2.4-.9.5-1.7 1-1.7 2.1v.3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="12" cy="17.7" r="1.2" fill="white"/>
   </svg>`;
 }
 
