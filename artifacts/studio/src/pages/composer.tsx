@@ -59,6 +59,19 @@ interface ComposerGenerationResponse {
   detail?: string;
 }
 
+interface ComposerActionLog {
+  id: string;
+  kind: "shortcut" | "generate" | "autofix" | "rollback";
+  action: string;
+  status: "ok" | "error" | "info";
+  beforeTotal: number | null;
+  afterTotal: number | null;
+  delta: number | null;
+  changedBlocks: number;
+  note: string;
+  at: string;
+}
+
 type ShortcutAction = "compact_rail" | "expand_context" | "boost_technical" | "enforce_four_cards";
 
 const TECHNICAL_BLOCK_TYPES = ["diagram_panel", "comparison_panel", "decision_tree", "map_panel"];
@@ -406,6 +419,12 @@ function scoreFromLockedDim(key: string, value: number): string {
   return `${key}: requiere intervencion editorial prioritaria.`;
 }
 
+function formatLogTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "--:--";
+  return date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+}
+
 function lockedActionHint(key: string): string {
   switch (key) {
     case "art_direction":
@@ -657,14 +676,27 @@ export default function ComposerPage() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [generatingFromComposer, setGeneratingFromComposer] = useState(false);
   const [generationFeedback, setGenerationFeedback] = useState<string | null>(null);
+  const [pipelineBusy, setPipelineBusy] = useState(false);
   const [qaDelta, setQaDelta] = useState<{ before: number | null; after: number | null; delta: number | null } | null>(null);
   const [autofixFeedback, setAutofixFeedback] = useState<string | null>(null);
   const [quickActionBusy, setQuickActionBusy] = useState<string | null>(null);
   const [quickActionFeedback, setQuickActionFeedback] = useState<string | null>(null);
   const [lastShortcutSnapshot, setLastShortcutSnapshot] = useState<ComposerProposal["draft"] | null>(null);
   const [lastShortcutLabel, setLastShortcutLabel] = useState<string | null>(null);
+  const [actionLogs, setActionLogs] = useState<ComposerActionLog[]>([]);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [editorialReadOpen, setEditorialReadOpen] = useState(false);
+
+  function pushActionLog(entry: Omit<ComposerActionLog, "id" | "at">) {
+    setActionLogs((current) => [
+      {
+        ...entry,
+        id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+        at: new Date().toISOString(),
+      },
+      ...current,
+    ].slice(0, 12));
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -767,12 +799,14 @@ export default function ComposerPage() {
 
   useEffect(() => {
     setGenerationFeedback(null);
+    setPipelineBusy(false);
     setQaDelta(null);
     setAutofixFeedback(null);
     setQuickActionBusy(null);
     setQuickActionFeedback(null);
     setLastShortcutSnapshot(null);
     setLastShortcutLabel(null);
+    setActionLogs([]);
     setActionsOpen(false);
     setEditorialReadOpen(false);
   }, [pageIdFromRoute]);
@@ -870,6 +904,55 @@ export default function ComposerPage() {
     }
     return null;
   }, [benchmark, projectedGap]);
+  const decisionFlow = useMemo(() => {
+    const step1Done = technicalBlockCount >= 4;
+    const step2Done = (projectedGap ?? 9.5) <= 0.6;
+    const step3Done = composerReadiness.serverAligned && composerReadiness.hasRealOutput;
+    const currentStep = !step1Done ? 1 : !step2Done ? 2 : !step3Done ? 3 : 4;
+    return {
+      currentStep,
+      steps: [
+        {
+          id: 1,
+          title: "Estructura técnica",
+          done: step1Done,
+          detail: step1Done ? "Núcleo técnico consolidado (4 tarjetas)." : `Faltan tarjetas técnicas (${technicalBlockCount}/4).`,
+        },
+        {
+          id: 2,
+          title: "Brecha editorial",
+          done: step2Done,
+          detail: step2Done ? "Brecha <= 0.6 hacia 9.5." : `Brecha actual ${projectedGap?.toFixed(1) ?? "-"} (objetivo <= 0.6).`,
+        },
+        {
+          id: 3,
+          title: "Consolidación QA",
+          done: step3Done,
+          detail: step3Done
+            ? "Composer y QA servidor alineados."
+            : "Genera y valida QA para consolidar trazabilidad final.",
+        },
+      ],
+    };
+  }, [technicalBlockCount, projectedGap, composerReadiness.serverAligned, composerReadiness.hasRealOutput]);
+  const shortcutImpact = useMemo(() => {
+    if (!lastShortcutSnapshot || !editableDraft) return null;
+    const beforeIds = lastShortcutSnapshot.blocks.map((block) => block.id);
+    const afterIds = editableDraft.blocks.map((block) => block.id);
+    const moved = afterIds.filter((id, index) => beforeIds[index] !== id).length;
+    const beforePlan = computeSpacePlan(lastShortcutSnapshot.blocks);
+    const afterPlan = computeSpacePlan(editableDraft.blocks);
+    const railDelta = afterPlan.examShare - beforePlan.examShare;
+    const technicalDelta = afterPlan.technicalShare - beforePlan.technicalShare;
+    const introDelta = afterPlan.introShare - beforePlan.introShare;
+    return {
+      moved,
+      railDelta,
+      technicalDelta,
+      introDelta,
+      label: lastShortcutLabel ?? "último ajuste",
+    };
+  }, [lastShortcutSnapshot, editableDraft, lastShortcutLabel]);
 
   useEffect(() => {
     if (!selectedBlockId && sortedBlocks.length > 0) {
@@ -1005,6 +1088,7 @@ export default function ComposerPage() {
     if (!editableDraft) return;
     const actionsApplied: string[] = [];
     const beforeTotal = projectedQaScores?.total ?? null;
+    const beforeBlocks = editableDraft.blocks;
     let nextBlocks = [...editableDraft.blocks].sort((a, b) => a.priority - b.priority);
     const initialBenchmark = evaluateComposerBenchmark(nextBlocks);
     const checkById = new Map(initialBenchmark.checks.map((check) => [check.id, check]));
@@ -1063,6 +1147,16 @@ export default function ComposerPage() {
 
     if (actionsApplied.length === 0) {
       setAutofixFeedback("No hubo ajustes automaticos: el draft ya estaba dentro de los parametros premium.");
+      pushActionLog({
+        kind: "autofix",
+        action: "Autocorregir premium",
+        status: "info",
+        beforeTotal,
+        afterTotal: beforeTotal,
+        delta: 0,
+        changedBlocks: 0,
+        note: "Sin cambios efectivos.",
+      });
       return;
     }
     const afterLockedTechnicalAccuracy = lockedQa?.scores?.technical_accuracy;
@@ -1071,7 +1165,21 @@ export default function ComposerPage() {
       afterLockedTechnicalAccuracy == null ? null : normalizeQaScoreToTen(afterLockedTechnicalAccuracy),
     );
     const afterTotal = afterScores?.total ?? null;
+    const changedBlocks = nextDraft.blocks.filter((block, idx) => {
+      const prev = beforeBlocks[idx];
+      return !prev || prev.id !== block.id || prev.variant !== block.variant || prev.type !== block.type;
+    }).length;
     setAutofixFeedback(`Autocorreccion aplicada: ${actionsApplied.join(" | ")}.`);
+    pushActionLog({
+      kind: "autofix",
+      action: "Autocorregir premium",
+      status: "ok",
+      beforeTotal,
+      afterTotal,
+      delta: beforeTotal != null && afterTotal != null ? Number((afterTotal - beforeTotal).toFixed(1)) : null,
+      changedBlocks,
+      note: actionsApplied.join(" · "),
+    });
 
     try {
       await logComposerAutofix(pageIdFromRoute, {
@@ -1158,15 +1266,56 @@ export default function ComposerPage() {
 
       if (beforeSerialized === afterSerialized) {
         setQuickActionFeedback(`Atajo "${label}" no produjo cambios efectivos en esta pagina.`);
+        pushActionLog({
+          kind: "shortcut",
+          action: label,
+          status: "info",
+          beforeTotal: projectedQaScores?.total ?? null,
+          afterTotal: projectedQaScores?.total ?? null,
+          delta: 0,
+          changedBlocks: 0,
+          note: "Sin cambios en bloques.",
+        });
         return;
       }
 
+      const changedBlocks = nextDraft.blocks.filter((block, idx) => {
+        const prev = editableDraft.blocks[idx];
+        return !prev || prev.id !== block.id || prev.variant !== block.variant || prev.type !== block.type;
+      }).length;
+      const beforeTotal = projectedQaScores?.total ?? null;
+      const afterLockedTechnicalAccuracy = lockedQa?.scores?.technical_accuracy;
+      const afterScores = buildProjectedQaScores(
+        nextDraft,
+        afterLockedTechnicalAccuracy == null ? null : normalizeQaScoreToTen(afterLockedTechnicalAccuracy),
+      );
+      const afterTotal = afterScores.total;
       setEditableDraft(nextDraft);
       setGeneratingFromComposer(true);
       await generateFromDraft(nextDraft, `Atajo operativo aplicado: ${label}`);
       setQuickActionFeedback(`Atajo "${label}" aplicado + regeneracion completada.`);
+      pushActionLog({
+        kind: "shortcut",
+        action: label,
+        status: "ok",
+        beforeTotal,
+        afterTotal,
+        delta: beforeTotal != null ? Number((afterTotal - beforeTotal).toFixed(1)) : null,
+        changedBlocks,
+        note: "Aplicado y regenerado.",
+      });
     } catch (err) {
       setQuickActionFeedback(err instanceof Error ? err.message : `Fallo al ejecutar atajo "${label}".`);
+      pushActionLog({
+        kind: "shortcut",
+        action: label,
+        status: "error",
+        beforeTotal: projectedQaScores?.total ?? null,
+        afterTotal: null,
+        delta: null,
+        changedBlocks: 0,
+        note: err instanceof Error ? err.message : "Error no especificado",
+      });
     } finally {
       setGeneratingFromComposer(false);
       setQuickActionBusy(null);
@@ -1187,10 +1336,30 @@ export default function ComposerPage() {
         `Rollback operativo del ultimo atajo${lastShortcutLabel ? `: ${lastShortcutLabel}` : ""}`,
       );
       setQuickActionFeedback(`Rollback aplicado${lastShortcutLabel ? ` (${lastShortcutLabel})` : ""} y regenerado.`);
+      pushActionLog({
+        kind: "rollback",
+        action: "Rollback atajo",
+        status: "ok",
+        beforeTotal: projectedQaScores?.total ?? null,
+        afterTotal: null,
+        delta: null,
+        changedBlocks: restored.blocks.length,
+        note: lastShortcutLabel ? `Revertido: ${lastShortcutLabel}` : "Rollback aplicado",
+      });
       setLastShortcutSnapshot(null);
       setLastShortcutLabel(null);
     } catch (err) {
       setQuickActionFeedback(err instanceof Error ? err.message : "No se pudo revertir el ultimo atajo.");
+      pushActionLog({
+        kind: "rollback",
+        action: "Rollback atajo",
+        status: "error",
+        beforeTotal: projectedQaScores?.total ?? null,
+        afterTotal: null,
+        delta: null,
+        changedBlocks: 0,
+        note: err instanceof Error ? err.message : "Error no especificado",
+      });
     } finally {
       setGeneratingFromComposer(false);
     }
@@ -1204,10 +1373,95 @@ export default function ComposerPage() {
     try {
       await generateFromDraft(editableDraft, "Draft aplicado para generacion desde Composer");
       setGenerationFeedback("Generacion completada desde Composer y QA recargado.");
+      pushActionLog({
+        kind: "generate",
+        action: "Generar con draft",
+        status: "ok",
+        beforeTotal: projectedQaScores?.total ?? null,
+        afterTotal: projectedQaScores?.total ?? null,
+        delta: qaDelta?.delta ?? null,
+        changedBlocks: editableDraft.blocks.length,
+        note: "Generación ejecutada.",
+      });
     } catch (err) {
       setGenerationFeedback(err instanceof Error ? err.message : "No se pudo generar desde Composer");
+      pushActionLog({
+        kind: "generate",
+        action: "Generar con draft",
+        status: "error",
+        beforeTotal: projectedQaScores?.total ?? null,
+        afterTotal: null,
+        delta: null,
+        changedBlocks: 0,
+        note: err instanceof Error ? err.message : "Error no especificado",
+      });
     } finally {
       setGeneratingFromComposer(false);
+    }
+  }
+
+  async function handlePipelineToQa() {
+    if (!proposal || !editableDraft || generatingFromComposer || pipelineBusy) return;
+    setPipelineBusy(true);
+    setGeneratingFromComposer(true);
+    setGenerationFeedback(null);
+    setQaDelta(null);
+    try {
+      let workingDraft = editableDraft;
+      if (recommendedShortcut) {
+        const updatedBlocks = applyComposerActionToBlocks(recommendedShortcut.action, workingDraft.blocks);
+        const nextDraft = recalculateDraft({ ...workingDraft, blocks: updatedBlocks });
+        if (JSON.stringify(nextDraft.blocks) !== JSON.stringify(workingDraft.blocks)) {
+          setLastShortcutSnapshot(cloneDraftRecord(workingDraft));
+          setLastShortcutLabel(recommendedShortcut.label);
+          setEditableDraft(nextDraft);
+          workingDraft = nextDraft;
+          pushActionLog({
+            kind: "shortcut",
+            action: `Pipeline: ${recommendedShortcut.label}`,
+            status: "ok",
+            beforeTotal: projectedQaScores?.total ?? null,
+            afterTotal: buildProjectedQaScores(
+              nextDraft,
+              lockedQa?.scores?.technical_accuracy == null
+                ? null
+                : normalizeQaScoreToTen(lockedQa.scores.technical_accuracy),
+            ).total,
+            delta: null,
+            changedBlocks: nextDraft.blocks.length,
+            note: "Ajuste recomendado aplicado dentro del pipeline.",
+          });
+        }
+      }
+
+      await generateFromDraft(workingDraft, "Pipeline operativo Composer -> QA");
+      pushActionLog({
+        kind: "generate",
+        action: "Pipeline a QA",
+        status: "ok",
+        beforeTotal: projectedQaScores?.total ?? null,
+        afterTotal: projectedQaScores?.total ?? null,
+        delta: qaDelta?.delta ?? null,
+        changedBlocks: workingDraft.blocks.length,
+        note: "Generado y redirigido a QA editorial.",
+      });
+      setLocation(`/qa/${parseInt(pageIdFromRoute, 10)}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "No se pudo ejecutar pipeline a QA";
+      setGenerationFeedback(message);
+      pushActionLog({
+        kind: "generate",
+        action: "Pipeline a QA",
+        status: "error",
+        beforeTotal: projectedQaScores?.total ?? null,
+        afterTotal: null,
+        delta: null,
+        changedBlocks: 0,
+        note: message,
+      });
+    } finally {
+      setGeneratingFromComposer(false);
+      setPipelineBusy(false);
     }
   }
 
@@ -1832,6 +2086,49 @@ export default function ComposerPage() {
                       </div>
                     </div>
 
+                    <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">
+                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Asistente de decision</p>
+                      <p className="text-[9px] text-white/48 mt-1">Paso {Math.min(decisionFlow.currentStep, 3)} de 3 para cerrar la pagina.</p>
+                      <div className="space-y-2 mt-2">
+                        {decisionFlow.steps.map((step) => (
+                          <div
+                            key={step.id}
+                            className={cn(
+                              "rounded-sm border px-2.5 py-2",
+                              step.done
+                                ? "border-emerald-500/20 bg-emerald-500/8"
+                                : step.id === decisionFlow.currentStep
+                                  ? "border-amber-500/25 bg-amber-500/10"
+                                  : "border-white/[0.08] bg-white/[0.02]",
+                            )}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <p className={cn("text-[9px] font-semibold", step.done ? "text-emerald-200/90" : "text-white/80")}>
+                                {step.id}. {step.title}
+                              </p>
+                              <span className={cn(
+                                "text-[8px] font-bold",
+                                step.done ? "text-emerald-300" : step.id === decisionFlow.currentStep ? "text-amber-300" : "text-white/35",
+                              )}>
+                                {step.done ? "OK" : step.id === decisionFlow.currentStep ? "Ahora" : "Pendiente"}
+                              </span>
+                            </div>
+                            <p className="text-[9px] text-white/52 mt-1">{step.detail}</p>
+                          </div>
+                        ))}
+                      </div>
+                      {recommendedShortcut && (
+                        <button
+                          type="button"
+                          onClick={() => runShortcutAction(recommendedShortcut.action, recommendedShortcut.label)}
+                          disabled={Boolean(quickActionBusy) || generatingFromComposer}
+                          className="mt-2 w-full h-8 rounded-sm border border-amber-400/25 bg-amber-500/15 text-[9px] font-semibold text-amber-100 hover:bg-amber-500/22 disabled:opacity-55 disabled:cursor-not-allowed"
+                        >
+                          {quickActionBusy === recommendedShortcut.action ? "Aplicando recomendacion..." : `Aplicar ahora: ${recommendedShortcut.label}`}
+                        </button>
+                      )}
+                    </div>
+
                     <details className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3 group" open>
                       <summary className="list-none cursor-pointer flex items-center justify-between">
                         <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Bloque seleccionado</p>
@@ -1944,10 +2241,90 @@ export default function ComposerPage() {
 
                     <details className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3 group" open>
                       <summary className="list-none cursor-pointer flex items-center justify-between">
+                        <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Diff de impacto</p>
+                        <ChevronDown className="w-3.5 h-3.5 text-white/30 transition-transform group-open:rotate-180" />
+                      </summary>
+                      <div className="mt-2">
+                        {shortcutImpact ? (
+                          <div className="space-y-2">
+                            <p className="text-[9px] text-white/65">
+                              Último ajuste: <span className="text-white/85 font-semibold">{shortcutImpact.label}</span>
+                            </p>
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] px-2 py-2">
+                                <p className="text-[8px] text-white/30 uppercase tracking-widest">rail</p>
+                                <p className={cn("text-[10px] font-bold mt-1", shortcutImpact.railDelta <= 0 ? "text-emerald-300" : "text-amber-300")}>
+                                  {shortcutImpact.railDelta >= 0 ? "+" : ""}{shortcutImpact.railDelta}%
+                                </p>
+                              </div>
+                              <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] px-2 py-2">
+                                <p className="text-[8px] text-white/30 uppercase tracking-widest">técnico</p>
+                                <p className={cn("text-[10px] font-bold mt-1", shortcutImpact.technicalDelta >= 0 ? "text-emerald-300" : "text-amber-300")}>
+                                  {shortcutImpact.technicalDelta >= 0 ? "+" : ""}{shortcutImpact.technicalDelta}%
+                                </p>
+                              </div>
+                              <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] px-2 py-2">
+                                <p className="text-[8px] text-white/30 uppercase tracking-widest">movidos</p>
+                                <p className="text-[10px] font-bold mt-1 text-cyan-300">{shortcutImpact.moved}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-[9px] text-white/45">Aplica un atajo para ver impacto comparativo inmediato.</p>
+                        )}
+                      </div>
+                    </details>
+
+                    <details className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3 group">
+                      <summary className="list-none cursor-pointer flex items-center justify-between">
+                        <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Telemetría de acciones</p>
+                        <ChevronDown className="w-3.5 h-3.5 text-white/30 transition-transform group-open:rotate-180" />
+                      </summary>
+                      <div className="mt-2 space-y-2 max-h-44 overflow-y-auto pr-1">
+                        {actionLogs.length === 0 ? (
+                          <p className="text-[9px] text-white/45">Sin eventos en esta sesión de página.</p>
+                        ) : (
+                          actionLogs.map((log) => (
+                            <div key={log.id} className="rounded-sm border border-white/[0.08] bg-white/[0.02] px-2.5 py-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-[9px] font-semibold text-white/80">{log.action}</p>
+                                <span className={cn(
+                                  "text-[8px] font-bold",
+                                  log.status === "ok" ? "text-emerald-300" : log.status === "error" ? "text-red-300" : "text-amber-300",
+                                )}>
+                                  {log.status.toUpperCase()}
+                                </span>
+                              </div>
+                              <p className="text-[8px] text-white/45 mt-1">
+                                {formatLogTime(log.at)} · Δ score {log.delta == null ? "--" : `${log.delta >= 0 ? "+" : ""}${log.delta}`} · bloques {log.changedBlocks}
+                              </p>
+                              <p className="text-[8px] text-white/55 mt-1 line-clamp-2">{log.note}</p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </details>
+
+                    <details className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3 group" open>
+                      <summary className="list-none cursor-pointer flex items-center justify-between">
                         <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Salida y validacion</p>
                         <ChevronDown className="w-3.5 h-3.5 text-white/30 transition-transform group-open:rotate-180" />
                       </summary>
                       <div className="space-y-2 mt-2">
+                        <button
+                          type="button"
+                          onClick={handlePipelineToQa}
+                          disabled={!proposal || !editableDraft || generatingFromComposer || pipelineBusy}
+                          className={cn(
+                            "w-full h-8 rounded-sm border text-[9px] font-semibold flex items-center justify-center gap-1.5",
+                            !proposal || !editableDraft || generatingFromComposer || pipelineBusy
+                              ? "border-white/[0.08] bg-white/[0.02] text-white/35 cursor-not-allowed"
+                              : "border-violet-400/25 bg-violet-500/12 text-violet-100 hover:bg-violet-500/18",
+                          )}
+                        >
+                          {pipelineBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                          {pipelineBusy ? "Ejecutando pipeline..." : "Aplicar + generar + abrir QA"}
+                        </button>
                         <button
                           type="button"
                           onClick={handleGenerateWithDraft}
