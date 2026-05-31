@@ -29,6 +29,32 @@ export async function resolvePageByNumber(pageNumber: string) {
   return page ?? null;
 }
 
+export async function ensurePageByNumber(args: {
+  pageNumber: string;
+  title: string;
+  domain: string;
+  batch: string;
+  context?: string | null;
+}) {
+  const [existing] = await db.select().from(pagesTable).where(eq(pagesTable.pageNumber, args.pageNumber));
+  if (existing) return existing;
+
+  const [created] = await db
+    .insert(pagesTable)
+    .values({
+      pageNumber: args.pageNumber,
+      title: args.title,
+      domain: args.domain,
+      batch: args.batch,
+      status: "pending",
+      groundingStatus: "verified",
+      context: args.context ?? null,
+    })
+    .returning();
+
+  return created;
+}
+
 export async function insertEditorialEvent(args: {
   actionType: string;
   pageId?: number | null;

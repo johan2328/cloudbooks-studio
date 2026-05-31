@@ -4,9 +4,10 @@ import { join } from "path";
 import { db, pagesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
+import { getSeed } from "../data/page-seeds";
 import { checkApprovalGate } from "../services/qa/approval-gate";
 import { pageOutputDir } from "../services/export/paths";
-import { getAuthUserFromHeader, insertEditorialEvent, resolvePageByNumber } from "../services/studio/editorial-events";
+import { ensurePageByNumber, getAuthUserFromHeader, insertEditorialEvent, resolvePageByNumber } from "../services/studio/editorial-events";
 
 const router = Router();
 
@@ -42,19 +43,30 @@ router.post("/studio/approve-page/:pageId", async (req, res): Promise<void> => {
   const outDir = pageOutputDir(pageId);
   await writeFile(join(outDir, "approval.json"), JSON.stringify(approval, null, 2), "utf-8");
 
-  const pageRecord = await resolvePageByNumber(pageId);
-  if (pageRecord) {
-    await db.update(pagesTable).set({ status: "approved", updatedAt: new Date() }).where(eq(pagesTable.id, pageRecord.id));
-    await insertEditorialEvent({
-      actionType: "page_approved",
-      pageId: pageRecord.id,
-      pageNumber: pageRecord.pageNumber,
-      pageTitle: pageRecord.title,
-      userId: authUser.id,
-      userName: authUser.displayName,
-      result: "Pagina aprobada para exportacion con upper visual real",
+  const seedResult = getSeed(pageId);
+  let pageRecord = await resolvePageByNumber(pageId);
+  if (!pageRecord && seedResult.found) {
+    pageRecord = await ensurePageByNumber({
+      pageNumber: pageId,
+      title: seedResult.data.title,
+      domain: seedResult.data.domainLabel,
+      batch: `Batch ${seedResult.data.batch}`,
+      context: seedResult.data.context,
     });
   }
+  const eventPageTitle = pageRecord?.title ?? (seedResult.found ? seedResult.data.title : `Pagina ${pageId}`);
+  if (pageRecord) {
+    await db.update(pagesTable).set({ status: "approved", updatedAt: new Date() }).where(eq(pagesTable.id, pageRecord.id));
+  }
+  await insertEditorialEvent({
+    actionType: "page_approved",
+    pageId: pageRecord?.id ?? null,
+    pageNumber: pageRecord?.pageNumber ?? pageId,
+    pageTitle: eventPageTitle,
+    userId: authUser.id,
+    userName: authUser.displayName,
+    result: "Pagina aprobada para exportacion con upper visual real",
+  });
 
   req.log.info({ pageId, approvedAt: approval.approvedAt }, "Page approved - approval.json written");
   res.status(200).json({ success: true, pageId, approvedAt: approval.approvedAt });

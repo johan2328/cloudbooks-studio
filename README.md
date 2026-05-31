@@ -156,3 +156,17 @@ Meta editorial:
 
 - [docs/editorial-composer-spec.md](/C:/Users/jguerra/OneDrive%20-%20Datco%20S.A/Documentos/Editorial%20IA/cloudbooks-studio/docs/editorial-composer-spec.md)
 - [docs/editorial-composer-transition-and-red-team.md](/C:/Users/jguerra/OneDrive%20-%20Datco%20S.A/Documentos/Editorial%20IA/cloudbooks-studio/docs/editorial-composer-transition-and-red-team.md)
+- [docs/composer-market-state-2026-05-31.md](/C:/Users/jguerra/OneDrive%20-%20Datco%20S.A/Documentos/Editorial%20IA/cloudbooks-studio/docs/composer-market-state-2026-05-31.md)
+
+---
+
+## Benchmark visual (referencias de industria)
+
+Para elevar la interfaz del Studio sin perder foco editorial, Composer incorpora un benchmark operativo inspirado en patrones de sistemas abiertos:
+
+- [Microsoft Fluent UI](https://github.com/microsoft/fluentui)
+- [IBM Carbon Design System](https://github.com/carbon-design-system/carbon)
+- [Adobe React Spectrum](https://github.com/adobe/react-spectrum)
+- [GitHub Primer](https://github.com/primer/react)
+
+CloudBooks no copia estos sistemas tal cual: toma criterios de legibilidad, jerarquia, densidad y consistencia para convertirlos en reglas productivas del contrato visual.

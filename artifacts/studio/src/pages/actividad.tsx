@@ -34,6 +34,7 @@ const ACTION_ICONS: Record<ActionType, React.ComponentType<{ className?: string 
   asset_linked: Link2,
   asset_approved: Package,
   asset_replaced: RefreshCw,
+  composer_draft_saved: FileEdit,
 };
 
 const FILTER_OPTIONS: { value: ActionType | "all"; label: string }[] = [
@@ -51,6 +52,7 @@ const FILTER_OPTIONS: { value: ActionType | "all"; label: string }[] = [
   { value: "asset_linked", label: "Asset vinculado" },
   { value: "asset_approved", label: "Asset aprobado" },
   { value: "asset_replaced", label: "Asset reemplazado" },
+  { value: "composer_draft_saved", label: "Composer guardado" },
 ];
 
 const USER_FILTERS = ["Todos los usuarios", "Ana García", "Carlos Méndez", "Laura Vidal", "Sistema"];
@@ -61,7 +63,7 @@ export default function Actividad() {
   const [filterUser, setFilterUser] = useState("Todos los usuarios");
   const [search, setSearch] = useState("");
   const [serverLogs, setServerLogs] = useState<UserActionLog[] | null>(null);
-  const [serverActive, setServerActive] = useState(false);
+  const [serverReachable, setServerReachable] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("studio_token") ?? "";
@@ -72,16 +74,17 @@ export default function Actividad() {
       .then((data) => {
         if (data?.logs && Array.isArray(data.logs)) {
           setServerLogs(data.logs);
-          setServerActive(true);
+          setServerReachable(true);
         }
       })
       .catch(() => {
         setServerLogs(null);
-        setServerActive(false);
+        setServerReachable(false);
       });
   }, []);
 
-  const sourceLogs = serverLogs ?? state.actionLog;
+  const usingServerLogs = (serverLogs?.length ?? 0) > 0;
+  const sourceLogs = usingServerLogs ? (serverLogs ?? []) : state.actionLog;
 
   const logs = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -119,7 +122,7 @@ export default function Actividad() {
           </div>
           <h1 className="text-sm font-black text-white">Historial de actividad</h1>
           <p className="text-[10px] text-white/25 mt-0.5">
-            {serverActive
+            {serverReachable
               ? "Bitacora persistente del Studio sobre paginas, QA, aprobaciones y exportaciones."
               : "Fallback local de sesion mientras la bitacora persistente no este disponible en este runtime."}
           </p>
@@ -208,8 +211,10 @@ export default function Actividad() {
               <div className="divide-y divide-white/[0.03]">
                 <div className="px-6 py-3 bg-[#0d1629] border-b border-white/[0.04]">
                   <p className="text-[9px] text-amber-300/80">
-                    {serverActive
-                      ? "Leyendo eventos persistidos por el servidor. Este es el punto de partida para el control de cambios real."
+                    {serverReachable
+                      ? (usingServerLogs
+                          ? "Leyendo eventos persistidos por el servidor. Este es el punto de partida para el control de cambios real."
+                          : "Servidor accesible, pero sin eventos persistidos todavia. Mostrando fallback local para no perder trazabilidad.")
                       : "Estas viendo el fallback local del Studio. Sirve para operar, pero no sustituye una bitacora persistente."}
                   </p>
                 </div>
@@ -249,7 +254,7 @@ export default function Actividad() {
 
             <div className="px-6 py-4 border-t border-white/[0.04]">
               <p className="text-[9px] text-white/15">
-                {logs.length} entrada{logs.length !== 1 ? "s" : ""} - {serverActive ? "bitacora persistente activa" : "fallback local de sesion"}
+                {logs.length} entrada{logs.length !== 1 ? "s" : ""} - {usingServerLogs ? "bitacora persistente activa" : "fallback local de sesion"}
               </p>
             </div>
           </div>

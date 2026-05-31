@@ -3,7 +3,12 @@ import { useRoute, useLocation } from "wouter";
 import Layout from "@/components/Layout";
 import { cn, scoreColorDark } from "@/lib/utils";
 import { useStudio } from "@/lib/studio-store";
-import { fetchStudioCatalog, type StudioCatalogPage } from "@/lib/studio-api";
+import {
+  fetchComposerDraft,
+  fetchStudioCatalog,
+  type ComposerDraftRecord,
+  type StudioCatalogPage,
+} from "@/lib/studio-api";
 import {
   CheckCircle2, RotateCcw, AlertTriangle, ChevronLeft, ChevronRight, ChevronDown,
   Shield, Loader2, ExternalLink, XCircle, Download, FileText,
@@ -47,6 +52,49 @@ function scoreTenToHundred(raw: number): number {
   if (value < 0) value = 0;
   if (value > 10) value = 10;
   return Math.round(value * 10);
+}
+
+type ComposerProjectedScores = Record<string, number> & { total: number };
+
+function clampScore(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function roundOne(value: number): number {
+  return Number(value.toFixed(1));
+}
+
+function buildComposerProjectedScores(
+  draftRecord: ComposerDraftRecord | null,
+  lockedTechnicalAccuracy: number | null,
+): ComposerProjectedScores | null {
+  if (!draftRecord?.draft?.editorialValidation) return null;
+  const validation = draftRecord.draft.editorialValidation;
+  const density = validation.usefulDensityScore;
+  const readability = validation.readabilityScore;
+  const consistency = validation.consistencyScore;
+  const utility = validation.examUtilityScore;
+  const coverage = validation.coverageScore;
+
+  const scores = {
+    art_direction: clampScore(roundOne((coverage + consistency) / 2), 6.8, 9.8),
+    editorial_consistency: clampScore(roundOne(consistency), 6.8, 9.8),
+    readability: clampScore(roundOne(readability), 6.8, 9.8),
+    technical_accuracy: clampScore(roundOne(lockedTechnicalAccuracy ?? 8.7), 6.8, 10),
+    useful_density: clampScore(roundOne(density), 6.8, 9.8),
+    commercial_risk: clampScore(roundOne((coverage + utility) / 2), 6.8, 10),
+  };
+
+  const total = roundOne(
+    (scores.art_direction
+      + scores.editorial_consistency
+      + scores.readability
+      + scores.technical_accuracy
+      + scores.useful_density
+      + scores.commercial_risk) / 6,
+  );
+
+  return { ...scores, total };
 }
 
 const QA_DIMS = [
@@ -164,6 +212,7 @@ export default function QAPage() {
 
   const [outputStatus, setOutputStatus] = useState<OutputStatus | null>(null);
   const [realQA, setRealQA] = useState<RealQA | null>(null);
+  const [composerDraft, setComposerDraft] = useState<ComposerDraftRecord | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [revisionComment, setRevisionComment] = useState("");
   const [showRevision, setShowRevision] = useState(false);
@@ -181,6 +230,7 @@ export default function QAPage() {
   useEffect(() => {
     setLoadingStatus(true);
     setRealQA(null);
+    setComposerDraft(null);
     fetch(`/api/studio/output-status/${pageNum}`, {
       headers: authHdr(),
     })
@@ -196,6 +246,12 @@ export default function QAPage() {
       })
       .catch(() => setOutputStatus(null))
       .finally(() => setLoadingStatus(false));
+  }, [pageNum]);
+
+  useEffect(() => {
+    fetchComposerDraft(pageNum)
+      .then((draft) => setComposerDraft(draft))
+      .catch(() => setComposerDraft(null));
   }, [pageNum]);
 
   useEffect(() => {
@@ -284,13 +340,51 @@ export default function QAPage() {
   const serverApproved = outputStatus?.files.approved === true;
   const htmlUrl = withCacheBust(outputStatus?.htmlPath ?? null, outputStatus?.generatedAt);
   const previewUrl = withCacheBust(outputStatus?.previewPath ?? null, outputStatus?.generatedAt);
-  const totalScore = realQA?.scores.total ?? null;
+  const composerScores = buildComposerProjectedScores(composerDraft, realQA?.scores?.technical_accuracy ?? null);
+  const generatedAtMs = outputStatus?.generatedAt ? Date.parse(outputStatus.generatedAt) : NaN;
+  const draftUpdatedAtMs = composerDraft?.updatedAt ? Date.parse(composerDraft.updatedAt) : NaN;
+  const composerDraftIsNewer = Number.isFinite(generatedAtMs) && Number.isFinite(draftUpdatedAtMs)
+    ? draftUpdatedAtMs > generatedAtMs
+    : Boolean(composerDraft);
+  const useComposerProjection = Boolean(composerScores)
+    && (!realQA?.scores || composerDraftIsNewer);
+  const activeScores = useComposerProjection
+    ? composerScores
+    : (realQA?.scores ?? composerScores ?? null);
+  const serverScores = realQA?.scores ?? null;
+  const serverTotal = serverScores?.total ?? null;
+  const composerTotal = composerScores?.total ?? null;
+  const hasScoreDivergence = composerDraftIsNewer
+    && serverTotal != null
+    && composerTotal != null
+    && Math.abs(composerTotal - serverTotal) >= 0.1;
+  const qaScoreSource = useComposerProjection
+    ? "composer"
+    : realQA
+      ? "server"
+      : composerScores
+        ? "composer"
+        : "none";
+  const scoreSourceLabel = qaScoreSource === "server" ? "QA SERVIDOR" : "DRAFT PENDIENTE";
+  const scoreSourceHint = qaScoreSource === "server"
+    ? "Lectura consolidada desde el ultimo QA persistido en servidor."
+    : "El draft del Composer es mas nuevo que la ultima generacion. Regenera para consolidar este score.";
+  const totalScore = activeScores?.total ?? null;
   const gapToTarget = totalScore != null ? Math.max(0, 9.5 - totalScore) : null;
+  const assessmentQa: RealQA | null = qaScoreSource === "composer" && activeScores
+    ? {
+        verdict: (activeScores.total ?? 0) >= 9.5 ? "approved" : "needs_revision",
+        scores: activeScores,
+        observations: composerDraft?.note ? [composerDraft.note] : [],
+        redTeamLog: [],
+        generatedAt: composerDraft?.updatedAt ?? null,
+      }
+    : realQA;
   const editorialAssessment = buildEditorialAssessment({
     hasOutput,
     isRealVisual,
     serverApproved,
-    realQA,
+    realQA: assessmentQa,
     pageTitle: page?.title,
     pageNumber: pageNum,
   });
@@ -543,16 +637,30 @@ export default function QAPage() {
                 <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Score por dimensión</p>
-                    {realQA && (
+                    {qaScoreSource !== "none" && (
                       <span className="text-[7px] px-1.5 py-px rounded-sm border border-teal-500/20 bg-teal-500/8 text-teal-400/70 font-bold">
-                        QA SERVIDOR
+                        {scoreSourceLabel}
                       </span>
                     )}
                   </div>
                   <p className="text-[10px] text-white/35 mb-3 leading-relaxed">
                     Cada dimension mide algo distinto. <span className="text-white/55 font-semibold">Seguridad comercial</span> puntua alto cuando el riesgo de percepcion premium es bajo.
                   </p>
-                  {realQA ? (
+                  {qaScoreSource !== "none" && (
+                    <p className={cn(
+                      "text-[9px] mb-3",
+                      qaScoreSource === "server" ? "text-teal-300/75" : "text-violet-300/80",
+                    )}>
+                      {scoreSourceHint}
+                    </p>
+                  )}
+                  {hasScoreDivergence && (
+                    <div className="mb-3 px-3 py-2 rounded-sm border border-violet-500/20 bg-violet-500/10 text-[9px] text-violet-200/85 leading-relaxed">
+                      Diferencia detectada: servidor <span className="font-semibold">{serverTotal?.toFixed(1)}/10</span> vs composer{" "}
+                      <span className="font-semibold">{composerTotal?.toFixed(1)}/10</span>. Si validas el draft, corre regeneracion para que QA oficial quede alineado.
+                    </div>
+                  )}
+                  {activeScores ? (
                     <div className="space-y-2.5">
                       <div className="bg-white/[0.02] border border-white/[0.05] rounded-sm px-3 py-2.5 flex items-center justify-between gap-3">
                         <span className="text-[10px] text-white/60 font-semibold">Puntaje global editorial</span>
@@ -562,7 +670,7 @@ export default function QAPage() {
                         </div>
                       </div>
                       {QA_DIMS.map(dim => {
-                        const val = scoreTenToHundred(realQA.scores[dim.key] ?? 0);
+                        const val = scoreTenToHundred(activeScores[dim.key] ?? 0);
                         return (
                           <div key={dim.key}>
                             <div className="flex justify-between mb-0.5">
@@ -585,15 +693,17 @@ export default function QAPage() {
                         "mt-3 px-3 py-2 rounded-sm border text-[10px] font-semibold",
                         isPlaceholder
                           ? "bg-red-500/10 border-red-500/25 text-red-300"
-                          : realQA.verdict === "approved"
+                          : (realQA?.verdict === "approved" && qaScoreSource !== "composer")
                             ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-300"
                             : "bg-amber-500/10 border-amber-500/25 text-amber-300"
                       )}>
                         {isPlaceholder
                           ? "Bloqueado - upper visual no premium"
-                          : realQA.verdict === "approved"
+                          : (realQA?.verdict === "approved" && qaScoreSource !== "composer")
                             ? "Lista para aprobación editorial"
-                            : "Requiere revisión visual antes de aprobar"}
+                            : qaScoreSource === "composer"
+                              ? "Proyeccion Composer - regenera para consolidar QA servidor"
+                              : "Requiere revisión visual antes de aprobar"}
                       </div>
                     </div>
                   ) : (

@@ -161,7 +161,8 @@ export type ActionType =
   | "asset_uploaded"
   | "asset_linked"
   | "asset_approved"
-  | "asset_replaced";
+  | "asset_replaced"
+  | "composer_draft_saved";
 
 export interface UserActionLog {
   id: string;

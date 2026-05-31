@@ -136,6 +136,11 @@ export function actionLabel(type: string): string {
     case "selective_regeneration":return "Regeneración selectiva";
     case "page_exported":         return "Página exportada";
     case "contract_updated":      return "Contrato actualizado";
+    case "asset_uploaded":        return "Asset cargado";
+    case "asset_linked":          return "Asset vinculado";
+    case "asset_approved":        return "Asset aprobado";
+    case "asset_replaced":        return "Asset reemplazado";
+    case "composer_draft_saved":  return "Composer guardado";
     default: return type;
   }
 }
@@ -151,6 +156,11 @@ export function actionColor(type: string): string {
     case "selective_regeneration":return "text-sky-400";
     case "page_exported":         return "text-teal-400";
     case "contract_updated":      return "text-white/50";
+    case "asset_uploaded":        return "text-blue-400";
+    case "asset_linked":          return "text-cyan-400";
+    case "asset_approved":        return "text-emerald-400";
+    case "asset_replaced":        return "text-amber-400";
+    case "composer_draft_saved":  return "text-violet-300";
     default: return "text-white/30";
   }
 }

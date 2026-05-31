@@ -5,6 +5,8 @@ import {
   ArrowUp,
   ArrowDown,
   Blocks,
+  ChevronDown,
+  ChevronUp,
   ChevronLeft,
   ChevronsUpDown,
   Layers3,
@@ -20,6 +22,7 @@ import {
 
 import Layout from "@/components/Layout";
 import { cn, scoreColorDark } from "@/lib/utils";
+import { evaluateComposerBenchmark } from "@/lib/editorial-benchmark";
 import {
   fetchComposerDraft,
   fetchComposerProposal,
@@ -35,6 +38,24 @@ import {
   type StudioOutputStatus,
   type StudioQaReport,
 } from "@/lib/studio-api";
+
+interface ComposerGenerationResponse {
+  success: boolean;
+  pageId: string;
+  outputs?: {
+    html: string;
+    metadata: string;
+    qaReport: string;
+    previewPng: string | null;
+  };
+  qaDelta?: {
+    before: number | null;
+    after: number | null;
+    delta: number | null;
+  };
+  error?: string;
+  detail?: string;
+}
 
 const TECHNICAL_BLOCK_TYPES = ["diagram_panel", "comparison_panel", "decision_tree", "map_panel"];
 const QA_ALIGNMENT_DIMS = [
@@ -146,6 +167,31 @@ function summarizeBlockContent(block: ComposerBlock): string {
 
 function scoreToHundred(score: number) {
   return Math.round(score * 10);
+}
+
+function withCacheBust(url: string | null, version: string | null | undefined): string | null {
+  if (!url) return null;
+  const stamp = version ?? String(Date.now());
+  return `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(stamp)}`;
+}
+
+async function readJsonOrThrow<T>(res: Response, label: string): Promise<T> {
+  const bodyText = await res.text();
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    const preview = bodyText.replace(/\s+/g, " ").slice(0, 180);
+    throw new Error(`${label}: respuesta no JSON (${res.status}). ${preview}`);
+  }
+  try {
+    return JSON.parse(bodyText) as T;
+  } catch (err) {
+    throw new Error(`${label}: JSON invalido (${String(err)})`);
+  }
+}
+
+function composerAuthHeaders(): HeadersInit {
+  const token = localStorage.getItem("studio_token") ?? "";
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 function estimateBlockHeight(block: ComposerBlock): number {
@@ -602,6 +648,12 @@ export default function ComposerPage() {
   const [editableDraft, setEditableDraft] = useState<ComposerProposal["draft"] | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
+  const [canvasMode, setCanvasMode] = useState<"draft" | "real">("draft");
+  const [focusMode, setFocusMode] = useState(true);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [generatingFromComposer, setGeneratingFromComposer] = useState(false);
+  const [generationFeedback, setGenerationFeedback] = useState<string | null>(null);
+  const [qaDelta, setQaDelta] = useState<{ before: number | null; after: number | null; delta: number | null } | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -672,6 +724,15 @@ export default function ComposerPage() {
     };
   }, [pageIdFromRoute]);
 
+  async function refreshLockedArtifacts(targetPageId: string) {
+    const [status, qa] = await Promise.all([
+      fetchStudioOutputStatus(targetPageId),
+      fetchStudioQaReport(targetPageId),
+    ]);
+    setLockedStatus(status);
+    setLockedQa(qa);
+  }
+
   useEffect(() => {
     let mounted = true;
     setLockedStatus(null);
@@ -693,6 +754,11 @@ export default function ComposerPage() {
     };
   }, [pageIdFromRoute]);
 
+  useEffect(() => {
+    setGenerationFeedback(null);
+    setQaDelta(null);
+  }, [pageIdFromRoute]);
+
   const pageSummary = useMemo(() => {
     return studioCatalog?.pages.find((page) => page.pageId === pageIdFromRoute) ?? studioCatalog?.pages[0] ?? null;
   }, [studioCatalog, pageIdFromRoute]);
@@ -709,6 +775,11 @@ export default function ComposerPage() {
     () => (editableDraft?.blocks ?? []).slice().sort((a, b) => a.priority - b.priority),
     [editableDraft],
   );
+  const realHtmlPreviewUrl = withCacheBust(lockedStatus?.htmlPath ?? null, lockedStatus?.generatedAt);
+  const technicalBlockCount = useMemo(
+    () => sortedBlocks.filter((block) => TECHNICAL_BLOCK_TYPES.includes(block.type)).length,
+    [sortedBlocks],
+  );
   const selectedBlock = useMemo(
     () => sortedBlocks.find((block) => block.id === selectedBlockId) ?? sortedBlocks[0] ?? null,
     [sortedBlocks, selectedBlockId],
@@ -721,6 +792,29 @@ export default function ComposerPage() {
       .sort((a, b) => a.value - b.value)
       .slice(0, 3);
   }, [lockedQa]);
+  const composerReadiness = useMemo(() => {
+    const projectedTotal = projectedQaScores?.total ?? null;
+    const lockedTotalScore = lockedQa?.scores?.total ?? null;
+    const hasRealOutput = lockedStatus?.hasOutput === true;
+    const hasFourTechnical = technicalBlockCount >= 4;
+    const targetReached = projectedTotal != null && projectedTotal >= 9.5;
+    const serverAligned = lockedTotalScore != null && projectedTotal != null
+      ? Math.abs(projectedTotal - lockedTotalScore) <= 0.1
+      : false;
+
+    return {
+      projectedTotal,
+      hasRealOutput,
+      hasFourTechnical,
+      targetReached,
+      serverAligned,
+      isReadyForPublish: hasRealOutput && targetReached && serverAligned,
+    };
+  }, [projectedQaScores, lockedQa, lockedStatus, technicalBlockCount]);
+  const benchmark = useMemo(
+    () => evaluateComposerBenchmark(sortedBlocks),
+    [sortedBlocks],
+  );
 
   useEffect(() => {
     if (!selectedBlockId && sortedBlocks.length > 0) {
@@ -731,6 +825,12 @@ export default function ComposerPage() {
       setSelectedBlockId(sortedBlocks[0]?.id ?? null);
     }
   }, [selectedBlockId, sortedBlocks]);
+
+  useEffect(() => {
+    if (lockedStatus?.hasOutput) {
+      setCanvasMode("real");
+    }
+  }, [lockedStatus?.hasOutput, pageIdFromRoute]);
 
   function updateDraftBlocks(mutator: (blocks: ComposerBlock[]) => ComposerBlock[]) {
     setEditableDraft((current) => {
@@ -792,7 +892,7 @@ export default function ComposerPage() {
     });
   }
 
-  function applyComposerAction(action: "compact_rail" | "expand_context" | "boost_technical") {
+  function applyComposerAction(action: "compact_rail" | "expand_context" | "boost_technical" | "enforce_four_cards") {
     updateDraftBlocks((blocks) => {
       let next = [...blocks];
       if (action === "compact_rail") {
@@ -822,6 +922,25 @@ export default function ComposerPage() {
           });
         }
       }
+      if (action === "enforce_four_cards") {
+        const intro = next.filter((block) => ["hero_title", "context_deck", "guide_question"].includes(block.type));
+        const examTail = next.filter((block) => ["exam_traps", "autocheck", "exam_signal"].includes(block.type));
+        const technicalByType = new Map(
+          next.filter((block) => TECHNICAL_BLOCK_TYPES.includes(block.type)).map((block) => [block.type, block]),
+        );
+        const modules = pageSummary?.visualModules ?? [];
+        const rebuiltTechnical: ComposerBlock[] = [
+          technicalByType.get("diagram_panel") ??
+            makeBlock("diagram_panel", "two_column", 40, { modules: modules.slice(0, 2) }),
+          technicalByType.get("comparison_panel") ??
+            makeBlock("comparison_panel", "sku_matrix", 50, { modules: modules.slice(0, 3) }),
+          technicalByType.get("decision_tree") ??
+            makeBlock("decision_tree", "binary_path", 60, { modules: modules.slice(1, 3) }),
+          technicalByType.get("map_panel") ??
+            makeBlock("map_panel", "replication_path", 70, { modules: modules.slice(2, 4) }),
+        ];
+        next = [...intro, ...rebuiltTechnical, ...examTail];
+      }
       return normalizePriorities(next);
     });
   }
@@ -844,6 +963,50 @@ export default function ComposerPage() {
       setSaveMessage(err instanceof Error ? err.message : "No se pudo guardar el draft");
     } finally {
       setSavingDraft(false);
+    }
+  }
+
+  async function handleGenerateWithDraft() {
+    if (!proposal || !editableDraft || generatingFromComposer) return;
+    setGeneratingFromComposer(true);
+    setGenerationFeedback(null);
+    setQaDelta(null);
+    try {
+      const saved = await saveComposerDraft(proposal.pageId, {
+        pageNumber: editableDraft.pageNumber,
+        family: editableDraft.family,
+        transitionLevel: proposal.recommendedTransition.level,
+        draft: editableDraft,
+        note: "Draft aplicado para generacion desde Composer",
+      });
+      setDraftRecord(saved);
+
+      const response = await fetch("/api/studio/generate-visual-atlas-page", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...composerAuthHeaders() },
+        body: JSON.stringify({
+          certificationId: "ai-200",
+          pageId: proposal.pageId,
+          useComposerDraft: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await readJsonOrThrow<ComposerGenerationResponse>(response, "generate-from-composer");
+        throw new Error(err.error ?? err.detail ?? `No se pudo generar (${response.status})`);
+      }
+
+      const data = await readJsonOrThrow<ComposerGenerationResponse>(response, "generate-from-composer");
+      if (data.qaDelta) {
+        setQaDelta(data.qaDelta);
+      }
+      await refreshLockedArtifacts(proposal.pageId);
+      setCanvasMode("real");
+      setGenerationFeedback("Generacion completada desde Composer y QA recargado.");
+    } catch (err) {
+      setGenerationFeedback(err instanceof Error ? err.message : "No se pudo generar desde Composer");
+    } finally {
+      setGeneratingFromComposer(false);
     }
   }
 
@@ -921,6 +1084,34 @@ export default function ComposerPage() {
             {savingDraft ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
             {savingDraft ? "Guardando..." : "Guardar draft"}
           </button>
+
+          <button
+            type="button"
+            onClick={() => setFocusMode((current) => !current)}
+            className={cn(
+              "h-9 px-3 rounded-sm border text-[10px] font-semibold transition-all",
+              focusMode
+                ? "border-violet-500/30 bg-violet-500/12 text-violet-100 hover:bg-violet-500/18"
+                : "border-white/[0.08] bg-white/[0.02] text-white/65 hover:bg-white/[0.04] hover:text-white",
+            )}
+          >
+            {focusMode ? "Modo enfoque" : "Mostrar diagnostico"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setLocation(`/generacion?page=${pageIdFromRoute}`)}
+            className="h-9 px-3 rounded-sm border border-teal-500/25 bg-teal-500/10 text-[10px] font-semibold text-teal-100 hover:bg-teal-500/16 transition-all"
+          >
+            Generar pagina
+          </button>
+          <button
+            type="button"
+            onClick={() => setLocation(`/qa/${parseInt(pageIdFromRoute, 10)}`)}
+            className="h-9 px-3 rounded-sm border border-blue-500/25 bg-blue-500/10 text-[10px] font-semibold text-blue-100 hover:bg-blue-500/16 transition-all"
+          >
+            Revisar QA
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
@@ -929,7 +1120,7 @@ export default function ComposerPage() {
               <p className="text-[10px] text-white/70">
                 {saveMessage
                   ? saveMessage
-                  : `Draft activo: ${draftRecord?.updatedByName ?? "Sistema"} · ${new Date(draftRecord?.updatedAt ?? "").toLocaleString("es-AR")}`}
+                  : `Draft activo: ${draftRecord?.updatedByName ?? "Sistema"} - ${new Date(draftRecord?.updatedAt ?? "").toLocaleString("es-AR")}`}
               </p>
             </div>
           )}
@@ -948,7 +1139,9 @@ export default function ComposerPage() {
             </div>
           ) : proposal ? (
             <div className="max-w-6xl mx-auto space-y-4">
-              <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-4">
+              {!focusMode && (
+                <>
+                  <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-4">
                 <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -968,7 +1161,7 @@ export default function ComposerPage() {
                       <p className="text-[8px] font-bold text-emerald-300/85 uppercase tracking-widest">Se desbloquea</p>
                       <ul className="mt-2 space-y-1.5">
                         {proposal.recommendedTransition.unlockedCapabilities.map((item) => (
-                          <li key={item} className="text-[10px] text-white/70 leading-relaxed">• {item}</li>
+                          <li key={item} className="text-[10px] text-white/70 leading-relaxed">- {item}</li>
                         ))}
                       </ul>
                     </div>
@@ -976,7 +1169,7 @@ export default function ComposerPage() {
                       <p className="text-[8px] font-bold text-amber-300/85 uppercase tracking-widest">Se mantiene bloqueado</p>
                       <ul className="mt-2 space-y-1.5">
                         {proposal.recommendedTransition.blockedCapabilities.map((item) => (
-                          <li key={item} className="text-[10px] text-white/70 leading-relaxed">• {item}</li>
+                          <li key={item} className="text-[10px] text-white/70 leading-relaxed">- {item}</li>
                         ))}
                       </ul>
                     </div>
@@ -1029,9 +1222,9 @@ export default function ComposerPage() {
                     })}
                   </div>
                 </section>
-              </div>
+                  </div>
 
-              <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                  <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Baseline locked real</p>
@@ -1089,9 +1282,9 @@ export default function ComposerPage() {
                     Composer ya esta listo, pero para cerrar brecha real necesitamos una corrida con output + QA de esta misma pagina.
                   </div>
                 )}
-              </section>
+                  </section>
 
-              <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                  <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Acciones Composer</p>
@@ -1122,97 +1315,245 @@ export default function ComposerPage() {
                     Elevar nucleo tecnico
                   </button>
                 </div>
-              </section>
+                  </section>
+                </>
+              )}
 
               <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div>
+                    <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Estado Composer</p>
+                    <p className="text-[12px] font-bold text-white/78 mt-0.5">
+                      {composerReadiness.isReadyForPublish ? "Listo para cierre editorial" : "Ajuste en progreso"}
+                    </p>
+                  </div>
+                  <span className={cn(
+                    "text-[8px] px-2 py-1 rounded-sm border font-bold",
+                    composerReadiness.isReadyForPublish
+                      ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-200"
+                      : "border-amber-500/25 bg-amber-500/10 text-amber-200",
+                  )}>
+                    {composerReadiness.isReadyForPublish ? "READY" : "WORKING"}
+                  </span>
+                </div>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
+                  <div className={cn(
+                    "rounded-sm border px-2.5 py-2",
+                    composerReadiness.hasFourTechnical ? "border-emerald-500/20 bg-emerald-500/8" : "border-amber-500/20 bg-amber-500/8",
+                  )}>
+                    <p className="text-[8px] text-white/30 uppercase tracking-widest">Nucleo tecnico</p>
+                    <p className="text-[10px] font-bold mt-1 text-white/80">
+                      {composerReadiness.hasFourTechnical ? "4 tarjetas activas" : `${technicalBlockCount}/4 tarjetas`}
+                    </p>
+                  </div>
+                  <div className={cn(
+                    "rounded-sm border px-2.5 py-2",
+                    composerReadiness.targetReached ? "border-emerald-500/20 bg-emerald-500/8" : "border-amber-500/20 bg-amber-500/8",
+                  )}>
+                    <p className="text-[8px] text-white/30 uppercase tracking-widest">Objetivo 9.5</p>
+                    <p className="text-[10px] font-bold mt-1 text-white/80">
+                      {composerReadiness.projectedTotal?.toFixed(1) ?? "-"} / 10
+                    </p>
+                  </div>
+                  <div className={cn(
+                    "rounded-sm border px-2.5 py-2",
+                    composerReadiness.serverAligned ? "border-emerald-500/20 bg-emerald-500/8" : "border-amber-500/20 bg-amber-500/8",
+                  )}>
+                    <p className="text-[8px] text-white/30 uppercase tracking-widest">Alineación QA</p>
+                    <p className="text-[10px] font-bold mt-1 text-white/80">
+                      {composerReadiness.serverAligned ? "Sync con servidor" : "Pendiente regeneración"}
+                    </p>
+                  </div>
+                  <div className={cn(
+                    "rounded-sm border px-2.5 py-2",
+                    composerReadiness.hasRealOutput ? "border-emerald-500/20 bg-emerald-500/8" : "border-amber-500/20 bg-amber-500/8",
+                  )}>
+                    <p className="text-[8px] text-white/30 uppercase tracking-widest">Output real</p>
+                    <p className="text-[10px] font-bold mt-1 text-white/80">
+                      {composerReadiness.hasRealOutput ? "Disponible" : "Aun no generado"}
+                    </p>
+                  </div>
+                </div>
+                <div className="rounded-sm border border-white/[0.08] bg-[#0b1a31] p-3 mb-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Benchmark industria</p>
+                    <span className={cn(
+                      "text-[9px] font-bold",
+                      benchmark.score >= 90 ? "text-emerald-300" : benchmark.score >= 75 ? "text-cyan-300" : "text-amber-300",
+                    )}>
+                      {benchmark.score}/100
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-white/60 mt-2">{benchmark.summary}</p>
+                  <div className="grid sm:grid-cols-2 gap-2 mt-3">
+                    {benchmark.checks.map((check) => (
+                      <div
+                        key={check.id}
+                        className={cn(
+                          "rounded-sm border px-2.5 py-2",
+                          check.passed
+                            ? "border-emerald-500/20 bg-emerald-500/8"
+                            : "border-amber-500/20 bg-amber-500/8",
+                        )}
+                      >
+                        <p className={cn(
+                          "text-[9px] font-semibold",
+                          check.passed ? "text-emerald-200/90" : "text-amber-200/90",
+                        )}>
+                          {check.label}
+                        </p>
+                        <p className="text-[9px] text-white/52 mt-1 leading-relaxed">{check.detail}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Canvas Composer</p>
                     <p className="text-[12px] font-bold text-white/78 mt-0.5">Editor compositivo: arrastra, suelta y ajusta variantes en contexto</p>
                   </div>
-                  <p className="text-[10px] text-white/40">Formato 768x1152 simulado</p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCanvasMode("draft")}
+                      className={cn(
+                        "h-7 px-2.5 rounded-sm border text-[9px] font-semibold transition-all",
+                        canvasMode === "draft"
+                          ? "border-blue-500/30 bg-blue-500/15 text-blue-100"
+                          : "border-white/[0.08] bg-white/[0.02] text-white/50 hover:text-white/75"
+                      )}
+                    >
+                      Draft
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCanvasMode("real")}
+                      className={cn(
+                        "h-7 px-2.5 rounded-sm border text-[9px] font-semibold transition-all",
+                        canvasMode === "real"
+                          ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-100"
+                          : "border-white/[0.08] bg-white/[0.02] text-white/50 hover:text-white/75"
+                      )}
+                    >
+                      Output real
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid xl:grid-cols-[0.68fr_0.32fr] gap-4 mt-4">
                   <div className="rounded-sm border border-white/[0.06] bg-[#09111e] p-3">
-                    <div className="w-full aspect-[768/1152] rounded-sm border border-white/[0.06] bg-[#f7fbff] overflow-y-auto p-[10px]">
-                      <div className="h-full w-full flex flex-col gap-[8px]">
-                        {sortedBlocks.map((block, index) => {
-                          const selected = selectedBlock?.id === block.id;
-                          const blockHeight = Math.max(36, Math.min(170, Math.round(estimateBlockHeight(block) * 0.52)));
-                          const isDragging = draggingBlockId === block.id;
-                          return (
-                            <div key={`canvas-wrap:${block.id}`} className="space-y-[6px]">
-                              {draggingBlockId && draggingBlockId !== block.id && (
-                                <div
-                                  className="h-[8px] rounded-full border border-dashed border-[#69a1ff]/45 bg-[#69a1ff]/10"
-                                  onDragOver={(event) => event.preventDefault()}
-                                  onDrop={(event) => {
-                                    event.preventDefault();
-                                    if (!draggingBlockId) return;
-                                    reorderFromCanvas(draggingBlockId, block.id, "before");
-                                    setDraggingBlockId(null);
-                                  }}
-                                />
-                              )}
-                              <button
-                                type="button"
-                                draggable
-                                onDragStart={() => setDraggingBlockId(block.id)}
-                                onDragEnd={() => setDraggingBlockId(null)}
-                                onClick={() => setSelectedBlockId(block.id)}
-                                className={cn(
-                                  "w-full text-left rounded-[6px] border px-2 py-2 transition-all",
-                                  selected
-                                    ? "border-[#1f6fff] bg-[#eaf3ff] shadow-[0_0_0_1px_rgba(31,111,255,0.35)]"
-                                    : "border-[#d8e4f4] bg-white hover:border-[#9bb8ea]",
-                                  isDragging && "opacity-45"
-                                )}
-                                style={{ minHeight: `${blockHeight}px` }}
-                              >
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    <GripVertical className="w-3 h-3 text-[#4369a8] shrink-0" />
-                                    <span className="text-[7px] font-black text-[#10336d] uppercase tracking-[0.09em]">{String(index + 1).padStart(2, "0")}</span>
-                                    <span className="text-[9px] font-bold text-[#1b3360] truncate">{labelBlockType(block.type)}</span>
-                                  </div>
-                                  <span className="text-[8px] text-[#5071a6] bg-[#e8f0fc] border border-[#d4e2f8] rounded-[4px] px-1.5 py-0.5">{block.variant}</span>
-                                </div>
-                                <p className="text-[8px] text-[#405c8f] leading-snug mt-2 line-clamp-3">{summarizeBlockContent(block)}</p>
-                              </button>
-                              {draggingBlockId && draggingBlockId !== block.id && (
-                                <div
-                                  className="h-[8px] rounded-full border border-dashed border-[#69a1ff]/45 bg-[#69a1ff]/10"
-                                  onDragOver={(event) => event.preventDefault()}
-                                  onDrop={(event) => {
-                                    event.preventDefault();
-                                    if (!draggingBlockId) return;
-                                    reorderFromCanvas(draggingBlockId, block.id, "after");
-                                    setDraggingBlockId(null);
-                                  }}
-                                />
-                              )}
-                            </div>
-                          );
-                        })}
-                        {draggingBlockId && sortedBlocks.length > 0 && (
-                          <div
-                            className="h-[8px] rounded-full border border-dashed border-[#69a1ff]/45 bg-[#69a1ff]/10"
-                            onDragOver={(event) => event.preventDefault()}
-                            onDrop={(event) => {
-                              event.preventDefault();
-                              const lastBlockId = sortedBlocks[sortedBlocks.length - 1]?.id;
-                              if (!draggingBlockId || !lastBlockId) return;
-                              reorderFromCanvas(draggingBlockId, lastBlockId, "after");
-                              setDraggingBlockId(null);
-                            }}
+                    {canvasMode === "real" ? (
+                      <div className="w-full aspect-[768/1152] rounded-sm border border-white/[0.06] bg-[#0b1424] overflow-hidden">
+                        {realHtmlPreviewUrl ? (
+                          <iframe
+                            title={`Output real pagina ${pageIdFromRoute}`}
+                            src={realHtmlPreviewUrl}
+                            className="w-full h-full border-0 bg-white"
                           />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center text-[10px] text-white/45">
+                            Aun no hay output real para esta pagina.
+                          </div>
                         )}
                       </div>
-                    </div>
+                    ) : (
+                      <div className="w-full aspect-[768/1152] rounded-sm border border-white/[0.06] bg-[#f7fbff] overflow-y-auto p-[10px]">
+                        <div className="h-full w-full flex flex-col gap-[8px]">
+                          {sortedBlocks.map((block, index) => {
+                            const selected = selectedBlock?.id === block.id;
+                            const blockHeight = Math.max(36, Math.min(170, Math.round(estimateBlockHeight(block) * 0.52)));
+                            const isDragging = draggingBlockId === block.id;
+                            return (
+                              <div key={`canvas-wrap:${block.id}`} className="space-y-[6px]">
+                                {draggingBlockId && draggingBlockId !== block.id && (
+                                  <div
+                                    className="h-[8px] rounded-full border border-dashed border-[#69a1ff]/45 bg-[#69a1ff]/10"
+                                    onDragOver={(event) => event.preventDefault()}
+                                    onDrop={(event) => {
+                                      event.preventDefault();
+                                      if (!draggingBlockId) return;
+                                      reorderFromCanvas(draggingBlockId, block.id, "before");
+                                      setDraggingBlockId(null);
+                                    }}
+                                  />
+                                )}
+                                <button
+                                  type="button"
+                                  draggable
+                                  onDragStart={() => setDraggingBlockId(block.id)}
+                                  onDragEnd={() => setDraggingBlockId(null)}
+                                  onClick={() => setSelectedBlockId(block.id)}
+                                  className={cn(
+                                    "w-full text-left rounded-[6px] border px-2 py-2 transition-all",
+                                    selected
+                                      ? "border-[#1f6fff] bg-[#eaf3ff] shadow-[0_0_0_1px_rgba(31,111,255,0.35)]"
+                                      : "border-[#d8e4f4] bg-white hover:border-[#9bb8ea]",
+                                    isDragging && "opacity-45"
+                                  )}
+                                  style={{ minHeight: `${blockHeight}px` }}
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <GripVertical className="w-3 h-3 text-[#4369a8] shrink-0" />
+                                      <span className="text-[7px] font-black text-[#10336d] uppercase tracking-[0.09em]">{String(index + 1).padStart(2, "0")}</span>
+                                      <span className="text-[9px] font-bold text-[#1b3360] truncate">{labelBlockType(block.type)}</span>
+                                    </div>
+                                    <span className="text-[8px] text-[#5071a6] bg-[#e8f0fc] border border-[#d4e2f8] rounded-[4px] px-1.5 py-0.5">{block.variant}</span>
+                                  </div>
+                                  <p className="text-[8px] text-[#405c8f] leading-snug mt-2 line-clamp-3">{summarizeBlockContent(block)}</p>
+                                </button>
+                                {draggingBlockId && draggingBlockId !== block.id && (
+                                  <div
+                                    className="h-[8px] rounded-full border border-dashed border-[#69a1ff]/45 bg-[#69a1ff]/10"
+                                    onDragOver={(event) => event.preventDefault()}
+                                    onDrop={(event) => {
+                                      event.preventDefault();
+                                      if (!draggingBlockId) return;
+                                      reorderFromCanvas(draggingBlockId, block.id, "after");
+                                      setDraggingBlockId(null);
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })}
+                          {draggingBlockId && sortedBlocks.length > 0 && (
+                            <div
+                              className="h-[8px] rounded-full border border-dashed border-[#69a1ff]/45 bg-[#69a1ff]/10"
+                              onDragOver={(event) => event.preventDefault()}
+                              onDrop={(event) => {
+                                event.preventDefault();
+                                const lastBlockId = sortedBlocks[sortedBlocks.length - 1]?.id;
+                                if (!draggingBlockId || !lastBlockId) return;
+                                reorderFromCanvas(draggingBlockId, lastBlockId, "after");
+                                setDraggingBlockId(null);
+                              }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-3">
+                    <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">
+                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Semaforo rapido</p>
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] px-2 py-2">
+                          <p className="text-[8px] text-white/30 uppercase tracking-widest">Bloques tecnicos</p>
+                          <p className={cn("text-[11px] font-bold mt-1", technicalBlockCount >= 4 ? "text-emerald-300" : "text-amber-300")}>
+                            {technicalBlockCount}/4
+                          </p>
+                        </div>
+                        <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] px-2 py-2">
+                          <p className="text-[8px] text-white/30 uppercase tracking-widest">Brecha 9.5</p>
+                          <p className={cn("text-[11px] font-bold mt-1", (projectedGap ?? 0) <= 0.6 ? "text-emerald-300" : "text-amber-300")}>
+                            {projectedGap?.toFixed(1) ?? "-"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">
                       <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Bloque seleccionado</p>
                       {selectedBlock ? (
@@ -1281,13 +1622,101 @@ export default function ComposerPage() {
                         >
                           Reforzar nucleo tecnico
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => applyComposerAction("enforce_four_cards")}
+                          className="w-full h-8 rounded-sm border border-violet-400/25 bg-violet-500/10 text-[9px] font-semibold text-violet-100 hover:bg-violet-500/15"
+                        >
+                          Estructura 4 tarjetas
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">
+                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Salida y validacion</p>
+                      <div className="space-y-2 mt-2">
+                        <button
+                          type="button"
+                          onClick={handleGenerateWithDraft}
+                          disabled={!proposal || !editableDraft || generatingFromComposer}
+                          className={cn(
+                            "w-full h-8 rounded-sm border text-[9px] font-semibold flex items-center justify-center gap-1.5",
+                            !proposal || !editableDraft || generatingFromComposer
+                              ? "border-white/[0.08] bg-white/[0.02] text-white/35 cursor-not-allowed"
+                              : "border-teal-400/25 bg-teal-500/10 text-teal-100 hover:bg-teal-500/15"
+                          )}
+                        >
+                          {generatingFromComposer ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                          {generatingFromComposer ? "Generando..." : "Generar con draft"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLocation(`/generacion?page=${pageIdFromRoute}`)}
+                          className="w-full h-8 rounded-sm border border-sky-400/25 bg-sky-500/10 text-[9px] font-semibold text-sky-100 hover:bg-sky-500/15"
+                        >
+                          Abrir panel generacion
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLocation(`/qa/${parseInt(pageIdFromRoute, 10)}`)}
+                          className="w-full h-8 rounded-sm border border-blue-400/25 bg-blue-500/10 text-[9px] font-semibold text-blue-100 hover:bg-blue-500/15"
+                        >
+                          Abrir QA
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveDraft}
+                          disabled={!proposal || savingDraft}
+                          className={cn(
+                            "w-full h-8 rounded-sm border text-[9px] font-semibold",
+                            !proposal || savingDraft
+                              ? "border-white/[0.08] bg-white/[0.02] text-white/35 cursor-not-allowed"
+                              : "border-emerald-500/25 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/16",
+                          )}
+                        >
+                          {savingDraft ? "Guardando..." : "Guardar draft"}
+                        </button>
+                        {(generationFeedback || qaDelta) && (
+                          <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] px-2.5 py-2 space-y-1.5">
+                            {generationFeedback ? (
+                              <p className="text-[9px] text-white/70 leading-relaxed">{generationFeedback}</p>
+                            ) : null}
+                            {qaDelta ? (
+                              <div className="text-[9px] text-white/55">
+                                <span className="font-semibold text-white/70">Delta QA:</span>{" "}
+                                {qaDelta.before == null ? "sin baseline previo" : `${qaDelta.before.toFixed(1)} -> ${qaDelta.after?.toFixed(1) ?? "-"} `}
+                                {qaDelta.delta != null ? (
+                                  <span className={cn("font-semibold", qaDelta.delta >= 0 ? "text-emerald-300" : "text-amber-300")}>
+                                    ({qaDelta.delta >= 0 ? "+" : ""}{qaDelta.delta.toFixed(1)})
+                                  </span>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
               </section>
 
-              {spacePlan && (
+              {!focusMode && (
+              <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-3">
+                <button
+                  type="button"
+                  onClick={() => setAdvancedOpen((value) => !value)}
+                  className="w-full flex items-center justify-between text-left px-1 py-1"
+                >
+                  <div>
+                    <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Diagnostico avanzado</p>
+                    <p className="text-[10px] text-white/45 mt-0.5">Huella espacial, baseline detallado, validaciones y listado tecnico de bloques</p>
+                  </div>
+                  {advancedOpen ? <ChevronUp className="w-4 h-4 text-white/35" /> : <ChevronDown className="w-4 h-4 text-white/35" />}
+                </button>
+              </section>
+              )}
+
+              {!focusMode && advancedOpen && spacePlan && (
                 <div className="grid xl:grid-cols-[0.95fr_1.05fr] gap-4">
                   <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
                     <div className="flex items-center justify-between gap-3">

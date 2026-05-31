@@ -5,7 +5,7 @@ import type { VisualAtlasPageData } from "../../../lib/visual-atlas-types";
 import { VISUAL_ATLAS_V24_CONTRACT } from "../../../domain/editorial-contracts/visual-atlas-v24";
 import { pageOutputDir, pagePublicPath } from "../../export/paths";
 import { renderVisualAtlasPage } from "../../renderers/visual-atlas/render-golden-page";
-import { runStructuralQa, computeQaDimensionScores, type StructuralQaResult } from "../../qa/visual-atlas/validate-page-html";
+import { runStructuralQa, computeQaDimensionScores, type QaDimensionScores, type StructuralQaResult } from "../../qa/visual-atlas/validate-page-html";
 import { generateUpperVisual } from "./generate-upper-visual";
 
 const GUARDRAIL_LABEL = VISUAL_ATLAS_V24_CONTRACT.generation.costGuardrail;
@@ -31,12 +31,40 @@ export interface GeneratePageResult {
   costGuardrail:  string;
   qaStructural:   StructuralQaResult;
   textModel:      string;
+  generationSource: "locked_seed" | "composer_draft";
+  composerDraft: {
+    id: number;
+    updatedAt: string;
+    family: string;
+    transitionLevel: string;
+  } | null;
+  qaBaselineTotal: number | null;
+  qaDimensions: QaDimensionScores;
 }
 
 interface Logger {
   info(obj: Record<string, unknown>, msg: string): void;
   warn(obj: Record<string, unknown>, msg: string): void;
   error(obj: Record<string, unknown>, msg: string): void;
+}
+
+interface GeneratePageOptions {
+  generationSource?: "locked_seed" | "composer_draft";
+  composerDraft?: {
+    id: number;
+    updatedAt: string;
+    family: string;
+    transitionLevel: string;
+  } | null;
+  qaBaselineTotal?: number | null;
+  qaDimensionsOverride?: {
+    artDirection: number;
+    editorialConsistency: number;
+    readability: number;
+    technicalAccuracy: number;
+    density: number;
+    commercialRisk: number;
+  } | null;
 }
 
 /**
@@ -51,6 +79,7 @@ export async function generateVisualAtlasPage(
   pageId:   string,
   seedData: VisualAtlasPageData,
   log:      Logger,
+  options:  GeneratePageOptions = {},
 ): Promise<GeneratePageResult> {
   const startedAt = Date.now();
   const outDir    = pageOutputDir(pageId);
@@ -71,11 +100,33 @@ export async function generateVisualAtlasPage(
 
   /* ── Step 3: QA estructural ───────────────────────────────────────────── */
   const qa  = runStructuralQa(pageHtml, pageData);
-  const dim = computeQaDimensionScores(imageGenerated);
+  const defaultDim = computeQaDimensionScores(imageGenerated);
+  const override = options.qaDimensionsOverride;
+  const dim: QaDimensionScores = override ? {
+    artDirection: override.artDirection,
+    editorialConsistency: override.editorialConsistency,
+    readability: override.readability,
+    technicalAccuracy: override.technicalAccuracy,
+    density: override.density,
+    commercialRisk: override.commercialRisk,
+    avg: Number((
+      (override.artDirection
+        + override.editorialConsistency
+        + override.readability
+        + override.technicalAccuracy
+        + override.density
+        + override.commercialRisk) / 6
+    ).toFixed(1)),
+    verdict: imageGenerated ? "needs_visual_review" : "needs_revision",
+    verdictLabel: imageGenerated
+      ? `Requires human visual review: target ${VISUAL_ATLAS_V24_CONTRACT.qa.humanArtScoreToProduce}/10 before production`
+      : "Blocked: upper visual is not a real premium image",
+  } : defaultDim;
   log.info({ pageId, qaScore: qa.score, qaPassed: qa.passed }, "Structural QA complete");
 
   const generatedAt = new Date().toISOString();
   const durationMs  = Date.now() - startedAt;
+  const generationSource = options.generationSource ?? "locked_seed";
 
   /* ── Step 4: Guardar outputs ──────────────────────────────────────────── */
   await writeFile(join(outDir, "page.html"), pageHtml, "utf-8");
@@ -97,6 +148,9 @@ export async function generateVisualAtlasPage(
     costGuardrail:    GUARDRAIL_LABEL,
     generationMode:   imageGenerated ? "openai_image" : "placeholder_image",
     imageError:       imageError || null,
+    generationSource,
+    composerDraft: options.composerDraft ?? null,
+    qaBaselineTotal: options.qaBaselineTotal ?? null,
     qaStructural:     qa,
     durationMs,
   };
@@ -151,5 +205,9 @@ ${!imageGenerated ? "- Acción requerida: Generar upper visual premium con gpt-i
     costGuardrail: GUARDRAIL_LABEL,
     qaStructural:  qa,
     textModel:     TEXT_MODEL,
+    generationSource,
+    composerDraft: options.composerDraft ?? null,
+    qaBaselineTotal: options.qaBaselineTotal ?? null,
+    qaDimensions: dim,
   };
 }

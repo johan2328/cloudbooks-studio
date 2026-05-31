@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import Layout from "@/components/Layout";
 import { cn } from "@/lib/utils";
-import { fetchStudioCatalog, type StudioCatalog } from "@/lib/studio-api";
+import { authHeaders, fetchStudioCatalog, type StudioCatalog } from "@/lib/studio-api";
 import {
   BookOpen, FileText, Target, HelpCircle, Table2, Zap,
   ArrowRight, ChevronRight,
@@ -178,9 +178,55 @@ export default function AI200Collection() {
   const [, setLocation] = useLocation();
   const [expanded, setExpanded] = useState<string | null>("visual-atlas");
   const [catalog, setCatalog] = useState<StudioCatalog | null>(null);
+  const [visualAtlasQaAvg, setVisualAtlasQaAvg] = useState<number | null>(null);
+  const [visualAtlasQaSamples, setVisualAtlasQaSamples] = useState(0);
 
   useEffect(() => {
-    fetchStudioCatalog().then(setCatalog).catch(() => setCatalog(null));
+    let mounted = true;
+    fetchStudioCatalog()
+      .then(async (data) => {
+        if (!mounted) return;
+        setCatalog(data);
+
+        const pagesWithQa = data.pages.filter((p) => p.outputStatus.files.qaReport);
+        if (!pagesWithQa.length) {
+          setVisualAtlasQaAvg(null);
+          setVisualAtlasQaSamples(0);
+          return;
+        }
+
+        const results = await Promise.all(
+          pagesWithQa.map(async (page) => {
+            try {
+              const res = await fetch(`/api/studio/qa-report/${page.pageId}`, {
+                headers: authHeaders(),
+                cache: "no-store",
+              });
+              if (!res.ok) return null;
+              const report = await res.json() as { scores?: Record<string, number> };
+              return typeof report.scores?.total === "number" ? report.scores.total : null;
+            } catch {
+              return null;
+            }
+          }),
+        );
+
+        const validScores = results.filter((score): score is number => typeof score === "number");
+        setVisualAtlasQaSamples(validScores.length);
+        setVisualAtlasQaAvg(validScores.length
+          ? validScores.reduce((sum, score) => sum + score, 0) / validScores.length
+          : null);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setCatalog(null);
+        setVisualAtlasQaAvg(null);
+        setVisualAtlasQaSamples(0);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const activeModules = MODULES.filter(m => m.status === "active").length;
@@ -192,7 +238,7 @@ export default function AI200Collection() {
     const approved = pages.filter((p) => p.outputStatus.files.approved).length;
     const seeds = catalog?.availableSeeds.length ?? 0;
     const expected = catalog?.totalExpected ?? 61;
-    const qaScore = approved > 0 ? 9.5 : generated > 0 && realVisuals === generated ? 9.2 : generated > 0 ? 8.4 : null;
+    const qaScore = visualAtlasQaAvg;
 
     return {
       generated,
@@ -202,10 +248,10 @@ export default function AI200Collection() {
       expected,
       qaScore,
       notes: generated > 0
-        ? `${generated} output(s), ${realVisuals} con imagen real, ${approved} aprobado(s).`
+        ? `${generated} output(s), ${realVisuals} con imagen real, ${approved} aprobado(s), ${visualAtlasQaSamples} QA report(s) reales.`
         : "Sin outputs generados en este entorno. Primero generar una pagina desde el modulo Visual Atlas.",
     };
-  }, [catalog]);
+  }, [catalog, visualAtlasQaAvg, visualAtlasQaSamples]);
 
   const modules = useMemo(() => MODULES.map((mod) => {
     if (mod.id !== "visual-atlas") return mod;
@@ -344,9 +390,9 @@ export default function AI200Collection() {
                       <div className="grid md:grid-cols-4 gap-2">
                         {[
                           { label: "Contenido", text: "Seeds, grounding y brechas", href: "/contenido-base", icon: Activity },
-                          { label: "Produccion", text: "Generacion por pagina", href: "/generacion", icon: Cpu },
+                          { label: "Generación", text: "Generación por página", href: "/generacion", icon: Cpu },
                           { label: "QA editorial", text: "Dictamen, riesgos y gates", href: "/qa/1", icon: Shield },
-                          { label: "Exportacion", text: "HTML, reportes y salida final", href: "/exportacion", icon: Download },
+                          { label: "Exportación", text: "HTML, reportes y salida final", href: "/exportacion", icon: Download },
                         ].map((item) => (
                           <button
                             key={item.label}
@@ -375,42 +421,6 @@ export default function AI200Collection() {
                         <Eye className="w-3 h-3" />
                         Abrir producción
                         {isActive && <ArrowRight className="w-2.5 h-2.5" />}
-                      </button>
-                      <button
-                        onClick={() => isActive && setLocation("/contenido-base")}
-                        disabled={!isActive}
-                        className={cn(
-                          "flex items-center gap-1.5 h-7 px-3 rounded-sm text-[10px] font-medium border transition-all",
-                          isActive
-                            ? "border-white/15 hover:border-white/30 text-white/60 hover:text-white/90"
-                            : "border-white/5 text-white/15 cursor-not-allowed"
-                        )}>
-                        <Activity className="w-3 h-3" />
-                        Ver contenido
-                      </button>
-                      <button
-                        onClick={() => isActive && setLocation("/qa/1")}
-                        disabled={!isActive}
-                        className={cn(
-                          "flex items-center gap-1.5 h-7 px-3 rounded-sm text-[10px] font-medium border transition-all",
-                          isActive
-                            ? "border-white/15 hover:border-white/30 text-white/60 hover:text-white/90"
-                            : "border-white/5 text-white/15 cursor-not-allowed"
-                        )}>
-                        <Shield className="w-3 h-3" />
-                        Ejecutar QA
-                      </button>
-                      <button
-                        onClick={() => isActive && setLocation("/exportacion")}
-                        disabled={!isActive}
-                        className={cn(
-                          "flex items-center gap-1.5 h-7 px-3 rounded-sm text-[10px] font-medium border transition-all",
-                          isActive
-                            ? "border-white/15 hover:border-white/30 text-white/60 hover:text-white/90"
-                            : "border-white/5 text-white/15 cursor-not-allowed"
-                        )}>
-                        <Download className="w-3 h-3" />
-                        Exportar
                       </button>
                     </div>
                   </div>
