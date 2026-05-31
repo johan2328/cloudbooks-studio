@@ -1,6 +1,27 @@
 import type { VisualAtlasPageData } from "../../../lib/visual-atlas-types";
 import { VISUAL_ATLAS_V24_CONTRACT } from "../../../domain/editorial-contracts/visual-atlas-v24";
 
+function clampNumber(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function estimateExamRailHeight(data: VisualAtlasPageData): number {
+  const trapChars = data.traps
+    .slice(0, 3)
+    .reduce((sum, item) => sum + item.wrong.length + item.correction.length, 0);
+  const autocheckChars =
+    data.autocheck.question.length
+    + data.autocheck.explanation.length
+    + data.autocheck.options.join(" ").length
+    + data.autocheck.discardNotes.join(" ").length;
+
+  const trapDemand = 92 + trapChars * 0.14;
+  const checkDemand = 96 + autocheckChars * 0.09;
+  const dominantDemand = Math.max(trapDemand, checkDemand);
+
+  return Math.round(clampNumber(dominantDemand, 138, 210));
+}
+
 function inferTopicFamily(data: VisualAtlasPageData): "containers" | "identity" | "networking" | "security" | "lifecycle" | "generic" {
   const text = `${data.title} ${data.subtitle} ${data.context}`.toLowerCase();
   if (/(acr|container|registry|docker|imagen)/.test(text)) return "containers";
@@ -89,6 +110,9 @@ export function renderVisualAtlasPage(data: VisualAtlasPageData): string {
   const contract = VISUAL_ATLAS_V24_CONTRACT;
   const trapItems = data.traps.slice(0, 3);
   const discardNotes = data.autocheck.discardNotes.slice(0, 2);
+  const bodyTotalHeight = 872;
+  const examRailHeight = estimateExamRailHeight(data);
+  const upperVisualHeight = bodyTotalHeight - examRailHeight;
 
   /* ── Icono de título ─────────────────────────────────────────────────── */
   const titleIconSvg = renderHeroIcon(data);
@@ -233,7 +257,7 @@ h1 {
 /* ── BODY (main content area) ───────────────────────────────────────────── */
 section.body {
   display: grid;
-  grid-template-rows: ${contract.page.bodyRows};
+  grid-template-rows: ${upperVisualHeight}px ${examRailHeight}px;
   overflow: hidden;
 }
 
