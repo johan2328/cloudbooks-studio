@@ -59,6 +59,8 @@ interface ComposerGenerationResponse {
   detail?: string;
 }
 
+type ShortcutAction = "compact_rail" | "expand_context" | "boost_technical" | "enforce_four_cards";
+
 const TECHNICAL_BLOCK_TYPES = ["diagram_panel", "comparison_panel", "decision_tree", "map_panel"];
 const QA_ALIGNMENT_DIMS = [
   { key: "art_direction", label: "Direccion de arte" },
@@ -175,6 +177,10 @@ function withCacheBust(url: string | null, version: string | null | undefined): 
   if (!url) return null;
   const stamp = version ?? String(Date.now());
   return `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(stamp)}`;
+}
+
+function cloneDraftRecord(draft: ComposerProposal["draft"]): ComposerProposal["draft"] {
+  return JSON.parse(JSON.stringify(draft)) as ComposerProposal["draft"];
 }
 
 async function readJsonOrThrow<T>(res: Response, label: string): Promise<T> {
@@ -659,6 +665,8 @@ export default function ComposerPage() {
   const [autofixFeedback, setAutofixFeedback] = useState<string | null>(null);
   const [quickActionBusy, setQuickActionBusy] = useState<string | null>(null);
   const [quickActionFeedback, setQuickActionFeedback] = useState<string | null>(null);
+  const [lastShortcutSnapshot, setLastShortcutSnapshot] = useState<ComposerProposal["draft"] | null>(null);
+  const [lastShortcutLabel, setLastShortcutLabel] = useState<string | null>(null);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [editorialReadOpen, setEditorialReadOpen] = useState(false);
 
@@ -767,6 +775,8 @@ export default function ComposerPage() {
     setAutofixFeedback(null);
     setQuickActionBusy(null);
     setQuickActionFeedback(null);
+    setLastShortcutSnapshot(null);
+    setLastShortcutLabel(null);
     setActionsOpen(false);
     setEditorialReadOpen(false);
   }, [pageIdFromRoute]);
@@ -836,6 +846,25 @@ export default function ComposerPage() {
     () => evaluateComposerBenchmark(sortedBlocks),
     [sortedBlocks],
   );
+  const recommendedShortcut = useMemo(() => {
+    const checks = new Map(benchmark.checks.map((check) => [check.id, check.passed]));
+    if (!checks.get("technical-dominance")) {
+      return { action: "enforce_four_cards" as ShortcutAction, label: "Estructura 4 tarjetas", reason: "el núcleo técnico todavía no domina la página" };
+    }
+    if (!checks.get("exam-rail-balance")) {
+      return { action: "compact_rail" as ShortcutAction, label: "Compactar rail", reason: "el rail inferior consume demasiado alto visual" };
+    }
+    if (!checks.get("flow-continuity")) {
+      return { action: "expand_context" as ShortcutAction, label: "Expandir contexto", reason: "la continuidad narrativa entre guía y bloque técnico aún es débil" };
+    }
+    if (!checks.get("variant-discipline")) {
+      return { action: "boost_technical" as ShortcutAction, label: "Reforzar núcleo técnico", reason: "las variantes de bloque todavía no están consolidadas" };
+    }
+    if ((projectedGap ?? 0) > 0.4) {
+      return { action: "boost_technical" as ShortcutAction, label: "Reforzar núcleo técnico", reason: "la brecha contra 9.5 todavía requiere más impacto visual/técnico" };
+    }
+    return null;
+  }, [benchmark, projectedGap]);
 
   useEffect(() => {
     if (!selectedBlockId && sortedBlocks.length > 0) {
@@ -914,7 +943,7 @@ export default function ComposerPage() {
   }
 
   function applyComposerActionToBlocks(
-    action: "compact_rail" | "expand_context" | "boost_technical" | "enforce_four_cards",
+    action: ShortcutAction,
     blocks: ComposerBlock[],
   ): ComposerBlock[] {
     let next = [...blocks];
@@ -965,10 +994,6 @@ export default function ComposerPage() {
       next = [...intro, ...rebuiltTechnical, ...examTail];
     }
     return normalizePriorities(next);
-  }
-
-  function applyComposerAction(action: "compact_rail" | "expand_context" | "boost_technical" | "enforce_four_cards") {
-    updateDraftBlocks((blocks) => applyComposerActionToBlocks(action, blocks));
   }
 
   async function handleAutofixComposer() {
@@ -1108,15 +1133,14 @@ export default function ComposerPage() {
     setCanvasMode("real");
   }
 
-  async function runShortcutAction(
-    action: "compact_rail" | "expand_context" | "boost_technical" | "enforce_four_cards",
-    label: string,
-  ) {
+  async function runShortcutAction(action: ShortcutAction, label: string) {
     if (!editableDraft || !proposal || quickActionBusy || generatingFromComposer) return;
     setQuickActionBusy(action);
     setQuickActionFeedback(null);
     setGenerationFeedback(null);
     setQaDelta(null);
+    setLastShortcutSnapshot(cloneDraftRecord(editableDraft));
+    setLastShortcutLabel(label);
     try {
       const beforeSerialized = JSON.stringify(editableDraft.blocks);
       const updatedBlocks = applyComposerActionToBlocks(action, editableDraft.blocks);
@@ -1137,6 +1161,29 @@ export default function ComposerPage() {
     } finally {
       setGeneratingFromComposer(false);
       setQuickActionBusy(null);
+    }
+  }
+
+  async function handleRevertLastShortcut() {
+    if (!lastShortcutSnapshot || !proposal || generatingFromComposer) return;
+    setGeneratingFromComposer(true);
+    setQuickActionFeedback(null);
+    setGenerationFeedback(null);
+    setQaDelta(null);
+    try {
+      const restored = recalculateDraft(cloneDraftRecord(lastShortcutSnapshot));
+      setEditableDraft(restored);
+      await generateFromDraft(
+        restored,
+        `Rollback operativo del ultimo atajo${lastShortcutLabel ? `: ${lastShortcutLabel}` : ""}`,
+      );
+      setQuickActionFeedback(`Rollback aplicado${lastShortcutLabel ? ` (${lastShortcutLabel})` : ""} y regenerado.`);
+      setLastShortcutSnapshot(null);
+      setLastShortcutLabel(null);
+    } catch (err) {
+      setQuickActionFeedback(err instanceof Error ? err.message : "No se pudo revertir el ultimo atajo.");
+    } finally {
+      setGeneratingFromComposer(false);
     }
   }
 
@@ -1577,7 +1624,7 @@ export default function ComposerPage() {
                 </div>
                 <div className="rounded-sm border border-white/[0.08] bg-[#0b1a31] p-3 mb-4">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Benchmark industria</p>
+                    <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Siguiente accion operativa</p>
                     <span className={cn(
                       "text-[9px] font-bold",
                       benchmark.score >= 90 ? "text-emerald-300" : benchmark.score >= 75 ? "text-cyan-300" : "text-amber-300",
@@ -1586,6 +1633,26 @@ export default function ComposerPage() {
                     </span>
                   </div>
                   <p className="text-[10px] text-white/60 mt-2">{benchmark.summary}</p>
+                  {recommendedShortcut ? (
+                    <div className="mt-3 rounded-sm border border-amber-500/25 bg-amber-500/10 px-3 py-2">
+                      <p className="text-[9px] text-amber-100 font-semibold">
+                        Recomendado: {recommendedShortcut.label}
+                      </p>
+                      <p className="text-[9px] text-amber-200/75 mt-1">{recommendedShortcut.reason}.</p>
+                      <button
+                        type="button"
+                        onClick={() => runShortcutAction(recommendedShortcut.action, recommendedShortcut.label)}
+                        disabled={Boolean(quickActionBusy) || generatingFromComposer}
+                        className="mt-2 h-7 px-2.5 rounded-sm border border-amber-400/30 bg-amber-500/20 text-[9px] font-semibold text-amber-50 hover:bg-amber-500/30 disabled:opacity-55 disabled:cursor-not-allowed"
+                      >
+                        {quickActionBusy === recommendedShortcut.action ? "Aplicando recomendacion..." : "Aplicar recomendacion"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-3 rounded-sm border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-[9px] text-emerald-100">
+                      No hay accion dominante pendiente: sigue con QA o ajustes finos por bloque.
+                    </div>
+                  )}
                   <div className="grid sm:grid-cols-2 gap-2 mt-3">
                     {benchmark.checks.map((check) => (
                       <div
@@ -1801,6 +1868,7 @@ export default function ComposerPage() {
 
                     <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">
                       <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Atajos editoriales</p>
+                      <p className="text-[9px] text-white/48 mt-1 leading-relaxed">Cada atajo aplica cambios al draft y dispara regeneracion real.</p>
                       <div className="space-y-2 mt-2">
                         <button
                           type="button"
@@ -1833,6 +1901,19 @@ export default function ComposerPage() {
                           className="w-full h-8 rounded-sm border border-violet-400/25 bg-violet-500/10 text-[9px] font-semibold text-violet-100 hover:bg-violet-500/15 disabled:opacity-55 disabled:cursor-not-allowed"
                         >
                           {quickActionBusy === "enforce_four_cards" ? "Aplicando..." : "Estructura 4 tarjetas"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRevertLastShortcut}
+                          disabled={!lastShortcutSnapshot || generatingFromComposer || Boolean(quickActionBusy)}
+                          className={cn(
+                            "w-full h-8 rounded-sm border text-[9px] font-semibold",
+                            !lastShortcutSnapshot || generatingFromComposer || Boolean(quickActionBusy)
+                              ? "border-white/[0.08] bg-white/[0.02] text-white/35 cursor-not-allowed"
+                              : "border-rose-400/25 bg-rose-500/10 text-rose-100 hover:bg-rose-500/16",
+                          )}
+                        >
+                          Revertir ultimo atajo
                         </button>
                       </div>
                       {quickActionFeedback ? (
