@@ -1,75 +1,97 @@
 # AI-200 Production Studio
 
-Consola editorial full-stack para un equipo de 4 personas que produce el libro de infografías de certificación Microsoft AI-200. Interfaz 100% en español.
+Consola editorial full-stack para un equipo pequeno que produce el libro **Visual Atlas** de certificacion Microsoft AI-200.
 
 ![Stack](https://img.shields.io/badge/stack-Node.js%2024%20%2B%20React%20%2B%20PostgreSQL-blue)
 ![License](https://img.shields.io/badge/license-privado-gray)
 
 ---
 
-## Qué es esto
+## Estado actual del sistema (mayo 2026)
 
-**AI-200 Production Studio** es una herramienta interna de producción editorial para generar, revisar y aprobar las 61 infografías del libro de estudio de certificación Microsoft AI-200. Cada infografía sigue el estándar **Visual Atlas v24** — un golden master de 768×1152px con layout determinístico, generación de imagen vía OpenAI, y QA automatizado de 14 dimensiones estructurales.
+### Lo que ya esta estable
+- Pipeline end-to-end `Contenido -> Generacion -> QA -> Exportacion`.
+- Renderer HTML deterministico (Golden Master) para pagina 768x1152.
+- Guardrail de costo activo (`gpt-image-2` en `medium`).
+- Deteccion de output viejo vs renderer actual mediante `layoutRevision`.
+- Flujo de sincronizacion Replit simplificado con `pnpm sync:replit`.
 
-El flujo editorial es:
+### Lo que esta en evolucion activa
+- Calidad compositiva del bloque visual superior (menos aire muerto, mayor ocupacion util).
+- Compactacion del rail inferior (`Trampas + Autocheck`) para evitar huecos.
+- Composer editorial (hoy en modo propuesta asistida, no editor drag-and-drop final).
 
-```
-Biblioteca → Contenido/Grounding → Generación → QA y Aprobación → Exportación
+### Lo que aun no esta terminado
+- Composer visual con arrastrar/soltar bloques.
+- Regeneracion puntual por bloque (no solo regeneracion completa de pagina).
+- Persistencia server-side de todas las notas manuales del editor en Composer.
+
+---
+
+## Que es esto
+
+**AI-200 Production Studio** es una herramienta interna para producir 61 infografias del formato Visual Atlas.  
+Cada salida combina:
+- contenido estructurado,
+- imagen superior generada,
+- ensamblado HTML deterministico,
+- y QA editorial con gate de aprobacion.
+
+Flujo editorial:
+
+```text
+Biblioteca -> Contenido/Grounding -> Generacion -> QA y Aprobacion -> Exportacion
 ```
 
 ---
 
 ## Stack
 
-| Capa | Tecnología |
-|------|-----------|
+| Capa | Tecnologia |
+|------|------------|
 | Runtime | Node.js 24, TypeScript 5.9 |
 | Backend | Express 5, Drizzle ORM, PostgreSQL |
-| Frontend | React + Vite + Wouter + TanStack Query + shadcn/ui + Tailwind CSS |
-| Validación | Zod v4, drizzle-zod |
-| API contract | OpenAPI 3.1 → Orval (codegen de hooks + schemas) |
-| Generación IA | gpt-4o-mini (texto) + gpt-image-2 medium (imagen) |
+| Frontend | React + Vite + Wouter + TanStack Query + Tailwind |
+| Validacion | Zod v4 |
+| API contract | OpenAPI 3.1 + Orval |
+| IA | `gpt-4o-mini` (texto), `gpt-image-2` medium (imagen) |
 | Monorepo | pnpm workspaces |
 
 ---
 
 ## Estructura del proyecto
 
-```
+```text
 artifacts/
   api-server/src/
-    app.ts                        — Express app, monta router en /api
-    config/generation.ts          — Modelos y guardrails (gpt-4o-mini, gpt-image-2 medium)
-    data/page-seeds/              — Seeds de contenido editorial por página
+    config/generation.ts
+    data/page-seeds/
+    domain/editorial-contracts/visual-atlas-v24.ts
+    domain/composer/
     routes/
-      auth.ts                     — POST /auth/login, GET /auth/me, POST /auth/logout
-      pages.ts                    — CRUD de páginas, aprobación, revisión, stats, batches
-      qa.ts                       — GET/PUT /qa/:pageId
-      generation.ts               — GET/POST /generation/runs (legacy CRUD)
-      studio-generate.ts          — POST /studio/generate/:pageId (Visual Atlas pipeline)
-      studio-approval.ts          — POST /studio/approve-page/:pageId
-      studio-qa.ts                — GET /studio/qa-report/:pageId
-      studio-status.ts            — GET /studio/output-status/:pageId, seed-status/:pageId
+      studio-generate.ts
+      studio-qa.ts
+      studio-approval.ts
+      studio-status.ts
+      studio-composer.ts
     services/
-      export/                     — paths.ts, output-status.ts
-      generation/visual-atlas/    — build-image-prompt, generate-upper-visual, orchestrator
-      qa/                         — approval-gate.ts, visual-atlas/validate-page-html.ts
-      renderers/visual-atlas/     — render-golden-page.ts (golden master 768×1152)
+      generation/visual-atlas/
+      renderers/visual-atlas/render-golden-page.ts
+      qa/
+      export/
   studio/src/
     pages/
-      login.tsx                   — Selección de perfil + PIN
-      biblioteca.tsx              — Grid de 61 infografías con filtros
-      contenido.tsx               — Formulario de Contenido y Grounding por página
-      generacion.tsx              — Disparar generación OpenAI, historial de corridas
-      qa.tsx                      — Panel QA, vista previa, aprobar/rechazar
-      exportacion.tsx             — Tabla de páginas aprobadas con acciones por formato
-      contrato.tsx                — Contrato Visual (reglas no negociables / flexibles)
-    domain/editorial-standards/   — Estándares editoriales del Visual Atlas v24
+      biblioteca.tsx
+      contenido.tsx
+      generacion.tsx
+      qa.tsx
+      composer.tsx
+      exportacion.tsx
 lib/
-  api-spec/openapi.yaml           — Fuente de verdad del contrato API
-  api-client-react/               — Hooks React Query generados por Orval
-  api-zod/                        — Schemas Zod generados por Orval
-  db/                             — Esquema Drizzle ORM
+  api-spec/openapi.yaml
+  api-client-react/
+  api-zod/
+  db/
 ```
 
 ---
@@ -78,137 +100,144 @@ lib/
 
 - Node.js 24+
 - pnpm 9+
-- PostgreSQL (se puede usar Replit DB o cualquier instancia)
-- Variables de entorno:
+- PostgreSQL
+
+Variables de entorno:
 
 ```env
-DATABASE_URL=postgres://...       # Requerido
-OPENAI_API_KEY=sk-...             # Opcional — sin él corre en modo demo
-SESSION_SECRET=...                # Requerido para sesiones
+DATABASE_URL=postgres://...       # requerido
+OPENAI_API_KEY=sk-...             # recomendado para salida real (sin key usa fallback)
+SESSION_SECRET=...                # requerido
 ```
 
 ---
 
-## Instalación y desarrollo
+## Instalacion y desarrollo
 
 ```bash
-# Instalar dependencias
 pnpm install
-
-# Push del esquema de base de datos
 pnpm --filter @workspace/db run push
-
-# Arrancar API server (puerto 8080)
 pnpm --filter @workspace/api-server run dev
-
-# Arrancar frontend (puerto 18425)
 pnpm --filter @workspace/studio run dev
 ```
 
-> En Replit, los workflows arrancan ambos servidores automáticamente.
+---
 
-### Flujo recomendado para Replit sin depender del agente
-
-1. Hacer cambios localmente y empujar a GitHub.
-2. En la Shell de Replit correr:
+## Operacion en Replit (sin depender del agente)
 
 ```bash
 pnpm sync:replit
 ```
 
-Ese comando:
-- hace `git fetch/pull --rebase` desde `origin/main`,
-- instala dependencias bloqueadas,
-- empuja el esquema de base de datos,
-- y deja el runtime alineado con el SHA remoto.
+Este comando:
+- sincroniza `origin/main`,
+- instala dependencias,
+- ejecuta `db push`,
+- y deja runtime alineado al SHA remoto.
 
-Notas:
-- Los secretos ya no deben vivir en `.replit`. Usar solo `Secrets` de Replit.
-- El Dashboard del Studio muestra el `SHA` activo y si el workspace está limpio o no.
-- El API server corre en modo watch, así que un pull válido debería refrescar backend/frontend sin depender del agente.
+Recomendaciones operativas:
+- guardar secretos solo en `Secrets` de Replit (no en `.replit`);
+- verificar SHA activo en Dashboard;
+- si cambias renderer/contrato, regenerar pagina para ver el efecto.
 
 ---
 
-## Documentos de diseno
+## Visual Atlas v24 (estado compositivo)
 
-- [Editorial Composer Spec](./docs/editorial-composer-spec.md): sistema dual de pagina (`locked` + `composer`) para composicion premium por bloques con validacion editorial.
-- [Composer Transition and Red Team](./docs/editorial-composer-transition-and-red-team.md): paso controlado de `locked` a `composer`, auditoria requerida y riesgos globales de producto, UX, gobernanza y negocio.
+### Base actual
+- Hero + Context + Pregunta guia en HTML fijo.
+- Upper visual generado por IA e insertado como asset.
+- Rail inferior de examen en HTML.
+
+### Problema historico que estamos resolviendo
+- margen excesivo dentro del upper visual (la composicion se ve pequena);
+- rail inferior sobredimensionado para contenido corto;
+- monotonia de composicion entre paginas.
+
+### Cambios recientes aplicados
+- ajuste de `slotWidth/slotHeight` del upper visual;
+- prompt mas estricto para evitar "marco poster" y aire excesivo;
+- compactacion adicional de tipografia y spacing en rail inferior;
+- deteccion de output desactualizado por `layoutRevision`.
+
+---
+
+## Composer editorial (estado real)
+
+### Hoy
+- Vista `Composer` disponible en Studio.
+- Propuesta de bloques por pagina (familia compositiva + cobertura + score).
+- Fallback local si la ruta API de Composer no esta disponible en el runtime.
+- Nueva lectura de huella espacial:
+  - % apertura,
+  - % cuerpo visual,
+  - % rail inferior,
+  - recomendacion operativa.
+- Mini wireframe para lectura rapida de balance.
+
+### Proximo objetivo (prioritario)
+1. Composer interactivo drag-and-drop.
+2. Regeneracion puntual por bloque.
+3. Grounding puntual por bloque/tema (sin rerun global cada generacion).
+4. Persistencia completa de acciones editoriales en backend.
+
+---
+
+## Politica de grounding recomendada
+
+No ejecutar grounding completo en cada generacion.
+
+Estrategia:
+1. Fuente base curada (`CSV` o `Sheet`) por tema.
+2. Grounding puntual por tema cuando se necesita.
+3. TTL editorial sugerido de 7 dias.
+4. Regeneracion de pagina usa grounding vigente.
+5. Refresco forzado solo si:
+   - cambio de fuente,
+   - expiracion de TTL,
+   - o decision editorial.
+
+---
+
+## QA y aprobacion
+
+Dimensiones de score:
+- Direccion de arte
+- Consistencia editorial
+- Legibilidad
+- Precision tecnica
+- Densidad util
+- Seguridad comercial
+
+Meta operativa actual:
+- cerrar brecha hacia `9.5` en score editorial total para salida de produccion por lote.
 
 ---
 
 ## Comandos utiles
 
 ```bash
-# Typecheck completo
 pnpm run typecheck
-
-# Build de todos los paquetes
 pnpm run build
-
-# Regenerar hooks y schemas desde la spec OpenAPI
 pnpm --filter @workspace/api-spec run codegen
 ```
 
 ---
 
-## Flujo de producción de una infografía
+## Documentacion de diseno
 
-### 1. Biblioteca
-Vista general de las 61 páginas con filtros por batch (1–13), estado y dominio.
-
-### 2. Contenido y Grounding
-Formulario editorial por página: contexto, conceptos clave, trampas de examen, autocheck y fuentes.
-
-### 3. Generación
-Dispara el pipeline Visual Atlas:
-- **Texto**: gpt-4o-mini genera el contenido estructurado
-- **Imagen**: gpt-image-2 medium genera el upper visual (728×494px)
-- **Render**: golden master 768×1152px ensamblado deterministicamente
-- **QA estructural**: 14 checks automáticos (dimensiones, colores, secciones)
-
-### 4. QA y Aprobación
-Panel de diagnóstico con 6 dimensiones de score:
-- Dirección de arte · Consistencia editorial · Legibilidad
-- Precisión técnica · Densidad útil · Riesgo comercial
-
-El gate de aprobación bloquea si el upper visual no es imagen real (`generationMode !== "openai_image"`). La aprobación final requiere revisión visual humana.
-
-### 5. Exportación
-Tabla de páginas aprobadas con acceso a `page.html`, metadata y QA report.
-
-### 6. Contrato Visual
-Reglas editoriales no negociables del Visual Atlas v24: colores, tipografía, layout, changelog.
+- [docs/editorial-composer-spec.md](/C:/Users/jguerra/OneDrive%20-%20Datco%20S.A/Documentos/Editorial%20IA/cloudbooks-studio/docs/editorial-composer-spec.md)
+- [docs/editorial-composer-transition-and-red-team.md](/C:/Users/jguerra/OneDrive%20-%20Datco%20S.A/Documentos/Editorial%20IA/cloudbooks-studio/docs/editorial-composer-transition-and-red-team.md)
 
 ---
 
-## Arquitectura y decisiones
+## Nota sobre "parches"
 
-- **Auth demo**: token `demo-token-{userId}` en localStorage, pasado via `Authorization: Bearer`. No JWT real — equipo interno de 4 personas.
-- **OpenAPI-first**: toda la superficie de la API definida en `openapi.yaml` antes de implementar. Hooks y schemas se regeneran con `codegen`.
-- **Generación server-side**: llamadas a OpenAI solo desde el servidor. Sin `OPENAI_API_KEY` corre en modo demo con contenido placeholder.
-- **Guardrail de costos**: `gpt-image-2 medium` únicamente. `ALLOW_HIGH_QUALITY=false` hardcodeado en `config/generation.ts`.
-- **Golden master determinístico**: el renderer HTML no depende de IA — solo ensambla el output de texto e imagen según el template v24.
-- **QA desnormalizado**: `qaScore` en la tabla `pages` se actualiza en cada upsert de QA para queries de lista rápidas.
+En este repo, un "parche" no significa atajo oculto ni fix desordenado por fuera del contrato.  
+Significa cambio pequeno y controlado en:
+- contrato visual,
+- renderer,
+- o UI de operacion,
+con commit trazable y validacion de impacto.
 
----
-
-## Producto
-
-61 infografías organizadas en 13 batches cubriendo los dominios del examen AI-200:
-- Soluciones contenerizadas en Azure
-- Servicios cognitivos y Computer Vision
-- Procesamiento de lenguaje natural
-- Búsqueda e indexación inteligente
-- Servicios de voz y traducción
-- Decisión e IA responsable
-- *(y 7 dominios más)*
-
----
-
-## Tema visual
-
-- Fondo: `#edf2f8` (editorial, no dark dashboard)
-- Acento teal: `#0d9488`
-- Topbar/footer navy: `#061B49`
-- Radio: `0.3rem`
-- Densidad alta — herramienta profesional
+Cuando un cambio no es estructuralmente sano, no se considera parche valido: se mueve a roadmap de arquitectura.
