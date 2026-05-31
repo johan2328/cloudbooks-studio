@@ -655,6 +655,8 @@ export default function ComposerPage() {
   const [generationFeedback, setGenerationFeedback] = useState<string | null>(null);
   const [qaDelta, setQaDelta] = useState<{ before: number | null; after: number | null; delta: number | null } | null>(null);
   const [autofixFeedback, setAutofixFeedback] = useState<string | null>(null);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [editorialReadOpen, setEditorialReadOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -759,6 +761,8 @@ export default function ComposerPage() {
     setGenerationFeedback(null);
     setQaDelta(null);
     setAutofixFeedback(null);
+    setActionsOpen(false);
+    setEditorialReadOpen(false);
   }, [pageIdFromRoute]);
 
   const pageSummary = useMemo(() => {
@@ -1192,6 +1196,25 @@ export default function ComposerPage() {
               </p>
             </div>
           )}
+          {!loading && !error && (
+            <div className="max-w-6xl mx-auto mb-3 px-3 py-2 rounded-sm border border-white/[0.08] bg-[#0d1629]">
+              <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Proceso recomendado</p>
+              <div className="mt-2 grid md:grid-cols-4 gap-2">
+                <div className="px-2.5 py-2 rounded-sm border border-white/[0.08] bg-white/[0.02] text-[9px] text-white/72">
+                  1. Ajustar bloques en canvas
+                </div>
+                <div className="px-2.5 py-2 rounded-sm border border-white/[0.08] bg-white/[0.02] text-[9px] text-white/72">
+                  2. Guardar draft
+                </div>
+                <div className="px-2.5 py-2 rounded-sm border border-teal-500/20 bg-teal-500/8 text-[9px] text-teal-100">
+                  3. Generar con draft
+                </div>
+                <div className="px-2.5 py-2 rounded-sm border border-blue-500/20 bg-blue-500/8 text-[9px] text-blue-100">
+                  4. Revisar QA y aprobar
+                </div>
+              </div>
+            </div>
+          )}
 
           {!loading && error && (
             <div className="max-w-5xl mx-auto bg-amber-500/8 border border-amber-400/20 rounded-sm p-4">
@@ -1247,7 +1270,7 @@ export default function ComposerPage() {
                 <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Puntaje Composer alineado a QA</p>
+                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Proyeccion Composer (draft)</p>
                       <p className="text-sm font-black text-white/88 mt-1">
                         {projectedQaScores?.total.toFixed(1) ?? "0.0"}/10
                       </p>
@@ -2052,13 +2075,21 @@ export default function ComposerPage() {
 
               <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-4">
                 <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
-                  <div className="flex items-center gap-2">
-                    <Layers3 className="w-4 h-4 text-white/30" />
-                    <div>
-                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Siguientes acciones</p>
-                      <p className="text-[12px] font-bold text-white/78 mt-0.5">Como usar esta propuesta</p>
+                  <button
+                    type="button"
+                    onClick={() => setActionsOpen((value) => !value)}
+                    className="w-full flex items-center justify-between gap-3 text-left"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Layers3 className="w-4 h-4 text-white/30" />
+                      <div>
+                        <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Siguientes acciones</p>
+                        <p className="text-[12px] font-bold text-white/78 mt-0.5">Como usar esta propuesta</p>
+                      </div>
                     </div>
-                  </div>
+                    <ChevronDown className={cn("w-4 h-4 text-white/30 transition-transform", actionsOpen && "rotate-180")} />
+                  </button>
+                  {actionsOpen && (
                   <div className="space-y-2 mt-4">
                     {proposal.nextActions.map((item) => (
                       <div key={item} className="px-3 py-2 rounded-sm bg-white/[0.02] border border-white/[0.05] text-[10px] text-white/68">
@@ -2066,17 +2097,26 @@ export default function ComposerPage() {
                       </div>
                     ))}
                   </div>
+                  )}
                 </section>
 
                 <section className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
-                  <div className="flex items-center gap-2">
-                    <MapPinned className="w-4 h-4 text-white/30" />
-                    <div>
-                      <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Lectura editorial</p>
-                      <p className="text-[12px] font-bold text-white/78 mt-0.5">Que estamos intentando mejorar</p>
+                  <button
+                    type="button"
+                    onClick={() => setEditorialReadOpen((value) => !value)}
+                    className="w-full flex items-center justify-between gap-3 text-left"
+                  >
+                    <div className="flex items-center gap-2">
+                      <MapPinned className="w-4 h-4 text-white/30" />
+                      <div>
+                        <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Lectura editorial</p>
+                        <p className="text-[12px] font-bold text-white/78 mt-0.5">Que estamos intentando mejorar</p>
+                      </div>
                     </div>
-                  </div>
+                    <ChevronDown className={cn("w-4 h-4 text-white/30 transition-transform", editorialReadOpen && "rotate-180")} />
+                  </button>
 
+                  {editorialReadOpen && (
                   <div className="mt-4 space-y-2">
                     <div className="px-3 py-2 rounded-sm bg-white/[0.02] border border-white/[0.05] text-[10px] text-white/68">
                       El modo Composer no desecha el locked actual: parte de esa base y nos ayuda a ajustar densidad, bloques dominantes y senales de examen sin perder identidad de coleccion.
@@ -2088,6 +2128,7 @@ export default function ComposerPage() {
                       Esta vista sirve justo para eso: evaluar si conviene quedarse en locked, pasar a composer minor o abrir una correccion mas estructural antes de seguir con el batch.
                     </div>
                   </div>
+                  )}
                 </section>
               </div>
             </div>

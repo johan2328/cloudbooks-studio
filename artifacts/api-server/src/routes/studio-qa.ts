@@ -46,7 +46,7 @@ router.get("/studio/qa-report/:pageId", async (req, res): Promise<void> => {
       readability: /^-\s+Legibilidad:\s+\*\*(\d+(?:\.\d+)?)\/10\*\*/im,
       technical_accuracy: /^-\s+Precisi[oó]n t[eé]cnica:\s+\*\*(\d+(?:\.\d+)?)\/10\*\*/im,
       useful_density: /^-\s+Densidad [uú]til:\s+\*\*(\d+(?:\.\d+)?)\/10\*\*/im,
-      commercial_risk: /^-\s+Seguridad comercial:\s+\*\*(\d+(?:\.\d+)?)\/10\*\*/im,
+      commercial_risk: /^-\s+(?:Seguridad|Riesgo) comercial:\s+\*\*(\d+(?:\.\d+)?)\/10\*\*/im,
       total: /^##\s+Scores\s+\((\d+(?:\.\d+)?)\/10/im,
     };
 
