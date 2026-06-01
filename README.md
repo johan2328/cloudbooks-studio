@@ -116,6 +116,11 @@ Sprint 14 (modo operador Composer) en avance:
 - la accion primaria queda visible arriba como siguiente paso sugerido;
 - la lectura post-render se muestra en el flujo operativo para decidir si compactar rail, usar mejor el upper o pasar a QA.
 
+Sprint 15 (evidencia real -> accion) cerrado en codigo:
+- Composer prioriza la evidencia post-render real por encima del score proyectado;
+- el plan post-render convierte upper subutilizado, rail inferior mal aprovechado o bloqueos estructurales en una accion concreta;
+- el QA hard gate bloquea cierre si la evidencia real del HTML cae por debajo del umbral compositivo.
+
 ---
 
 ## Alcance por cloud

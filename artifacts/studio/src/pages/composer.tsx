@@ -75,6 +75,20 @@ type ShortcutAction = "compact_rail" | "expand_context" | "boost_technical" | "e
 type ComposerRegenerationScope = "full" | "technical_core" | "exam_rail";
 type ComposerPresetId = "premium_balanced" | "comparison_dominant" | "rail_compact";
 type ComposerObjectiveId = "fill_density" | "compact_exam_rail" | "qa_lock";
+type PostRenderRemediationSeverity = "success" | "warning" | "critical";
+
+interface PostRenderRemediation {
+  available: boolean;
+  severity: PostRenderRemediationSeverity;
+  label: string;
+  reason: string;
+  actionLabel: string;
+  shortcutAction?: ShortcutAction;
+  scope?: ComposerRegenerationScope;
+  objectiveId?: ComposerObjectiveId;
+  syncOnly?: boolean;
+  evidenceItems: string[];
+}
 
 const COMPOSER_PRESETS: Array<{
   id: ComposerPresetId;
@@ -554,6 +568,132 @@ function lockedActionHint(key: string): string {
     default:
       return "Aplicar ajuste editorial dirigido en la proxima regeneracion.";
   }
+}
+
+function derivePostRenderRemediation(
+  report: StudioQaReport | null,
+  technicalBlockCount: number,
+  qaAlignmentState: string,
+): PostRenderRemediation {
+  const evidence = report?.layoutEvidence;
+  if (!report) {
+    return {
+      available: false,
+      severity: "warning",
+      label: "Sin QA real",
+      reason: "Todavia no hay lectura QA consolidada para convertir el Composer en una accion verificable.",
+      actionLabel: "Sincronizar QA",
+      syncOnly: true,
+      evidenceItems: ["Genera la pagina y refresca QA antes de tomar una decision editorial final."],
+    };
+  }
+
+  if (!evidence) {
+    return {
+      available: false,
+      severity: "warning",
+      label: "Falta evidencia post-render",
+      reason: "El QA existe, pero no trae mediciones del HTML final; sin eso el Composer vuelve a operar por intuicion.",
+      actionLabel: "Sincronizar QA",
+      syncOnly: true,
+      evidenceItems: ["Refresca QA o regenera la pagina para capturar upper, rail y zonas reales."],
+    };
+  }
+
+  const evidenceItems = [
+    `Upper: ${evidence.upper.rowHeight}px, aire ${evidence.upper.freeVerticalPx}px, uso ${evidence.upper.imageSlotSharePct}%.`,
+    `Rail: ${evidence.examRail.rowHeight}px, ${evidence.examRail.sharePct}% del cuerpo, densidad ${evidence.examRail.densityBand}.`,
+    `Layout score: ${evidence.score.toFixed(1)}/10.`,
+  ];
+
+  if (evidence.blockers.length > 0) {
+    return {
+      available: true,
+      severity: "critical",
+      label: "Bloqueo estructural real",
+      reason: evidence.blockers[0],
+      actionLabel: "Regenerar pagina completa",
+      scope: "full",
+      objectiveId: "qa_lock",
+      evidenceItems: [...evidenceItems, ...evidence.blockers.slice(0, 2)],
+    };
+  }
+
+  if (evidence.upper.freeVerticalPx > 92 || evidence.upper.imageSlotSharePct < 78) {
+    return {
+      available: true,
+      severity: "warning",
+      label: "Upper visual subutilizado",
+      reason: "La composicion central no esta usando suficiente altura disponible; el cuerpo visual queda timido y aparecen huecos.",
+      actionLabel: "Reforzar nucleo tecnico",
+      shortcutAction: "boost_technical",
+      scope: "technical_core",
+      objectiveId: "fill_density",
+      evidenceItems,
+    };
+  }
+
+  if (technicalBlockCount < 4) {
+    return {
+      available: true,
+      severity: "warning",
+      label: "Nucleo tecnico incompleto",
+      reason: `El Composer tiene ${technicalBlockCount}/4 bloques tecnicos; falta estructura visual suficiente para una pagina premium.`,
+      actionLabel: "Estructura 4 tarjetas",
+      shortcutAction: "enforce_four_cards",
+      scope: "technical_core",
+      objectiveId: "fill_density",
+      evidenceItems,
+    };
+  }
+
+  if (evidence.examRail.rowHeight > 225 || evidence.examRail.sharePct > 28 || evidence.examRail.densityBand === "thin") {
+    return {
+      available: true,
+      severity: "warning",
+      label: "Rail inferior mal aprovechado",
+      reason: "Trampas/autocheck ocupan demasiado plano para la densidad que aportan; conviene compactar o enriquecer sin agrandar.",
+      actionLabel: "Compactar rail inferior",
+      shortcutAction: "compact_rail",
+      scope: "exam_rail",
+      objectiveId: "compact_exam_rail",
+      evidenceItems,
+    };
+  }
+
+  if (qaAlignmentState !== "aligned") {
+    return {
+      available: true,
+      severity: "warning",
+      label: "Composer no consolidado",
+      reason: "El draft o la proyeccion no estan alineados con el QA servidor; falta una corrida real antes de confiar en el score.",
+      actionLabel: "Generar desde draft",
+      scope: "full",
+      objectiveId: "qa_lock",
+      evidenceItems,
+    };
+  }
+
+  if (evidence.score < 9) {
+    return {
+      available: true,
+      severity: "warning",
+      label: "Calidad post-render insuficiente",
+      reason: "La pagina no esta bloqueada, pero la evidencia real todavia no alcanza el umbral editorial premium.",
+      actionLabel: "Autocorregir premium",
+      objectiveId: "qa_lock",
+      evidenceItems,
+    };
+  }
+
+  return {
+    available: true,
+    severity: "success",
+    label: "Post-render estable",
+    reason: "La evidencia del HTML final no muestra huecos criticos ni bloqueos estructurales.",
+    actionLabel: "Abrir QA final",
+    evidenceItems,
+  };
 }
 
 function inferFamilyFromPage(page: StudioCatalogPage): ComposerProposal["draft"]["family"] {
@@ -1129,16 +1269,19 @@ export default function ComposerPage() {
   }, [stepDraftAdjusted, stepDraftSaved, stepGenerated, stepQaReviewed]);
   const qaHardGate = useMemo(() => {
     const blockers: string[] = [];
+    const evidence = lockedQa?.layoutEvidence ?? null;
     if (qaAlignmentState !== "aligned") blockers.push("QA servidor y Composer no estan alineados todavia.");
     if (!stepGenerated) blockers.push("No hay output real confirmado para esta version.");
     if (!stepQaReviewed) blockers.push("QA oficial aun no consolido lectura para esta pagina.");
     if (lockedTotal == null) blockers.push("No existe score total de QA servidor.");
     if (lockedTotal != null && lockedTotal < 9.5) blockers.push(`Score QA servidor en ${lockedTotal.toFixed(1)}/10 (objetivo minimo 9.5).`);
+    if (evidence?.blockers.length) blockers.push(`Bloqueo post-render: ${evidence.blockers[0]}`);
+    if (evidence && evidence.score < 8.5) blockers.push(`Score post-render en ${evidence.score.toFixed(1)}/10; falta correccion compositiva.`);
     return {
       ready: blockers.length === 0,
       blockers,
     };
-  }, [qaAlignmentState, stepGenerated, stepQaReviewed, lockedTotal]);
+  }, [qaAlignmentState, stepGenerated, stepQaReviewed, lockedTotal, lockedQa]);
   const projectedGap = projectedQaScores ? Math.max(0, 9.5 - projectedQaScores.total) : null;
   const sortedBlocks = useMemo(
     () => (editableDraft?.blocks ?? []).slice().sort((a, b) => a.priority - b.priority),
@@ -1186,7 +1329,18 @@ export default function ComposerPage() {
     () => evaluateComposerBenchmark(sortedBlocks),
     [sortedBlocks],
   );
+  const postRenderRemediation = useMemo(
+    () => derivePostRenderRemediation(lockedQa, technicalBlockCount, qaAlignmentState),
+    [lockedQa, technicalBlockCount, qaAlignmentState],
+  );
   const recommendedShortcut = useMemo(() => {
+    if (postRenderRemediation.shortcutAction) {
+      return {
+        action: postRenderRemediation.shortcutAction,
+        label: postRenderRemediation.actionLabel,
+        reason: postRenderRemediation.reason,
+      };
+    }
     const checks = new Map(benchmark.checks.map((check) => [check.id, check.passed]));
     if (!checks.get("technical-dominance")) {
       return { action: "enforce_four_cards" as ShortcutAction, label: "Estructura 4 tarjetas", reason: "el núcleo técnico todavía no domina la página" };
@@ -1204,8 +1358,11 @@ export default function ComposerPage() {
       return { action: "boost_technical" as ShortcutAction, label: "Reforzar núcleo técnico", reason: "la brecha contra 9.5 todavía requiere más impacto visual/técnico" };
     }
     return null;
-  }, [benchmark, projectedGap]);
+  }, [benchmark, projectedGap, postRenderRemediation]);
   const recommendedObjective = useMemo(() => {
+    if (postRenderRemediation.objectiveId) {
+      return COMPOSER_OBJECTIVES.find((objective) => objective.id === postRenderRemediation.objectiveId) ?? null;
+    }
     if (!spacePlan) return null;
     if (qaAlignmentState !== "aligned" && (projectedGap ?? 9.5) > 0.6) {
       return COMPOSER_OBJECTIVES.find((objective) => objective.id === "qa_lock") ?? null;
@@ -1220,7 +1377,7 @@ export default function ComposerPage() {
       return COMPOSER_OBJECTIVES.find((objective) => objective.id === "qa_lock") ?? null;
     }
     return null;
-  }, [spacePlan, qaAlignmentState, projectedGap]);
+  }, [spacePlan, qaAlignmentState, projectedGap, postRenderRemediation]);
   const decisionFlow = useMemo(() => {
     const step1Done = technicalBlockCount >= 4;
     const step2Done = (projectedGap ?? 9.5) <= 0.6;
@@ -1645,6 +1802,66 @@ export default function ComposerPage() {
       return;
     }
     setLocation(`/qa/${parseInt(pageIdFromRoute, 10)}`);
+  }
+
+  async function handleApplyPostRenderRemediation() {
+    if (postRenderRemediation.syncOnly) {
+      await syncComposerWithServerQa("manual");
+      return;
+    }
+
+    if (postRenderRemediation.severity === "success" && !postRenderRemediation.shortcutAction && !postRenderRemediation.scope) {
+      setLocation(`/qa/${parseInt(pageIdFromRoute, 10)}`);
+      return;
+    }
+
+    if (postRenderRemediation.shortcutAction) {
+      await runShortcutAction(postRenderRemediation.shortcutAction, postRenderRemediation.actionLabel);
+      return;
+    }
+
+    if (postRenderRemediation.actionLabel === "Autocorregir premium") {
+      await handleAutofixComposer();
+      return;
+    }
+
+    if (!editableDraft || !proposal || generatingFromComposer || pipelineBusy) return;
+    setGeneratingFromComposer(true);
+    setGenerationFeedback(null);
+    setQaDelta(null);
+    try {
+      await generateFromDraft(
+        editableDraft,
+        `Remediacion post-render: ${postRenderRemediation.label}`,
+        postRenderRemediation.scope ?? "full",
+      );
+      setGenerationFeedback(`Remediacion post-render aplicada: ${postRenderRemediation.label}.`);
+      pushActionLog({
+        kind: "shortcut",
+        action: postRenderRemediation.actionLabel,
+        status: "ok",
+        beforeTotal: activeQaTotal,
+        afterTotal: null,
+        delta: null,
+        changedBlocks: 0,
+        note: postRenderRemediation.reason,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "No se pudo aplicar la remediacion post-render.";
+      setGenerationFeedback(message);
+      pushActionLog({
+        kind: "shortcut",
+        action: postRenderRemediation.actionLabel,
+        status: "error",
+        beforeTotal: activeQaTotal,
+        afterTotal: null,
+        delta: null,
+        changedBlocks: 0,
+        note: message,
+      });
+    } finally {
+      setGeneratingFromComposer(false);
+    }
   }
 
   function parseBatchInput(value: string): string[] {
@@ -2444,6 +2661,48 @@ export default function ComposerPage() {
               ) : null}
               <div className={cn(
                 "mt-2 rounded-sm border p-2.5",
+                postRenderRemediation.severity === "success" && "border-emerald-500/25 bg-emerald-500/10",
+                postRenderRemediation.severity === "warning" && "border-amber-500/25 bg-amber-500/10",
+                postRenderRemediation.severity === "critical" && "border-red-500/25 bg-red-500/10",
+              )}>
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="min-w-0">
+                    <p className="text-[8px] font-bold text-white/35 uppercase tracking-widest">Plan post-render</p>
+                    <p className={cn(
+                      "text-[11px] font-bold mt-0.5",
+                      postRenderRemediation.severity === "success" && "text-emerald-100",
+                      postRenderRemediation.severity === "warning" && "text-amber-100",
+                      postRenderRemediation.severity === "critical" && "text-red-100",
+                    )}>
+                      {postRenderRemediation.label}
+                    </p>
+                    <p className="text-[9px] text-white/68 mt-1 leading-relaxed">{postRenderRemediation.reason}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleApplyPostRenderRemediation()}
+                    disabled={pipelineBusy || generatingFromComposer || syncingServerState}
+                    className={cn(
+                      "h-8 px-3 rounded-sm border text-[9px] font-semibold transition-all flex items-center gap-1.5",
+                      pipelineBusy || generatingFromComposer || syncingServerState
+                        ? "border-white/[0.08] bg-white/[0.02] text-white/35 cursor-not-allowed"
+                        : "border-white/[0.12] bg-white/[0.06] text-white/86 hover:bg-white/[0.10]",
+                    )}
+                  >
+                    {(pipelineBusy || generatingFromComposer || syncingServerState) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                    {postRenderRemediation.actionLabel}
+                  </button>
+                </div>
+                <div className="mt-2 grid md:grid-cols-3 gap-1.5">
+                  {postRenderRemediation.evidenceItems.slice(0, 3).map((item) => (
+                    <p key={item} className="rounded-sm border border-white/[0.06] bg-white/[0.03] px-2 py-1.5 text-[8px] text-white/62">
+                      {item}
+                    </p>
+                  ))}
+                </div>
+              </div>
+              <div className={cn(
+                "mt-2 rounded-sm border p-2.5",
                 qaHardGate.ready
                   ? "border-emerald-500/25 bg-emerald-500/10"
                   : "border-amber-500/25 bg-amber-500/10",
@@ -2458,7 +2717,7 @@ export default function ComposerPage() {
                       ? "border-emerald-500/25 bg-emerald-500/12 text-emerald-200"
                       : "border-amber-500/25 bg-amber-500/12 text-amber-200",
                   )}>
-                    QA hard gate
+                    Cierre editorial
                   </span>
                 </div>
                 {qaHardGate.blockers.length > 0 ? (
