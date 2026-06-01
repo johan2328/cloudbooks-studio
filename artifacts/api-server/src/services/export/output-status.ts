@@ -85,10 +85,10 @@ export async function readOutputStatus(pageId: string): Promise<OutputStatus> {
     }
   }
 
-  const previewPath = files.upperVisual
-    ? pagePublicPath(pageId, "upper-art.png")
-    : files.previewPng
-      ? pagePublicPath(pageId, "preview.png")
+  const previewPath = files.previewPng
+    ? pagePublicPath(pageId, "preview.png")
+    : files.upperVisual
+      ? pagePublicPath(pageId, "upper-art.png")
       : files.previewSvg
         ? pagePublicPath(pageId, "preview.svg")
         : null;

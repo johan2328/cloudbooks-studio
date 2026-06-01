@@ -31,7 +31,7 @@ Formatos por certificacion:
 
 ---
 
-## Estado real (mayo 2026)
+## Estado real (junio 2026)
 
 Lo estable hoy:
 - pipeline `Contenido -> Generacion -> QA -> Exportacion`;
@@ -125,6 +125,11 @@ Sprint 16 (layout engine v1) cerrado en codigo:
 - el servidor calcula un motor de layout con readiness, score, accion primaria y batch gate;
 - metadata, QA Report, QA editorial y Composer consumen la misma decision del motor;
 - batch registra `layout_engine` y `batch_gate` para evitar produccion ciega por lote.
+
+Sprint 17 (visual measurement v1) cerrado en codigo:
+- el generador escribe `page.html` y, si el runtime tiene Playwright/Chromium, mide el HTML renderizado contra el canvas real;
+- se persiste `visualMeasurement` en `metadata.json` y se expone en QA Report, QA editorial y Composer;
+- `preview.png` pasa a ser captura de pagina completa cuando la medicion visual esta disponible, con fallback seguro a `upper-art.png`.
 
 ---
 

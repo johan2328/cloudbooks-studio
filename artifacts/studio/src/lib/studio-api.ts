@@ -30,7 +30,58 @@ export interface StudioQaReport {
   generatedAt?: string | null;
   layoutEvidence?: StudioLayoutEvidence | null;
   layoutEngine?: StudioLayoutEngineReport | null;
+  visualMeasurement?: StudioVisualMeasurementReport | null;
   raw?: string;
+}
+
+export interface StudioVisualMeasurementRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  bottom: number;
+  right: number;
+}
+
+export interface StudioVisualMeasurementZoneUsage {
+  usedHeight: number;
+  freeBottomPx: number;
+  occupancyPct: number;
+}
+
+export interface StudioVisualMeasurementReport {
+  version: "visual-measurement-v1";
+  available: boolean;
+  renderer: "playwright" | "unavailable";
+  screenshotFile: string | null;
+  page: {
+    width: number;
+    height: number;
+    scrollWidth: number;
+    scrollHeight: number;
+    horizontalOverflowPx: number;
+    verticalOverflowPx: number;
+  };
+  zones: Record<string, StudioVisualMeasurementRect | null>;
+  zoneUsage: Record<string, StudioVisualMeasurementZoneUsage | null>;
+  typography: {
+    minFontPx: number | null;
+    smallTextCount: number;
+  };
+  overflow: {
+    count: number;
+    examples: Array<{
+      tag: string;
+      className: string;
+      text: string;
+      horizontalOverflowPx: number;
+      verticalOverflowPx: number;
+    }>;
+  };
+  warnings: string[];
+  blockers: string[];
+  score: number;
+  note: string;
 }
 
 export interface StudioLayoutEngineAction {

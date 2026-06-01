@@ -590,6 +590,15 @@ function derivePostRenderRemediation(
 
   const engine = report.layoutEngine;
   if (engine?.primaryAction) {
+    const visual = report.visualMeasurement;
+    const visualEvidenceItems = visual?.available
+      ? [
+          `Visual real: ${visual.score.toFixed(1)}/10, overflow ${visual.overflow.count}, microtexto ${visual.typography.smallTextCount}.`,
+          `Rail real: ${visual.zoneUsage.exam_rail?.freeBottomPx ?? "-"}px libres; upper ${visual.zoneUsage.upper_visual?.occupancyPct ?? "-"}% ocupado.`,
+        ]
+      : visual
+        ? [`Visual real: no disponible (${visual.note}).`]
+        : [];
     const actionId = engine.primaryAction.id;
     const shortcutAction: ShortcutAction | undefined =
       actionId === "boost_technical_core"
@@ -625,9 +634,43 @@ function derivePostRenderRemediation(
       evidenceItems: [
         `Motor layout: ${engine.score.toFixed(1)}/10 (${engine.readiness}).`,
         `Batch: ${engine.batchGate.canBatch ? "habilitado" : "bloqueado"} - ${engine.batchGate.reason}`,
+        ...visualEvidenceItems,
         engine.primaryAction.expectedImpact,
       ],
     };
+  }
+
+  const visual = report.visualMeasurement;
+  if (visual?.available) {
+    const visualItems = [
+      `Visual real: ${visual.score.toFixed(1)}/10; canvas ${visual.page.width}x${visual.page.height}.`,
+      `Overflow: ${visual.overflow.count}; microtexto: ${visual.typography.smallTextCount}; rail libre: ${visual.zoneUsage.exam_rail?.freeBottomPx ?? "-"}px.`,
+    ];
+    if (visual.blockers.length > 0) {
+      return {
+        available: true,
+        severity: "critical",
+        label: "Bloqueo visual real",
+        reason: visual.blockers[0],
+        actionLabel: "Regenerar pagina completa",
+        scope: "full",
+        objectiveId: "qa_lock",
+        evidenceItems: [...visualItems, ...visual.blockers.slice(0, 2)],
+      };
+    }
+    if (visual.typography.smallTextCount > 0 || visual.overflow.count > 0) {
+      return {
+        available: true,
+        severity: "warning",
+        label: "Ajuste visual medido",
+        reason: visual.warnings[0] ?? "La captura real detecto detalles visuales que no aparecen en el QA estructural.",
+        actionLabel: "Reforzar nucleo tecnico",
+        shortcutAction: "boost_technical",
+        scope: "technical_core",
+        objectiveId: "fill_density",
+        evidenceItems: visualItems,
+      };
+    }
   }
 
   if (!evidence) {
@@ -2673,7 +2716,7 @@ export default function ComposerPage() {
                 ) : null}
               </div>
               {lockedQa?.layoutEvidence ? (
-                <div className="mt-2 grid md:grid-cols-3 gap-2">
+                <div className="mt-2 grid md:grid-cols-4 gap-2">
                   <div className="rounded-sm border border-cyan-500/18 bg-cyan-500/8 px-2.5 py-2">
                     <p className="text-[8px] font-bold text-cyan-100/75 uppercase tracking-widest">Upper real</p>
                     <p className="text-[10px] text-white/78 mt-1">
@@ -2697,6 +2740,21 @@ export default function ComposerPage() {
                       {lockedQa.layoutEvidence.blockers[0]
                         ?? lockedQa.layoutEvidence.warnings[0]
                         ?? "Sin alertas post-render en el HTML actual."}
+                    </p>
+                  </div>
+                  <div className={cn(
+                    "rounded-sm border px-2.5 py-2",
+                    lockedQa.visualMeasurement?.available
+                      ? lockedQa.visualMeasurement.blockers.length > 0 || lockedQa.visualMeasurement.warnings.length > 0
+                        ? "border-amber-500/22 bg-amber-500/10"
+                        : "border-emerald-500/20 bg-emerald-500/8"
+                      : "border-white/[0.08] bg-white/[0.02]",
+                  )}>
+                    <p className="text-[8px] font-bold text-white/45 uppercase tracking-widest">Medicion visual</p>
+                    <p className="text-[10px] text-white/78 mt-1 line-clamp-2">
+                      {lockedQa.visualMeasurement?.available
+                        ? `${lockedQa.visualMeasurement.score.toFixed(1)}/10 · overflow ${lockedQa.visualMeasurement.overflow.count} · micro ${lockedQa.visualMeasurement.typography.smallTextCount}`
+                        : "No disponible: instalar Chromium/Playwright activa lectura real."}
                     </p>
                   </div>
                 </div>

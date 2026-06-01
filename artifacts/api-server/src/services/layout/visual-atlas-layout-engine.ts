@@ -1,4 +1,5 @@
 import type { QaDimensionScores, VisualAtlasLayoutEvidence } from "../qa/visual-atlas/validate-page-html";
+import type { VisualAtlasPageVisualMeasurement } from "../visual-measurement/visual-atlas-page-measurement";
 
 export type LayoutEngineReadiness = "approved_candidate" | "needs_targeted_fix" | "blocked";
 export type LayoutEngineActionId =
@@ -43,6 +44,7 @@ export interface VisualAtlasLayoutEngineReport {
 interface LayoutEngineContext {
   imageGenerated: boolean;
   generationSource: "locked_seed" | "composer_draft";
+  visualMeasurement?: VisualAtlasPageVisualMeasurement | null;
 }
 
 const CONSTRAINTS = {
@@ -148,6 +150,39 @@ export function evaluateVisualAtlasLayoutEngine(
     ));
   }
 
+  if (context.visualMeasurement?.available) {
+    if (context.visualMeasurement.blockers.length > 0) {
+      actions.push(action(
+        "regenerate_full",
+        "Corregir medicion visual",
+        "full",
+        98,
+        context.visualMeasurement.blockers[0],
+        "La captura real detecto un problema que no debe entrar a produccion.",
+      ));
+    }
+    if (context.visualMeasurement.typography.smallTextCount > 0) {
+      actions.push(action(
+        "boost_technical_core",
+        "Ajustar microtipografia",
+        "technical_core",
+        78,
+        `${context.visualMeasurement.typography.smallTextCount} texto(s) por debajo del umbral legible.`,
+        "Sube legibilidad real y reduce riesgo de lectura pobre en pagina impresa.",
+      ));
+    }
+    if ((context.visualMeasurement.zoneUsage.exam_rail?.freeBottomPx ?? 0) > 58) {
+      actions.push(action(
+        "compact_exam_rail",
+        "Recomponer rail inferior",
+        "exam_rail",
+        76,
+        `La captura real detecto ${context.visualMeasurement.zoneUsage.exam_rail?.freeBottomPx ?? 0}px libres al fondo del rail.`,
+        "Reduce vacio visible o enriquece microexplicaciones sin inflar el bloque.",
+      ));
+    }
+  }
+
   if (actions.length === 0 && qa.avg < CONSTRAINTS.targetScore) {
     actions.push(action(
       "human_visual_review",
@@ -174,17 +209,20 @@ export function evaluateVisualAtlasLayoutEngine(
   const evidencePenalty =
     evidence.blockers.length * 1.4
     + evidence.warnings.length * 0.28
+    + (context.visualMeasurement?.available ? context.visualMeasurement.blockers.length * 0.9 + context.visualMeasurement.warnings.length * 0.18 : 0)
     + (context.imageGenerated ? 0 : 1.2)
     + Math.max(0, CONSTRAINTS.targetScore - qa.avg) * 0.35;
   const score = roundOne(clamp(10 - evidencePenalty, 0, 10));
   const canBatch =
     context.imageGenerated
     && evidence.blockers.length === 0
+    && (!context.visualMeasurement?.available || context.visualMeasurement.blockers.length === 0)
     && evidence.score >= CONSTRAINTS.minLayoutScoreForBatch
+    && (!context.visualMeasurement?.available || context.visualMeasurement.score >= 8.8)
     && qa.avg >= CONSTRAINTS.targetScore;
   const readiness: LayoutEngineReadiness = canBatch
     ? "approved_candidate"
-    : evidence.blockers.length > 0 || !context.imageGenerated
+    : evidence.blockers.length > 0 || !context.imageGenerated || (context.visualMeasurement?.available === true && context.visualMeasurement.blockers.length > 0)
       ? "blocked"
       : "needs_targeted_fix";
 
@@ -211,4 +249,3 @@ export function evaluateVisualAtlasLayoutEngine(
     evidenceFingerprint: fingerprint(evidence, qa),
   };
 }
-

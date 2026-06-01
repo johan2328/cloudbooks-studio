@@ -10,6 +10,7 @@ import {
   type StudioCatalogPage,
   type StudioLayoutEngineReport,
   type StudioLayoutEvidence,
+  type StudioVisualMeasurementReport,
 } from "@/lib/studio-api";
 import { normalizeQaScoreToTen, qaScoreToHundred, resolveQaScoreSource } from "@/lib/qa-score-source";
 import {
@@ -26,6 +27,7 @@ interface RealQA {
   generatedAt: string | null;
   layoutEvidence?: StudioLayoutEvidence | null;
   layoutEngine?: StudioLayoutEngineReport | null;
+  visualMeasurement?: StudioVisualMeasurementReport | null;
 }
 
 type GenerationMode = "openai_image" | "placeholder_image" | "fallback_html" | "none";
@@ -739,6 +741,68 @@ export default function QAPage() {
                     {[...realQA.layoutEvidence.blockers, ...realQA.layoutEvidence.warnings].length > 0 && (
                       <div className="mt-3 space-y-1.5">
                         {[...realQA.layoutEvidence.blockers, ...realQA.layoutEvidence.warnings].slice(0, 4).map((item) => (
+                          <p key={item} className="text-[9px] text-amber-200/80 leading-relaxed">
+                            - {item}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {realQA?.visualMeasurement && (
+                  <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div>
+                        <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Medicion visual real</p>
+                        <p className="text-[10px] text-white/45 mt-1">
+                          {realQA.visualMeasurement.available
+                            ? "Lectura del HTML renderizado en Chromium."
+                            : "Runtime sin Chromium/Playwright; se conserva QA estructural."}
+                        </p>
+                      </div>
+                      <span className={cn(
+                        "text-[10px] font-black",
+                        !realQA.visualMeasurement.available
+                          ? "text-white/35"
+                          : realQA.visualMeasurement.blockers.length > 0
+                            ? "text-red-300"
+                            : realQA.visualMeasurement.warnings.length > 0
+                              ? "text-amber-300"
+                              : "text-emerald-300",
+                      )}>
+                        {realQA.visualMeasurement.available ? `${realQA.visualMeasurement.score.toFixed(1)}/10` : "offline"}
+                      </span>
+                    </div>
+                    <div className="grid md:grid-cols-4 gap-2">
+                      <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                        <p className="text-[8px] text-white/30 uppercase tracking-widest">Canvas</p>
+                        <p className="text-[10px] text-white/72 font-semibold mt-1">
+                          {realQA.visualMeasurement.page.width || "-"}x{realQA.visualMeasurement.page.height || "-"}
+                        </p>
+                      </div>
+                      <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                        <p className="text-[8px] text-white/30 uppercase tracking-widest">Overflow</p>
+                        <p className="text-[10px] text-white/72 font-semibold mt-1">
+                          {realQA.visualMeasurement.overflow.count} items
+                        </p>
+                      </div>
+                      <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                        <p className="text-[8px] text-white/30 uppercase tracking-widest">Microtexto</p>
+                        <p className="text-[10px] text-white/72 font-semibold mt-1">
+                          {realQA.visualMeasurement.typography.smallTextCount} bajos
+                        </p>
+                      </div>
+                      <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                        <p className="text-[8px] text-white/30 uppercase tracking-widest">Rail libre</p>
+                        <p className="text-[10px] text-white/72 font-semibold mt-1">
+                          {realQA.visualMeasurement.zoneUsage.exam_rail?.freeBottomPx ?? "-"}px
+                        </p>
+                      </div>
+                    </div>
+                    {[...realQA.visualMeasurement.blockers, ...realQA.visualMeasurement.warnings].length > 0 && (
+                      <div className="mt-3 space-y-1.5">
+                        {[...realQA.visualMeasurement.blockers, ...realQA.visualMeasurement.warnings].slice(0, 4).map((item) => (
                           <p key={item} className="text-[9px] text-amber-200/80 leading-relaxed">
                             - {item}
                           </p>

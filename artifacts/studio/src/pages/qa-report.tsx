@@ -12,7 +12,7 @@ import {
 import Layout from "@/components/Layout";
 import { cn, scoreColorDark } from "@/lib/utils";
 import { useStudio } from "@/lib/studio-store";
-import type { StudioLayoutEngineReport, StudioLayoutEvidence } from "@/lib/studio-api";
+import type { StudioLayoutEngineReport, StudioLayoutEvidence, StudioVisualMeasurementReport } from "@/lib/studio-api";
 
 interface RealQA {
   verdict: string;
@@ -21,6 +21,7 @@ interface RealQA {
   redTeamLog: string[];
   layoutEvidence?: StudioLayoutEvidence | null;
   layoutEngine?: StudioLayoutEngineReport | null;
+  visualMeasurement?: StudioVisualMeasurementReport | null;
   raw?: string;
 }
 
@@ -256,6 +257,69 @@ export default function QAReportPage() {
                         ))}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {report.visualMeasurement && (
+                  <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div>
+                        <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Medicion visual real</p>
+                        <p className="text-[10px] text-white/45 mt-1">
+                          {report.visualMeasurement.available
+                            ? "Captura y medicion tomadas sobre page.html."
+                            : "No disponible en este runtime; el reporte conserva la razon."}
+                        </p>
+                      </div>
+                      <span className={cn(
+                        "text-sm font-black",
+                        !report.visualMeasurement.available
+                          ? "text-white/35"
+                          : report.visualMeasurement.blockers.length > 0
+                            ? "text-red-300"
+                            : report.visualMeasurement.warnings.length > 0
+                              ? "text-amber-300"
+                              : "text-emerald-300",
+                      )}>
+                        {report.visualMeasurement.available ? `${report.visualMeasurement.score.toFixed(1)}/10` : "offline"}
+                      </span>
+                    </div>
+                    <div className="grid md:grid-cols-4 gap-2">
+                      <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                        <p className="text-[8px] text-white/30 uppercase tracking-widest">Canvas</p>
+                        <p className="text-[10px] text-white/70 font-semibold mt-1">
+                          {report.visualMeasurement.page.width || "-"}x{report.visualMeasurement.page.height || "-"}
+                        </p>
+                      </div>
+                      <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                        <p className="text-[8px] text-white/30 uppercase tracking-widest">Overflow</p>
+                        <p className="text-[10px] text-white/70 font-semibold mt-1">
+                          {report.visualMeasurement.overflow.count} items
+                        </p>
+                      </div>
+                      <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                        <p className="text-[8px] text-white/30 uppercase tracking-widest">Microtexto</p>
+                        <p className="text-[10px] text-white/70 font-semibold mt-1">
+                          {report.visualMeasurement.typography.smallTextCount} bajos
+                        </p>
+                      </div>
+                      <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                        <p className="text-[8px] text-white/30 uppercase tracking-widest">Rail libre</p>
+                        <p className="text-[10px] text-white/70 font-semibold mt-1">
+                          {report.visualMeasurement.zoneUsage.exam_rail?.freeBottomPx ?? "-"}px
+                        </p>
+                      </div>
+                    </div>
+                    {[...report.visualMeasurement.blockers, ...report.visualMeasurement.warnings].length > 0 && (
+                      <div className="mt-3 grid md:grid-cols-2 gap-2">
+                        {[...report.visualMeasurement.blockers, ...report.visualMeasurement.warnings].slice(0, 6).map((item) => (
+                          <div key={item} className="rounded-sm border border-amber-500/18 bg-amber-500/8 px-3 py-2 text-[10px] text-amber-100/80 leading-relaxed">
+                            {item}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-white/38 mt-3 leading-relaxed">{report.visualMeasurement.note}</p>
                   </div>
                 )}
 
