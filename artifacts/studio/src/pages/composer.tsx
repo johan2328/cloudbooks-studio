@@ -14,7 +14,6 @@ import {
   Lock,
   MapPinned,
   GripVertical,
-  Save,
   ShieldCheck,
   Sparkles,
   Waypoints,
@@ -2589,79 +2588,25 @@ export default function ComposerPage() {
 
           <button
             type="button"
-            onClick={handleSaveDraft}
-            disabled={!proposal || savingDraft}
+            onClick={handleGenerateWithDraft}
+            disabled={!proposal || !editableDraft || generatingFromComposer}
             className={cn(
               "h-9 px-3 rounded-sm border text-[10px] font-semibold transition-all flex items-center gap-2",
-              !proposal || savingDraft
-                ? "border-white/[0.08] bg-white/[0.02] text-white/30 cursor-not-allowed"
-                : "border-emerald-500/25 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/16"
+              !proposal || !editableDraft || generatingFromComposer
+                ? "border-white/[0.08] bg-white/[0.02] text-white/35 cursor-not-allowed"
+                : "border-teal-400/30 bg-teal-500/18 text-teal-50 hover:bg-teal-500/26",
             )}
           >
-            {savingDraft ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            {savingDraft ? "Guardando..." : "Guardar draft"}
+            {generatingFromComposer ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+            {generatingFromComposer ? "Generando..." : "Generar draft"}
           </button>
-
-          <div className="h-9 rounded-sm border border-white/[0.08] bg-white/[0.02] p-0.5 flex items-center">
-            <button
-              type="button"
-              onClick={() => setFocusMode(true)}
-              className={cn(
-                "h-8 px-3 rounded-[3px] text-[10px] font-semibold transition-all",
-                focusMode
-                  ? "bg-violet-500/18 text-violet-50"
-                  : "text-white/45 hover:text-white/75",
-              )}
-            >
-              Operador
-            </button>
-            <button
-              type="button"
-              onClick={() => setFocusMode(false)}
-              className={cn(
-                "h-8 px-3 rounded-[3px] text-[10px] font-semibold transition-all",
-                !focusMode
-                  ? "bg-blue-500/16 text-blue-50"
-                  : "text-white/45 hover:text-white/75",
-              )}
-            >
-              Diagnostico
-            </button>
-          </div>
-
-          {focusMode ? (
-            <button
-              type="button"
-              onClick={() => void handleRunNextStep()}
-              disabled={pipelineBusy || generatingFromComposer || savingDraft || (flowNextStep > 4 && !qaHardGate.ready)}
-              className={cn(
-                "h-9 px-3 rounded-sm border text-[10px] font-semibold transition-all flex items-center gap-2",
-                pipelineBusy || generatingFromComposer || savingDraft || (flowNextStep > 4 && !qaHardGate.ready)
-                  ? "border-white/[0.08] bg-white/[0.02] text-white/35 cursor-not-allowed"
-                  : "border-violet-400/30 bg-violet-500/20 text-violet-50 hover:bg-violet-500/28",
-              )}
-            >
-              {(pipelineBusy || generatingFromComposer || savingDraft) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-              Siguiente: {flowStepDescriptor}
-            </button>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => setLocation(`/generacion?page=${pageIdFromRoute}`)}
-                className="h-9 px-3 rounded-sm border border-teal-500/25 bg-teal-500/10 text-[10px] font-semibold text-teal-100 hover:bg-teal-500/16 transition-all"
-              >
-                Generar pagina
-              </button>
-              <button
-                type="button"
-                onClick={() => setLocation(`/qa/${parseInt(pageIdFromRoute, 10)}`)}
-                className="h-9 px-3 rounded-sm border border-blue-500/25 bg-blue-500/10 text-[10px] font-semibold text-blue-100 hover:bg-blue-500/16 transition-all"
-              >
-                Revisar QA
-              </button>
-            </>
-          )}
+          <button
+            type="button"
+            onClick={() => setLocation(`/qa/${parseInt(pageIdFromRoute, 10)}`)}
+            className="h-9 px-3 rounded-sm border border-blue-500/25 bg-blue-500/10 text-[10px] font-semibold text-blue-100 hover:bg-blue-500/16 transition-all"
+          >
+            QA
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
@@ -2674,6 +2619,281 @@ export default function ComposerPage() {
               </p>
             </div>
           )}
+
+          {loading ? (
+            <div className="max-w-6xl mx-auto flex items-center gap-2 py-8 text-white/35">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-[10px]">Armando mesa de composicion...</span>
+            </div>
+          ) : error ? (
+            <div className="max-w-6xl mx-auto bg-amber-500/8 border border-amber-400/20 rounded-sm p-4">
+              <p className="text-[11px] font-bold text-amber-200">Composer usando propuesta local</p>
+              <p className="text-[10px] text-amber-100/70 mt-1">{error}</p>
+            </div>
+          ) : proposal ? (
+            <div className="max-w-[1500px] mx-auto space-y-4">
+              <section className="rounded-sm border border-white/[0.08] bg-[#0d1629] px-4 py-3">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div>
+                    <p className="text-[8px] font-black uppercase tracking-widest text-cyan-300/75">Composer Reset</p>
+                    <h2 className="text-lg font-black text-white mt-1">Mesa editorial de pagina</h2>
+                    <p className="text-[11px] text-white/52 mt-1 max-w-3xl">
+                      Una sola lectura: preview grande, problema dominante y tres acciones que deben cambiar la salida final.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 min-w-[360px]">
+                    <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] px-3 py-2">
+                      <p className="text-[8px] text-white/30 uppercase tracking-widest">QA oficial</p>
+                      <p className={cn("text-sm font-black mt-1", lockedTotal != null && lockedTotal >= 9.5 ? "text-emerald-300" : "text-amber-300")}>
+                        {lockedTotal != null ? `${lockedTotal.toFixed(1)}/10` : "sin QA"}
+                      </p>
+                    </div>
+                    <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] px-3 py-2">
+                      <p className="text-[8px] text-white/30 uppercase tracking-widest">Draft</p>
+                      <p className={cn("text-sm font-black mt-1", projectedQaScores && projectedQaScores.total >= 9.5 ? "text-emerald-300" : "text-cyan-300")}>
+                        {projectedQaScores ? `${projectedQaScores.total.toFixed(1)}/10` : "sin draft"}
+                      </p>
+                    </div>
+                    <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] px-3 py-2">
+                      <p className="text-[8px] text-white/30 uppercase tracking-widest">Brecha</p>
+                      <p className={cn("text-sm font-black mt-1", (activeGapToTarget ?? projectedGap ?? 9.5) <= 0.5 ? "text-emerald-300" : "text-amber-300")}>
+                        {(activeGapToTarget ?? projectedGap) != null ? (activeGapToTarget ?? projectedGap)?.toFixed(1) : "-"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <div className="grid xl:grid-cols-[minmax(0,1fr)_380px] gap-4 items-start">
+                <section className="rounded-sm border border-white/[0.08] bg-[#0d1629] p-4">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Preview editorial</p>
+                      <p className="text-[11px] text-white/55 mt-1">
+                        {canvasMode === "real" ? "Output real generado" : "Borrador compositivo editable"}
+                      </p>
+                    </div>
+                    <div className="h-8 rounded-sm border border-white/[0.08] bg-white/[0.02] p-0.5 flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => setCanvasMode("real")}
+                        className={cn(
+                          "h-7 px-3 rounded-[3px] text-[9px] font-semibold transition-all",
+                          canvasMode === "real" ? "bg-emerald-500/18 text-emerald-50" : "text-white/45 hover:text-white/75",
+                        )}
+                      >
+                        Real
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCanvasMode("draft")}
+                        className={cn(
+                          "h-7 px-3 rounded-[3px] text-[9px] font-semibold transition-all",
+                          canvasMode === "draft" ? "bg-blue-500/18 text-blue-50" : "text-white/45 hover:text-white/75",
+                        )}
+                      >
+                        Draft
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mx-auto max-w-[860px] rounded-sm border border-white/[0.08] bg-[#07101d] p-3">
+                    {canvasMode === "real" ? (
+                      <div className="w-full aspect-[768/1152] rounded-sm border border-white/[0.08] bg-white overflow-hidden">
+                        {realHtmlPreviewUrl ? (
+                          <iframe
+                            title={`Output real pagina ${pageIdFromRoute}`}
+                            src={realHtmlPreviewUrl}
+                            className="w-full h-full border-0 bg-white"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center bg-[#f7fbff] text-[11px] text-[#47607f]">
+                            Todavia no hay output real para esta pagina.
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="w-full aspect-[768/1152] rounded-sm border border-white/[0.08] bg-[#f7fbff] overflow-y-auto p-4">
+                        <div className="h-full w-full flex flex-col gap-2">
+                          {sortedBlocks.map((block, index) => {
+                            const selected = selectedBlock?.id === block.id;
+                            const blockHeight = Math.max(42, Math.min(180, Math.round(estimateBlockHeight(block) * 0.58)));
+                            const isDragging = draggingBlockId === block.id;
+                            return (
+                              <button
+                                key={`reset-canvas:${block.id}`}
+                                type="button"
+                                draggable
+                                onDragStart={() => setDraggingBlockId(block.id)}
+                                onDragEnd={() => setDraggingBlockId(null)}
+                                onDragOver={(event) => event.preventDefault()}
+                                onDrop={(event) => {
+                                  event.preventDefault();
+                                  if (!draggingBlockId || draggingBlockId === block.id) return;
+                                  reorderFromCanvas(draggingBlockId, block.id, "before");
+                                  setDraggingBlockId(null);
+                                }}
+                                onClick={() => setSelectedBlockId(block.id)}
+                                className={cn(
+                                  "w-full text-left rounded-[6px] border px-3 py-2 transition-all",
+                                  selected ? "border-[#1f6fff] bg-[#eaf3ff]" : "border-[#d8e4f4] bg-white hover:border-[#9bb8ea]",
+                                  isDragging && "opacity-45",
+                                )}
+                                style={{ minHeight: `${blockHeight}px` }}
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <GripVertical className="w-3 h-3 text-[#4369a8] shrink-0" />
+                                    <span className="text-[8px] font-black text-[#0b4aa2] uppercase tracking-[0.08em]">
+                                      {String(index + 1).padStart(2, "0")}
+                                    </span>
+                                    <span className="text-[11px] font-black text-[#091b4f] truncate">{labelBlockType(block.type)}</span>
+                                  </div>
+                                  <span className="text-[8px] text-[#5071a6] bg-[#e8f0fc] border border-[#d4e2f8] rounded-[4px] px-1.5 py-0.5">
+                                    {block.variant}
+                                  </span>
+                                </div>
+                                <p className="text-[9px] text-[#405c8f] leading-snug mt-2 line-clamp-3">
+                                  {summarizeBlockContent(block)}
+                                </p>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                <aside className="space-y-3">
+                  <section className="rounded-sm border border-white/[0.08] bg-[#0d1629] p-4">
+                    <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Problema dominante</p>
+                    <p className="text-sm font-black text-white mt-2">
+                      {recommendedObjective?.label ?? recommendedShortcut?.label ?? postRenderRemediation.label}
+                    </p>
+                    <p className="text-[10px] text-white/58 mt-2 leading-relaxed">
+                      {spacePlan?.guidance ?? recommendedShortcut?.reason ?? postRenderRemediation.reason}
+                    </p>
+                    {spacePlan ? (
+                      <div className="grid grid-cols-3 gap-2 mt-3">
+                        <div className="rounded-sm border border-white/[0.07] bg-white/[0.02] px-2 py-2">
+                          <p className="text-[8px] text-white/30 uppercase tracking-widest">Intro</p>
+                          <p className="text-[12px] font-black text-cyan-300 mt-1">{spacePlan.introShare}%</p>
+                        </div>
+                        <div className="rounded-sm border border-white/[0.07] bg-white/[0.02] px-2 py-2">
+                          <p className="text-[8px] text-white/30 uppercase tracking-widest">Visual</p>
+                          <p className="text-[12px] font-black text-emerald-300 mt-1">{spacePlan.technicalShare}%</p>
+                        </div>
+                        <div className="rounded-sm border border-white/[0.07] bg-white/[0.02] px-2 py-2">
+                          <p className="text-[8px] text-white/30 uppercase tracking-widest">Rail</p>
+                          <p className="text-[12px] font-black text-amber-300 mt-1">{spacePlan.examShare}%</p>
+                        </div>
+                      </div>
+                    ) : null}
+                  </section>
+
+                  <section className="rounded-sm border border-white/[0.08] bg-[#0d1629] p-4">
+                    <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Acciones de maquetacion</p>
+                    <div className="mt-3 space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleRunObjective("qa_lock")}
+                        disabled={!proposal || !editableDraft || generatingFromComposer || pipelineBusy}
+                        className="w-full h-10 rounded-sm border border-violet-400/30 bg-violet-500/16 text-[10px] font-bold text-violet-50 hover:bg-violet-500/24 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {(generatingFromComposer || pipelineBusy) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                        Rebalancear pagina
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleRunObjective("fill_density")}
+                        disabled={!proposal || !editableDraft || generatingFromComposer || pipelineBusy}
+                        className="w-full h-10 rounded-sm border border-cyan-400/30 bg-cyan-500/14 text-[10px] font-bold text-cyan-50 hover:bg-cyan-500/22 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        <Layers3 className="w-3.5 h-3.5" />
+                        Rellenar huecos utiles
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleRunObjective("compact_exam_rail")}
+                        disabled={!proposal || !editableDraft || generatingFromComposer || pipelineBusy}
+                        className="w-full h-10 rounded-sm border border-amber-400/30 bg-amber-500/14 text-[10px] font-bold text-amber-50 hover:bg-amber-500/22 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        <Waypoints className="w-3.5 h-3.5" />
+                        Compactar rail inferior
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mt-3">
+                      <button
+                        type="button"
+                        onClick={handleSaveDraft}
+                        disabled={!proposal || savingDraft}
+                        className="h-8 rounded-sm border border-white/[0.1] bg-white/[0.03] text-[9px] font-semibold text-white/70 hover:bg-white/[0.06] disabled:opacity-50"
+                      >
+                        {savingDraft ? "Guardando..." : "Guardar draft"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLocation(`/qa/${parseInt(pageIdFromRoute, 10)}`)}
+                        className="h-8 rounded-sm border border-blue-400/25 bg-blue-500/10 text-[9px] font-semibold text-blue-100 hover:bg-blue-500/16"
+                      >
+                        Abrir QA
+                      </button>
+                    </div>
+                  </section>
+
+                  <section className="rounded-sm border border-white/[0.08] bg-[#0d1629] p-4">
+                    <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Bloque seleccionado</p>
+                    {selectedBlock ? (
+                      <>
+                        <p className="text-sm font-black text-white mt-2">{labelBlockType(selectedBlock.type)}</p>
+                        <p className="text-[10px] text-white/55 mt-1 leading-relaxed">{summarizeBlockContent(selectedBlock)}</p>
+                        <div className="grid grid-cols-3 gap-2 mt-3">
+                          <button
+                            type="button"
+                            onClick={() => moveBlockByOffset(selectedBlock.id, -1)}
+                            className="h-8 rounded-sm border border-white/[0.1] text-[9px] font-semibold text-white/70 hover:bg-white/[0.04]"
+                          >
+                            Subir
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveBlockByOffset(selectedBlock.id, 1)}
+                            className="h-8 rounded-sm border border-white/[0.1] text-[9px] font-semibold text-white/70 hover:bg-white/[0.04]"
+                          >
+                            Bajar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => rotateVariant(selectedBlock.id)}
+                            className="h-8 rounded-sm border border-blue-400/25 bg-blue-500/10 text-[9px] font-semibold text-blue-100 hover:bg-blue-500/16"
+                          >
+                            Variante
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-[10px] text-white/45 mt-2">Selecciona un bloque del canvas.</p>
+                    )}
+                  </section>
+
+                  {(generationFeedback || quickActionFeedback || qaDelta) && (
+                    <section className="rounded-sm border border-white/[0.08] bg-white/[0.02] p-3">
+                      {generationFeedback ? <p className="text-[10px] text-white/70 leading-relaxed">{generationFeedback}</p> : null}
+                      {quickActionFeedback ? <p className="text-[10px] text-cyan-200/85 leading-relaxed mt-1">{quickActionFeedback}</p> : null}
+                      {qaDelta ? (
+                        <p className="text-[9px] text-white/50 mt-1">
+                          Delta QA: {qaDelta.before == null ? "sin baseline" : qaDelta.before.toFixed(1)} {"->"} {qaDelta.after?.toFixed(1) ?? "-"}
+                        </p>
+                      ) : null}
+                    </section>
+                  )}
+                </aside>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="hidden" aria-hidden="true">
           {!loading && !error && (
             <div className="max-w-6xl mx-auto mb-3 px-3 py-2 rounded-sm border border-white/[0.08] bg-[#0d1629]">
               <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Modo operador Composer</p>
@@ -4540,6 +4760,7 @@ export default function ComposerPage() {
               )}
             </div>
           ) : null}
+          </div>
         </div>
       </div>
     </Layout>
