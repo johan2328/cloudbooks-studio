@@ -12,7 +12,7 @@ import {
 import Layout from "@/components/Layout";
 import { cn, scoreColorDark } from "@/lib/utils";
 import { useStudio } from "@/lib/studio-store";
-import type { StudioLayoutEvidence } from "@/lib/studio-api";
+import type { StudioLayoutEngineReport, StudioLayoutEvidence } from "@/lib/studio-api";
 
 interface RealQA {
   verdict: string;
@@ -20,6 +20,7 @@ interface RealQA {
   observations: string[];
   redTeamLog: string[];
   layoutEvidence?: StudioLayoutEvidence | null;
+  layoutEngine?: StudioLayoutEngineReport | null;
   raw?: string;
 }
 
@@ -255,6 +256,41 @@ export default function QAReportPage() {
                         ))}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {report.layoutEngine && (
+                  <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div>
+                        <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Motor de layout</p>
+                        <p className="text-[10px] text-white/45 mt-1">
+                          Decision operativa calculada desde evidencia real, QA y guardrails de batch.
+                        </p>
+                      </div>
+                      <span className={cn(
+                        "text-sm font-black",
+                        report.layoutEngine.batchGate.canBatch ? "text-emerald-300" : report.layoutEngine.readiness === "blocked" ? "text-red-300" : "text-amber-300",
+                      )}>
+                        {report.layoutEngine.score.toFixed(1)}/10
+                      </span>
+                    </div>
+                    <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-[11px] font-bold text-white/82">{report.layoutEngine.primaryAction.label}</p>
+                        <span className="text-[8px] font-bold text-white/45 uppercase tracking-widest">{report.layoutEngine.primaryAction.scope}</span>
+                      </div>
+                      <p className="text-[10px] text-white/58 mt-1 leading-relaxed">{report.layoutEngine.primaryAction.reason}</p>
+                      <p className="text-[10px] text-cyan-100/70 mt-1 leading-relaxed">{report.layoutEngine.primaryAction.expectedImpact}</p>
+                    </div>
+                    <div className={cn(
+                      "mt-3 rounded-sm border px-3 py-2 text-[10px] leading-relaxed",
+                      report.layoutEngine.batchGate.canBatch
+                        ? "border-emerald-500/20 bg-emerald-500/8 text-emerald-100/85"
+                        : "border-amber-500/20 bg-amber-500/8 text-amber-100/85",
+                    )}>
+                      Batch gate: {report.layoutEngine.batchGate.canBatch ? "habilitado" : "bloqueado"} - {report.layoutEngine.batchGate.reason}
+                    </div>
                   </div>
                 )}
 

@@ -29,7 +29,38 @@ export interface StudioQaReport {
   redTeamLog: string[];
   generatedAt?: string | null;
   layoutEvidence?: StudioLayoutEvidence | null;
+  layoutEngine?: StudioLayoutEngineReport | null;
   raw?: string;
+}
+
+export interface StudioLayoutEngineAction {
+  id: "regenerate_full" | "boost_technical_core" | "compact_exam_rail" | "expand_context" | "human_visual_review" | "approve_candidate";
+  label: string;
+  scope: "full" | "technical_core" | "exam_rail" | "qa_review";
+  priority: number;
+  reason: string;
+  expectedImpact: string;
+}
+
+export interface StudioLayoutEngineReport {
+  version: "visual-atlas-layout-engine-v1";
+  readiness: "approved_candidate" | "needs_targeted_fix" | "blocked";
+  score: number;
+  summary: string;
+  primaryAction: StudioLayoutEngineAction;
+  actions: StudioLayoutEngineAction[];
+  batchGate: {
+    canBatch: boolean;
+    reason: string;
+  };
+  constraints: {
+    targetScore: number;
+    maxUpperFreeVerticalPx: number;
+    minUpperImageSharePct: number;
+    maxExamRailSharePct: number;
+    minLayoutScoreForBatch: number;
+  };
+  evidenceFingerprint: string;
 }
 
 export interface StudioLayoutEvidence {

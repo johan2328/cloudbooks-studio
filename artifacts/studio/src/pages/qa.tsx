@@ -8,6 +8,7 @@ import {
   fetchStudioCatalog,
   type ComposerDraftRecord,
   type StudioCatalogPage,
+  type StudioLayoutEngineReport,
   type StudioLayoutEvidence,
 } from "@/lib/studio-api";
 import { normalizeQaScoreToTen, qaScoreToHundred, resolveQaScoreSource } from "@/lib/qa-score-source";
@@ -24,6 +25,7 @@ interface RealQA {
   redTeamLog: string[];
   generatedAt: string | null;
   layoutEvidence?: StudioLayoutEvidence | null;
+  layoutEngine?: StudioLayoutEngineReport | null;
 }
 
 type GenerationMode = "openai_image" | "placeholder_image" | "fallback_html" | "none";
@@ -743,6 +745,34 @@ export default function QAPage() {
                         ))}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {realQA?.layoutEngine && (
+                  <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div>
+                        <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Motor de layout</p>
+                        <p className="text-[10px] text-white/45 mt-1">Decision operativa para corregir o habilitar batch.</p>
+                      </div>
+                      <span className={cn(
+                        "text-[10px] font-black",
+                        realQA.layoutEngine.batchGate.canBatch ? "text-emerald-300" : realQA.layoutEngine.readiness === "blocked" ? "text-red-300" : "text-amber-300",
+                      )}>
+                        {realQA.layoutEngine.score.toFixed(1)}/10
+                      </span>
+                    </div>
+                    <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                      <p className="text-[10px] font-bold text-white/80">{realQA.layoutEngine.primaryAction.label}</p>
+                      <p className="text-[9px] text-white/55 leading-relaxed mt-1">{realQA.layoutEngine.primaryAction.reason}</p>
+                      <p className="text-[9px] text-cyan-100/70 leading-relaxed mt-1">{realQA.layoutEngine.primaryAction.expectedImpact}</p>
+                    </div>
+                    <p className={cn(
+                      "mt-2 text-[9px] leading-relaxed",
+                      realQA.layoutEngine.batchGate.canBatch ? "text-emerald-200/80" : "text-amber-200/80",
+                    )}>
+                      Batch gate: {realQA.layoutEngine.batchGate.canBatch ? "habilitado" : "bloqueado"} - {realQA.layoutEngine.batchGate.reason}
+                    </p>
                   </div>
                 )}
 

@@ -184,10 +184,13 @@ async function processBatchRun(args: {
         imageGenerated?: boolean;
         imageError?: string | null;
         qaDelta?: { after?: number | null };
+        layoutEngine?: { score?: number; batchGate?: { canBatch?: boolean } };
       };
       const outputSummary = [
         payload.outputs?.html ? `html=${payload.outputs.html}` : null,
         typeof payload.qaDelta?.after === "number" ? `qa_after=${payload.qaDelta.after.toFixed(1)}` : null,
+        typeof payload.layoutEngine?.score === "number" ? `layout_engine=${payload.layoutEngine.score.toFixed(1)}` : null,
+        typeof payload.layoutEngine?.batchGate?.canBatch === "boolean" ? `batch_gate=${payload.layoutEngine.batchGate.canBatch ? "pass" : "hold"}` : null,
         payload.imageGenerated ? "visual=real" : "visual=placeholder",
       ].filter(Boolean).join(" · ");
 

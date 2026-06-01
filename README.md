@@ -121,6 +121,11 @@ Sprint 15 (evidencia real -> accion) cerrado en codigo:
 - el plan post-render convierte upper subutilizado, rail inferior mal aprovechado o bloqueos estructurales en una accion concreta;
 - el QA hard gate bloquea cierre si la evidencia real del HTML cae por debajo del umbral compositivo.
 
+Sprint 16 (layout engine v1) cerrado en codigo:
+- el servidor calcula un motor de layout con readiness, score, accion primaria y batch gate;
+- metadata, QA Report, QA editorial y Composer consumen la misma decision del motor;
+- batch registra `layout_engine` y `batch_gate` para evitar produccion ciega por lote.
+
 ---
 
 ## Alcance por cloud

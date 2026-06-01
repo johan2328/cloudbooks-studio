@@ -6,6 +6,7 @@ import { VISUAL_ATLAS_V24_CONTRACT } from "../../../domain/editorial-contracts/v
 import { pageOutputDir, pagePublicPath } from "../../export/paths";
 import { renderVisualAtlasPage } from "../../renderers/visual-atlas/render-golden-page";
 import { runStructuralQa, computeQaDimensionScores, type QaDimensionScores, type StructuralQaResult } from "../../qa/visual-atlas/validate-page-html";
+import { evaluateVisualAtlasLayoutEngine, type VisualAtlasLayoutEngineReport } from "../../layout/visual-atlas-layout-engine";
 import { generateUpperVisual } from "./generate-upper-visual";
 
 const GUARDRAIL_LABEL = VISUAL_ATLAS_V24_CONTRACT.generation.costGuardrail;
@@ -40,6 +41,7 @@ export interface GeneratePageResult {
   } | null;
   qaBaselineTotal: number | null;
   qaDimensions: QaDimensionScores;
+  layoutEngine: VisualAtlasLayoutEngineReport;
 }
 
 interface Logger {
@@ -97,6 +99,7 @@ export async function generateVisualAtlasPage(
   };
   log.info({ pageId, hasImage: imageGenerated }, "Assembling HTML from golden master template");
   const pageHtml = renderVisualAtlasPage(pageData);
+  const generationSource = options.generationSource ?? "locked_seed";
 
   /* ── Step 3: QA estructural ───────────────────────────────────────────── */
   const qa  = runStructuralQa(pageHtml, pageData);
@@ -122,11 +125,14 @@ export async function generateVisualAtlasPage(
       ? `Requires human visual review: target ${VISUAL_ATLAS_V24_CONTRACT.qa.humanArtScoreToProduce}/10 before production`
       : "Blocked: upper visual is not a real premium image",
   } : defaultDim;
+  const layoutEngine = evaluateVisualAtlasLayoutEngine(qa.layoutEvidence, dim, {
+    imageGenerated,
+    generationSource,
+  });
   log.info({ pageId, qaScore: qa.score, qaPassed: qa.passed }, "Structural QA complete");
 
   const generatedAt = new Date().toISOString();
   const durationMs  = Date.now() - startedAt;
-  const generationSource = options.generationSource ?? "locked_seed";
 
   /* ── Step 4: Guardar outputs ──────────────────────────────────────────── */
   await writeFile(join(outDir, "page.html"), pageHtml, "utf-8");
@@ -154,6 +160,7 @@ export async function generateVisualAtlasPage(
     qaStructural:     qa,
     layoutEvidence:   qa.layoutEvidence,
     qaDimensions:     dim,
+    layoutEngine,
     durationMs,
   };
   await writeFile(join(outDir, "metadata.json"), JSON.stringify(metadata, null, 2), "utf-8");
@@ -188,6 +195,14 @@ ${qaLines}
 ${qa.layoutEvidence.blockers.length > 0 ? `\n### Bloqueos post-render\n${qa.layoutEvidence.blockers.map((item) => `- ${item}`).join("\n")}\n` : ""}
 ${qa.layoutEvidence.warnings.length > 0 ? `\n### Alertas post-render\n${qa.layoutEvidence.warnings.map((item) => `- ${item}`).join("\n")}\n` : ""}
 
+## Motor de layout
+- Version: **${layoutEngine.version}**
+- Score motor: **${layoutEngine.score}/10**
+- Estado: **${layoutEngine.readiness}**
+- Accion primaria: **${layoutEngine.primaryAction.label}**
+- Razon: ${layoutEngine.primaryAction.reason}
+- Batch gate: **${layoutEngine.batchGate.canBatch ? "habilitado" : "bloqueado"}** - ${layoutEngine.batchGate.reason}
+
 ## Observaciones
 - Layout golden master v24 ensamblado deterministicamente
 - Contenido editorial validado manualmente para página ${pageId}
@@ -220,5 +235,6 @@ ${!imageGenerated ? "- Acción requerida: Generar upper visual premium con gpt-i
     composerDraft: options.composerDraft ?? null,
     qaBaselineTotal: options.qaBaselineTotal ?? null,
     qaDimensions: dim,
+    layoutEngine,
   };
 }

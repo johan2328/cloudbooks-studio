@@ -588,6 +588,48 @@ function derivePostRenderRemediation(
     };
   }
 
+  const engine = report.layoutEngine;
+  if (engine?.primaryAction) {
+    const actionId = engine.primaryAction.id;
+    const shortcutAction: ShortcutAction | undefined =
+      actionId === "boost_technical_core"
+        ? "boost_technical"
+        : actionId === "compact_exam_rail"
+          ? "compact_rail"
+          : actionId === "expand_context"
+            ? "expand_context"
+            : actionId === "approve_candidate"
+              ? undefined
+              : undefined;
+    const scope: ComposerRegenerationScope | undefined =
+      engine.primaryAction.scope === "technical_core" || engine.primaryAction.scope === "exam_rail" || engine.primaryAction.scope === "full"
+        ? engine.primaryAction.scope
+        : undefined;
+    return {
+      available: true,
+      severity: engine.readiness === "blocked" ? "critical" : engine.readiness === "approved_candidate" ? "success" : "warning",
+      label: engine.primaryAction.label,
+      reason: engine.primaryAction.reason,
+      actionLabel: engine.primaryAction.id === "approve_candidate" || engine.primaryAction.id === "human_visual_review"
+        ? "Abrir QA final"
+        : engine.primaryAction.label,
+      shortcutAction,
+      scope,
+      objectiveId: engine.primaryAction.id === "compact_exam_rail"
+        ? "compact_exam_rail"
+        : engine.primaryAction.id === "boost_technical_core" || engine.primaryAction.id === "expand_context"
+          ? "fill_density"
+          : engine.primaryAction.id === "approve_candidate" || engine.primaryAction.id === "human_visual_review"
+            ? undefined
+            : "qa_lock",
+      evidenceItems: [
+        `Motor layout: ${engine.score.toFixed(1)}/10 (${engine.readiness}).`,
+        `Batch: ${engine.batchGate.canBatch ? "habilitado" : "bloqueado"} - ${engine.batchGate.reason}`,
+        engine.primaryAction.expectedImpact,
+      ],
+    };
+  }
+
   if (!evidence) {
     return {
       available: false,
@@ -1810,7 +1852,7 @@ export default function ComposerPage() {
       return;
     }
 
-    if (postRenderRemediation.severity === "success" && !postRenderRemediation.shortcutAction && !postRenderRemediation.scope) {
+    if (postRenderRemediation.actionLabel === "Abrir QA final") {
       setLocation(`/qa/${parseInt(pageIdFromRoute, 10)}`);
       return;
     }

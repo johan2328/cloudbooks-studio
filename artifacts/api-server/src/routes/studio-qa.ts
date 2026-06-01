@@ -44,6 +44,7 @@ router.get("/studio/qa-report/:pageId", async (req, res): Promise<void> => {
       generatedAt?: string;
       qaDimensions?: Record<string, number>;
       layoutEvidence?: unknown;
+      layoutEngine?: unknown;
       qaStructural?: { layoutEvidence?: unknown };
     } | null = null;
     if (existsSync(metadataPath)) {
@@ -106,6 +107,7 @@ router.get("/studio/qa-report/:pageId", async (req, res): Promise<void> => {
       observations,
       redTeamLog,
       layoutEvidence,
+      layoutEngine: metadata?.layoutEngine ?? null,
       generatedAt: metadata?.generatedAt ?? null,
       raw,
     });
