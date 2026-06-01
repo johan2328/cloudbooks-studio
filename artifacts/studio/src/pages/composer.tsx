@@ -3222,6 +3222,7 @@ export default function ComposerPage() {
                   </button>
 
                   {alignmentOpen && (
+                    <>
                   <div className="flex items-start justify-between gap-3 mt-3">
                     <div>
                       <div className="grid sm:grid-cols-2 gap-2 mt-2">
@@ -3352,6 +3353,7 @@ export default function ComposerPage() {
                       );
                     })}
                   </div>
+                    </>
                   )}
                 </section>
                   </div>
@@ -3439,6 +3441,7 @@ export default function ComposerPage() {
                   </div>
                 </button>
                 {composerActionsOpen && (
+                  <>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
@@ -3475,6 +3478,7 @@ export default function ComposerPage() {
                 {autofixFeedback ? (
                   <p className="text-[10px] text-violet-200/80 mt-3 leading-relaxed">{autofixFeedback}</p>
                 ) : null}
+                  </>
                 )}
                   </section>
                 </>
@@ -3968,7 +3972,6 @@ export default function ComposerPage() {
                       {quickActionFeedback ? (
                         <p className="text-[9px] text-cyan-200/85 mt-2 leading-relaxed">{quickActionFeedback}</p>
                       ) : null}
-                      </div>
                     </details>
 
                     <details className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3 group" open>
@@ -4006,7 +4009,7 @@ export default function ComposerPage() {
                                 <div>
                                   <div className="flex items-center justify-between text-[8px] text-white/55">
                                     <span>Intro</span>
-                                    <span>{zoneImpact.before.introShare}% -> {zoneImpact.after.introShare}%</span>
+                                    <span>{zoneImpact.before.introShare}% {"->"} {zoneImpact.after.introShare}%</span>
                                   </div>
                                   <div className="mt-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
                                     <div className="h-full bg-violet-400/75" style={{ width: `${Math.min(100, zoneImpact.after.introShare)}%` }} />
@@ -4015,7 +4018,7 @@ export default function ComposerPage() {
                                 <div>
                                   <div className="flex items-center justify-between text-[8px] text-white/55">
                                     <span>Tecnico</span>
-                                    <span>{zoneImpact.before.technicalShare}% -> {zoneImpact.after.technicalShare}%</span>
+                                    <span>{zoneImpact.before.technicalShare}% {"->"} {zoneImpact.after.technicalShare}%</span>
                                   </div>
                                   <div className="mt-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
                                     <div className="h-full bg-emerald-400/85" style={{ width: `${Math.min(100, zoneImpact.after.technicalShare)}%` }} />
@@ -4024,7 +4027,7 @@ export default function ComposerPage() {
                                 <div>
                                   <div className="flex items-center justify-between text-[8px] text-white/55">
                                     <span>Rail examen</span>
-                                    <span>{zoneImpact.before.examShare}% -> {zoneImpact.after.examShare}%</span>
+                                    <span>{zoneImpact.before.examShare}% {"->"} {zoneImpact.after.examShare}%</span>
                                   </div>
                                   <div className="mt-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
                                     <div className="h-full bg-amber-400/85" style={{ width: `${Math.min(100, zoneImpact.after.examShare)}%` }} />
