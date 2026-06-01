@@ -9,6 +9,7 @@
     "db:push": "npm --workspace @workspace/db run push",
     "build": "npm run typecheck && npm run build --workspaces --if-present",
     "sync:replit": "bash ./scripts/sync-replit.sh",
+    "bootstrap:replit": "bash ./scripts/replit-bootstrap.sh",
     "typecheck:libs": "tsc --build",
     "typecheck": "npm run typecheck:libs && npm run typecheck --workspaces --if-present"
   },

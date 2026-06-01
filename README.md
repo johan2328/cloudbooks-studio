@@ -215,6 +215,19 @@ Este comando:
 - ejecuta `db push`,
 - deja runtime alineado al SHA remoto.
 
+Recuperacion completa (cuando aparece estado mixto npm/pnpm o runtime roto):
+
+```bash
+npm run bootstrap:replit
+```
+
+Este comando:
+- limpia `node_modules` en root/workspaces,
+- elimina locks heredados de pnpm,
+- reinstala dependencias con npm,
+- empuja esquema DB,
+- y ejecuta sync final con `origin/main`.
+
 ---
 
 ## Estrategia editorial actual (Visual Atlas)

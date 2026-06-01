@@ -51,6 +51,15 @@ else
 fi
 
 echo "[sync] Instalando dependencias con npm"
+if [ -d node_modules/.pnpm ] || [ -f pnpm-lock.yaml ] || [ -f pnpm-workspace.yaml ]; then
+  echo "[sync] Detectado estado mixto pnpm/npm; limpiando dependencias locales"
+  rm -rf node_modules
+  rm -rf artifacts/*/node_modules
+  rm -rf lib/*/node_modules
+  rm -rf lib/integrations/*/node_modules
+  rm -f package-lock.json
+fi
+
 if [ -f package-lock.json ]; then
   npm ci
 else

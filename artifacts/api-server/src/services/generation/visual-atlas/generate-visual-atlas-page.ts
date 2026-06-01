@@ -71,6 +71,68 @@ interface GeneratePageOptions {
   } | null;
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function roundOne(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+function applyVisualMeasurementToQaDimensions(
+  base: QaDimensionScores,
+  visual: VisualAtlasPageVisualMeasurement,
+): QaDimensionScores {
+  if (!visual.available) return base;
+
+  const upperUsage = visual.zoneUsage.upper_visual;
+  const examUsage = visual.zoneUsage.exam_rail;
+  const visualWarningPenalty = visual.warnings.length * 0.08;
+  const visualBlockerPenalty = visual.blockers.length * 0.25;
+
+  const upperOccupancyPenalty =
+    upperUsage && upperUsage.occupancyPct < 82
+      ? Math.min(0.9, (82 - upperUsage.occupancyPct) * 0.04)
+      : 0;
+  const examFreeBottomPenalty =
+    examUsage && examUsage.freeBottomPx > 40
+      ? Math.min(1.1, (examUsage.freeBottomPx - 40) * 0.02)
+      : 0;
+  const microTypographyPenalty = Math.min(0.8, visual.typography.smallTextCount * 0.06);
+  const overflowPenalty = Math.min(0.7, visual.overflow.count * 0.07);
+
+  const visualPenalty =
+    visualWarningPenalty
+    + visualBlockerPenalty
+    + upperOccupancyPenalty
+    + examFreeBottomPenalty
+    + microTypographyPenalty
+    + overflowPenalty;
+
+  const artDirection = roundOne(clamp(base.artDirection - visualPenalty, 0, 10));
+  const readability = roundOne(clamp(base.readability - (examFreeBottomPenalty * 0.65 + microTypographyPenalty * 0.35), 0, 10));
+  const density = roundOne(clamp(base.density - (examFreeBottomPenalty * 0.9 + upperOccupancyPenalty * 0.4), 0, 10));
+  const editorialConsistency = roundOne(
+    clamp(base.editorialConsistency - (visualWarningPenalty + visualBlockerPenalty + overflowPenalty * 0.4), 0, 10),
+  );
+  const technicalAccuracy = base.technicalAccuracy;
+  const commercialRisk = roundOne(clamp(base.commercialRisk - (visualBlockerPenalty + visualWarningPenalty * 0.5), 0, 10));
+  const avg = roundOne(
+    (artDirection + editorialConsistency + readability + technicalAccuracy + density + commercialRisk) / 6,
+  );
+
+  return {
+    ...base,
+    artDirection,
+    editorialConsistency,
+    readability,
+    technicalAccuracy,
+    density,
+    commercialRisk,
+    avg,
+  };
+}
+
 /**
  * Orquestador de generación Visual Atlas (página completa):
  *   1. generateUpperVisual → imagen gpt-image-2 medium o placeholder
@@ -110,7 +172,7 @@ export async function generateVisualAtlasPage(
   const qa  = runStructuralQa(pageHtml, pageData);
   const defaultDim = computeQaDimensionScores(imageGenerated, qa.layoutEvidence);
   const override = options.qaDimensionsOverride;
-  const dim: QaDimensionScores = override ? {
+  const provisionalDim: QaDimensionScores = override ? {
     artDirection: override.artDirection,
     editorialConsistency: override.editorialConsistency,
     readability: override.readability,
@@ -137,6 +199,7 @@ export async function generateVisualAtlasPage(
     pageHeight: VISUAL_ATLAS_V24_CONTRACT.page.height,
     log,
   });
+  const dim = applyVisualMeasurementToQaDimensions(provisionalDim, visualMeasurement);
   const layoutEngine = evaluateVisualAtlasLayoutEngine(qa.layoutEvidence, dim, {
     imageGenerated,
     generationSource,
