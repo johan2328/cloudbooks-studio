@@ -88,6 +88,10 @@ export default function StudioDashboard() {
   const [, setLocation] = useLocation();
   const [catalog, setCatalog] = useState<StudioCatalog | null>(null);
   const [qualityScore, setQualityScore] = useState<number | null>(null);
+  const [qaScoresByPage, setQaScoresByPage] = useState<Record<string, number>>({});
+  const [timeToApprovableAvg, setTimeToApprovableAvg] = useState<number | null>(null);
+  const [timeToApprovableSamples, setTimeToApprovableSamples] = useState(0);
+  const [pendingConsolidationCount, setPendingConsolidationCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -106,17 +110,65 @@ export default function StudioDashboard() {
               const res = await fetch(`/api/studio/qa-report/${page.pageId}`, { headers: authHeaders() });
               if (!res.ok) return null;
               const report = await res.json() as { scores?: Record<string, number> };
-              return typeof report.scores?.total === "number" ? report.scores.total : null;
+              return {
+                pageId: page.pageId,
+                score: typeof report.scores?.total === "number" ? report.scores.total : null,
+              };
             } catch {
               return null;
             }
           }),
         );
 
-        const validScores = results.filter((score): score is number => typeof score === "number");
+        const scoreMap: Record<string, number> = {};
+        const validScores: number[] = [];
+        for (const item of results) {
+          if (!item || typeof item.score !== "number") continue;
+          scoreMap[item.pageId] = item.score;
+          validScores.push(item.score);
+        }
+        setQaScoresByPage(scoreMap);
         setQualityScore(validScores.length
           ? validScores.reduce((sum, score) => sum + score, 0) / validScores.length
           : null);
+
+        const outputPages = data.pages.filter((p) => p.outputStatus.hasOutput && p.outputStatus.generatedAt);
+        const draftChecks = await Promise.all(outputPages.map(async (page) => {
+          try {
+            const res = await fetch(`/api/studio/composer/draft/${page.pageId}`, {
+              headers: authHeaders(),
+              cache: "no-store",
+            });
+            if (!res.ok) return false;
+            const draft = await res.json() as { updatedAt?: string | null };
+            if (!draft.updatedAt || !page.outputStatus.generatedAt) return false;
+            const draftAt = Date.parse(draft.updatedAt);
+            const outputAt = Date.parse(page.outputStatus.generatedAt);
+            return Number.isFinite(draftAt) && Number.isFinite(outputAt) && draftAt > outputAt;
+          } catch {
+            return false;
+          }
+        }));
+        setPendingConsolidationCount(draftChecks.filter(Boolean).length);
+
+        try {
+          const actRes = await fetch("/api/studio/activity", {
+            headers: authHeaders(),
+            cache: "no-store",
+          });
+          if (actRes.ok) {
+            const activity = await actRes.json() as {
+              summary?: { timeToApprovable?: { avgMinutes?: number | null; samples?: number } };
+            };
+            const avg = activity.summary?.timeToApprovable?.avgMinutes;
+            const samples = activity.summary?.timeToApprovable?.samples;
+            setTimeToApprovableAvg(typeof avg === "number" ? avg : null);
+            setTimeToApprovableSamples(typeof samples === "number" ? samples : 0);
+          }
+        } catch {
+          setTimeToApprovableAvg(null);
+          setTimeToApprovableSamples(0);
+        }
       })
       .catch(() => setCatalog(null))
       .finally(() => setLoading(false));
@@ -135,6 +187,41 @@ export default function StudioDashboard() {
       approved,
     };
   }, [catalog]);
+
+  const operationalStats = useMemo(() => {
+    const pages = catalog?.pages ?? [];
+    const staleOutputs = pages.filter((p) =>
+      p.outputStatus.hasOutput
+      && p.outputStatus.layoutRevision
+      && p.outputStatus.currentLayoutRevision
+      && p.outputStatus.layoutRevision !== p.outputStatus.currentLayoutRevision).length;
+    const noOfficialQa = pages.filter((p) => p.outputStatus.hasOutput && !p.outputStatus.files.qaReport).length;
+    const officialAligned = pages.filter((p) =>
+      p.outputStatus.hasOutput
+      && p.outputStatus.files.qaReport
+      && !(p.outputStatus.layoutRevision && p.outputStatus.currentLayoutRevision && p.outputStatus.layoutRevision !== p.outputStatus.currentLayoutRevision)
+    ).length - pendingConsolidationCount;
+
+    return {
+      staleOutputs,
+      noOfficialQa,
+      officialAligned: Math.max(0, officialAligned),
+    };
+  }, [catalog, pendingConsolidationCount]);
+
+  const batchGate = useMemo(() => {
+    const pages = (catalog?.pages ?? []).filter((p) => p.batch.toLowerCase().includes("batch 01"));
+    const total = pages.length;
+    if (!total) return null;
+    const required = Math.ceil(total * 0.85);
+    const passCount = pages.filter((page) => {
+      const score = qaScoresByPage[page.pageId];
+      const isRealVisual = page.outputStatus.generationMode === "openai_image";
+      return typeof score === "number" && score >= 9.5 && isRealVisual;
+    }).length;
+    const gatePass = passCount >= required;
+    return { total, required, passCount, gatePass };
+  }, [catalog, qaScoresByPage]);
 
   const collectionProgress = Math.round((atlasStats.generated / Math.max(atlasStats.expected, 1)) * 100);
   const qualityGap = qualityScore != null ? Math.max(0, 9.5 - qualityScore) : null;
@@ -185,6 +272,72 @@ export default function StudioDashboard() {
                 <p className="text-[8px] text-white/25 mt-1">{card.sub}</p>
               </div>
             ))}
+          </section>
+
+          <section className="grid md:grid-cols-4 gap-3">
+            <div className="bg-[#0d1629] border border-white/[0.06] rounded-sm p-4">
+              <p className="text-[8px] text-white/25 uppercase tracking-widest font-bold">Semaforo oficial</p>
+              <p className="text-lg font-black text-emerald-300 mt-1">{operationalStats.officialAligned}</p>
+              <p className="text-[8px] text-white/30">oficiales alineadas</p>
+            </div>
+            <div className="bg-[#0d1629] border border-white/[0.06] rounded-sm p-4">
+              <p className="text-[8px] text-white/25 uppercase tracking-widest font-bold">Pendiente consolidar</p>
+              <p className="text-lg font-black text-amber-300 mt-1">{pendingConsolidationCount}</p>
+              <p className="text-[8px] text-white/30">draft mas nuevo que output</p>
+            </div>
+            <div className="bg-[#0d1629] border border-white/[0.06] rounded-sm p-4">
+              <p className="text-[8px] text-white/25 uppercase tracking-widest font-bold">Sin QA oficial</p>
+              <p className="text-lg font-black text-violet-300 mt-1">{operationalStats.noOfficialQa}</p>
+              <p className="text-[8px] text-white/30">
+                outputs sin QA · {operationalStats.staleOutputs} desactualizados
+              </p>
+            </div>
+            <div className="bg-[#0d1629] border border-white/[0.06] rounded-sm p-4">
+              <p className="text-[8px] text-white/25 uppercase tracking-widest font-bold">Tiempo a aprobable</p>
+              <p className="text-lg font-black text-cyan-300 mt-1">
+                {timeToApprovableAvg != null ? `${timeToApprovableAvg}m` : "—"}
+              </p>
+              <p className="text-[8px] text-white/30">{timeToApprovableSamples} muestra(s)</p>
+            </div>
+          </section>
+
+          <section className="bg-[#0d1629] border border-white/[0.06] rounded-sm p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[8px] text-white/25 uppercase tracking-widest font-bold">Gate de lote · Batch 01</p>
+                <p className="text-[10px] text-white/40 mt-1">
+                  Criterio: QA >= 9.5 y visual real en al menos 85% de paginas del lote.
+                </p>
+              </div>
+              <span className={cn(
+                "text-[9px] font-bold px-2.5 py-1 rounded-sm border",
+                batchGate?.gatePass
+                  ? "text-emerald-300 border-emerald-500/30 bg-emerald-500/10"
+                  : "text-amber-300 border-amber-500/30 bg-amber-500/10",
+              )}>
+                {batchGate
+                  ? (batchGate.gatePass ? "LOTE APROBABLE" : "LOTE BLOQUEADO")
+                  : "SIN DATOS"}
+              </span>
+            </div>
+            {batchGate ? (
+              <div className="mt-3 grid sm:grid-cols-3 gap-2">
+                <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] p-2.5">
+                  <p className="text-[8px] text-white/25 uppercase tracking-widest">Paginas lote</p>
+                  <p className="text-[12px] font-bold text-white/80 mt-1">{batchGate.total}</p>
+                </div>
+                <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] p-2.5">
+                  <p className="text-[8px] text-white/25 uppercase tracking-widest">Minimo requerido</p>
+                  <p className="text-[12px] font-bold text-white/80 mt-1">{batchGate.required}</p>
+                </div>
+                <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] p-2.5">
+                  <p className="text-[8px] text-white/25 uppercase tracking-widest">Cumplen</p>
+                  <p className={cn("text-[12px] font-bold mt-1", batchGate.gatePass ? "text-emerald-300" : "text-amber-300")}>
+                    {batchGate.passCount}
+                  </p>
+                </div>
+              </div>
+            ) : null}
           </section>
 
           <section className="bg-[#0d1629] border border-white/[0.06] rounded-sm overflow-hidden">

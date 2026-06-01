@@ -27,7 +27,45 @@ export interface StudioQaReport {
   scores: Record<string, number>;
   observations: string[];
   redTeamLog: string[];
+  generatedAt?: string | null;
+  layoutEvidence?: StudioLayoutEvidence | null;
   raw?: string;
+}
+
+export interface StudioLayoutEvidence {
+  page: {
+    width: number;
+    height: number;
+  };
+  zonesPresent: Record<string, boolean>;
+  upper: {
+    rowHeight: number;
+    slotHeight: number;
+    slotWidth: number;
+    freeVerticalPx: number;
+    imageSlotSharePct: number;
+  };
+  examRail: {
+    rowHeight: number;
+    sharePct: number;
+    trapItems: number;
+    autocheckOptions: number;
+    discardNotes: number;
+    fillerBlocks: number;
+    trapChars: number;
+    autocheckChars: number;
+    densityBand: "thin" | "balanced" | "dense";
+  };
+  projectedVsReal: {
+    expectedBodyHeight: number;
+    measuredBodyHeight: number;
+    bodyDeltaPx: number;
+    expectedUpperRowHeight: number;
+    upperDeltaPx: number;
+  };
+  warnings: string[];
+  blockers: string[];
+  score: number;
 }
 
 export interface StudioActivityLog {
@@ -212,6 +250,46 @@ export interface ComposerDraftRecord {
   updatedAt: string;
 }
 
+export interface ComposerActionLogRecord {
+  id: string;
+  pageId: string;
+  kind: "shortcut" | "generate" | "autofix" | "rollback";
+  action: string;
+  status: "ok" | "error" | "info";
+  beforeTotal: number | null;
+  afterTotal: number | null;
+  delta: number | null;
+  changedBlocks: number;
+  note: string;
+  userName: string;
+  createdAt: string;
+}
+
+export interface ComposerBatchRunItem {
+  runRowId: number;
+  pageDbId: number;
+  pageId: string;
+  title: string;
+  status: "queued" | "running" | "completed" | "failed" | string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  output: string | null;
+  error: string | null;
+}
+
+export interface ComposerBatchRunStatus {
+  runId: string;
+  batchKey: string;
+  done: boolean;
+  counts: {
+    queued: number;
+    running: number;
+    completed: number;
+    failed: number;
+  };
+  items: ComposerBatchRunItem[];
+}
+
 export interface StudioContractChangelogEntry {
   version: string;
   note: string;
@@ -340,6 +418,82 @@ export async function logComposerAutofix(pageId: string, payload: {
     },
     body: JSON.stringify(payload),
   });
+}
+
+export async function fetchComposerActionLogs(pageId: string, limit = 24): Promise<ComposerActionLogRecord[]> {
+  const res = await fetch(`/api/studio/composer/actions/${pageId}?limit=${Math.max(1, Math.min(80, limit))}`, {
+    headers: authHeaders(),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`No se pudo cargar telemetria Composer para ${pageId} (${res.status})`);
+  const data = await res.json() as { logs?: ComposerActionLogRecord[] };
+  return Array.isArray(data.logs) ? data.logs : [];
+}
+
+export async function saveComposerActionLog(pageId: string, payload: {
+  kind: "shortcut" | "generate" | "autofix" | "rollback";
+  action: string;
+  status: "ok" | "error" | "info";
+  beforeTotal: number | null;
+  afterTotal: number | null;
+  delta: number | null;
+  changedBlocks: number;
+  note: string;
+}): Promise<ComposerActionLogRecord> {
+  const res = await fetch(`/api/studio/composer/actions/${pageId}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`No se pudo persistir accion Composer para ${pageId} (${res.status})`);
+  const data = await res.json() as { log?: ComposerActionLogRecord };
+  if (!data.log) throw new Error("Respuesta de telemetria Composer invalida.");
+  return data.log;
+}
+
+export async function startComposerBatchRun(payload: {
+  pageIds: string[];
+  useComposerDraft?: boolean;
+  regenerationScope?: "full" | "technical_core" | "exam_rail";
+}): Promise<{ runId: string; queued: number; source: string; regenerationScope: string }> {
+  const res = await fetch("/api/studio/composer/batch/run", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`No se pudo iniciar batch Composer (${res.status})`);
+  return res.json() as Promise<{ runId: string; queued: number; source: string; regenerationScope: string }>;
+}
+
+export async function fetchComposerBatchStatus(runId: string): Promise<ComposerBatchRunStatus> {
+  const res = await fetch(`/api/studio/composer/batch/${runId}`, {
+    headers: authHeaders(),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`No se pudo leer estado de batch Composer (${res.status})`);
+  return res.json() as Promise<ComposerBatchRunStatus>;
+}
+
+export async function retryComposerBatchFailed(runId: string, payload?: {
+  useComposerDraft?: boolean;
+  regenerationScope?: "full" | "technical_core" | "exam_rail";
+}): Promise<{ runId: string; retried: number }> {
+  const res = await fetch(`/api/studio/composer/batch/${runId}/retry-failed`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(payload ?? {}),
+  });
+  if (!res.ok) throw new Error(`No se pudo reintentar fallidas del batch (${res.status})`);
+  return res.json() as Promise<{ runId: string; retried: number }>;
 }
 
 export async function fetchStudioContract(): Promise<StudioVisualContract> {

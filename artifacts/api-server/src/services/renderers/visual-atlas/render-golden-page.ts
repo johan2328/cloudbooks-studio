@@ -487,30 +487,30 @@ section.body {
 </head>
 <body>
 
-<main class="page">
+<main class="page" data-template="${contract.id}" data-render-revision="${contract.renderRevision}" data-page-width="${contract.page.width}" data-page-height="${contract.page.height}">
 
-  <div class="topbar">
+  <div class="topbar" data-zone="topbar">
     ${data.domainLabel}
   </div>
 
-  <section class="hero">
+  <section class="hero" data-zone="hero">
     <h1>${data.title} — ${data.subtitle}</h1>
     <div class="deck">${data.context}</div>
     <div class="icon-slot">${titleIconSvg}</div>
   </section>
 
-  <section class="guide">
+  <section class="guide" data-zone="guide">
     <span class="guide-mark">${guideIconSvg}</span>
     <span><strong>PREGUNTA GUÍA:</strong>${data.guideQuestion}</span>
   </section>
 
-  <section class="body">
-    <div class="upper">
+  <section class="body" data-zone="body" data-upper-height="${upperVisualHeight}" data-exam-rail-height="${examRailHeight}" data-upper-slot-width="${contract.upperVisual.slotWidth}" data-upper-slot-height="${contract.upperVisual.slotHeight}" data-trap-demand="${trapDemand}" data-check-demand="${checkDemand}">
+    <div class="upper" data-zone="upper_visual">
       ${upperVisualHtml}
     </div>
-    <div class="exam">
+    <div class="exam" data-zone="exam_rail">
 
-      <section class="mod traps">
+      <section class="mod traps" data-zone="exam_traps" data-fill-enabled="${trapFillEnabled ? "true" : "false"}">
         <div class="mod-header">
           <span class="mod-header-label">⚠ Trampas del examen</span>
         </div>
@@ -530,7 +530,7 @@ section.body {
         </div>
       </section>
 
-      <section class="mod check">
+      <section class="mod check" data-zone="autocheck" data-fill-enabled="${checkFillEnabled ? "true" : "false"}">
         <div class="mod-header">
           <span class="mod-header-label">✓ Verificación autocheck</span>
         </div>
@@ -557,7 +557,7 @@ section.body {
     </div>
   </section>
 
-  <footer class="footer">
+  <footer class="footer" data-zone="footer">
     <span>${contract.chrome.footer.brandText}</span>
     <span class="page-no">${data.pageNumber}/${data.totalPages}</span>
   </footer>

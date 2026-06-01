@@ -100,7 +100,7 @@ export async function generateVisualAtlasPage(
 
   /* ── Step 3: QA estructural ───────────────────────────────────────────── */
   const qa  = runStructuralQa(pageHtml, pageData);
-  const defaultDim = computeQaDimensionScores(imageGenerated);
+  const defaultDim = computeQaDimensionScores(imageGenerated, qa.layoutEvidence);
   const override = options.qaDimensionsOverride;
   const dim: QaDimensionScores = override ? {
     artDirection: override.artDirection,
@@ -152,6 +152,8 @@ export async function generateVisualAtlasPage(
     composerDraft: options.composerDraft ?? null,
     qaBaselineTotal: options.qaBaselineTotal ?? null,
     qaStructural:     qa,
+    layoutEvidence:   qa.layoutEvidence,
+    qaDimensions:     dim,
     durationMs,
   };
   await writeFile(join(outDir, "metadata.json"), JSON.stringify(metadata, null, 2), "utf-8");
@@ -176,6 +178,15 @@ export async function generateVisualAtlasPage(
 
 ## Checks estructurales
 ${qaLines}
+
+## Evidencia post-render
+- Canvas: **${qa.layoutEvidence.page.width}x${qa.layoutEvidence.page.height}px**
+- Upper row: **${qa.layoutEvidence.upper.rowHeight}px** · slot imagen **${qa.layoutEvidence.upper.slotWidth}x${qa.layoutEvidence.upper.slotHeight}px** · aire vertical **${qa.layoutEvidence.upper.freeVerticalPx}px**
+- Rail examen: **${qa.layoutEvidence.examRail.rowHeight}px** (${qa.layoutEvidence.examRail.sharePct}% del body) · densidad **${qa.layoutEvidence.examRail.densityBand}**
+- Trampas renderizadas: **${qa.layoutEvidence.examRail.trapItems}** · opciones autocheck: **${qa.layoutEvidence.examRail.autocheckOptions}** · notas de descarte: **${qa.layoutEvidence.examRail.discardNotes}**
+- Score layout real: **${qa.layoutEvidence.score}/10**
+${qa.layoutEvidence.blockers.length > 0 ? `\n### Bloqueos post-render\n${qa.layoutEvidence.blockers.map((item) => `- ${item}`).join("\n")}\n` : ""}
+${qa.layoutEvidence.warnings.length > 0 ? `\n### Alertas post-render\n${qa.layoutEvidence.warnings.map((item) => `- ${item}`).join("\n")}\n` : ""}
 
 ## Observaciones
 - Layout golden master v24 ensamblado deterministicamente

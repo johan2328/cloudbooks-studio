@@ -4,7 +4,7 @@ import { IMAGE_MODEL, IMAGE_QUALITY, TEMPLATE_VERSION, TEXT_MODEL } from "../../
 export const VISUAL_ATLAS_V24_CONTRACT = {
   id: "visual-atlas-v24",
   version: TEMPLATE_VERSION,
-  renderRevision: "visual-atlas-2026-05-31-e",
+  renderRevision: "visual-atlas-2026-05-31-f",
   name: "Visual Atlas v24",
   generation: {
     textModel: TEXT_MODEL,

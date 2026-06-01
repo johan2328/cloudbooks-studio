@@ -37,6 +37,7 @@ const ACTION_ICONS: Record<ActionType, React.ComponentType<{ className?: string 
   asset_replaced: RefreshCw,
   composer_draft_saved: FileEdit,
   composer_autofix_applied: Sparkles,
+  composer_action: Sparkles,
 };
 
 const FILTER_OPTIONS: { value: ActionType | "all"; label: string }[] = [
@@ -54,6 +55,7 @@ const FILTER_OPTIONS: { value: ActionType | "all"; label: string }[] = [
   { value: "asset_linked", label: "Asset vinculado" },
   { value: "asset_approved", label: "Asset aprobado" },
   { value: "asset_replaced", label: "Asset reemplazado" },
+  { value: "composer_action", label: "Composer acciones" },
   { value: "composer_draft_saved", label: "Composer guardado" },
   { value: "composer_autofix_applied", label: "Composer autofix" },
 ];

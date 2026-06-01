@@ -43,7 +43,78 @@ Lo estable hoy:
 Lo prioritario en curso:
 - Composer util para cerrar brecha al 9.5 con baseline real;
 - control fino del balance visual (menos marco, menos aire muerto, mejor densidad util);
+- regeneracion dirigida desde Composer por alcance (`full`, `technical_core`, `exam_rail`);
 - crecimiento modular del sistema a mas certificaciones cloud.
+
+Sprint 1 (fuente unica + control operativo) en avance:
+- semaforo operativo en Dashboard (`oficial`, `pendiente consolidar`, `sin QA`);
+- KPI `tiempo a aprobable` desde bitacora persistente;
+- gate de lote Batch 01 con criterio QA >= 9.5 + visual real.
+
+Sprint 2 (Composer accionable) en avance:
+- presets compositivos aplicables en un clic;
+- flujo rapido `preset -> generar -> QA`;
+- receta aplicada persistida en bitacora (`composer_action`) para reproducibilidad por pagina.
+
+Sprint 3 (Composer operativo + alineacion QA) en avance:
+- panel de alineacion QA/Composer con fuente activa explicita (`QA servidor` vs `draft pendiente`);
+- CTA unico de ejecucion (`aplicar recomendacion + generar + abrir QA`) para evitar pasos ambiguos;
+- score por dimension mostrando valor activo y delta de proyeccion contra baseline QA oficial.
+
+Sprint 4 (Composer UX de produccion) en avance:
+- paneles principales rebatibles para reducir ruido cognitivo en sesiones editoriales largas;
+- acceso rapido entre `vista operativa` y `diagnostico completo` sin perder el draft actual;
+- estado de alineacion visible en el flujo (`QA consolidado` / `falta regenerar` / `solo proyeccion`).
+
+Sprint 5 (Composer orientado a objetivos) en avance:
+- playbooks editoriales con ejecucion en un clic (`densidad util`, `compactar rail`, `cierre QA`);
+- cadena de ajustes + regeneracion dirigida (`technical_core`, `exam_rail`, `full`) dentro del mismo flujo;
+- trazabilidad de objetivo aplicado en bitacora Composer para comparar impacto por pagina.
+
+Sprint 6 (Composer con direccion operativa) en avance:
+- accion primaria recomendada por contexto (`objetivo recomendado`) para reducir decision fatigue;
+- comparativa visual `before/after` por zonas (intro, tecnico, rail examen) tras cada ajuste;
+- feedback de estado orientado a cierre (`QA consolidado`, `falta regenerar`, `solo proyeccion`).
+
+Sprint 7 (Composer contextual por bloque) en avance:
+- scope sugerido por bloque seleccionado (`technical_core`, `exam_rail`, `full`) visible en el panel;
+- regeneracion dirigida por bloque desde Composer sin salir del flujo de edicion;
+- trazabilidad de regeneracion contextual en la bitacora para comparar impacto por zona.
+
+Sprint 8 (flujo guiado operativo) en avance:
+- barra de proceso con estado vivo por paso (`ajustar`, `guardar`, `generar`, `QA`);
+- progreso de cierre visible en porcentaje + siguiente paso pendiente;
+- CTAs por paso dentro del bloque de proceso para evitar navegacion ambigua.
+
+Sprint 9 (orquestacion de cierre en Composer) en avance:
+- CTA unico de "siguiente accion sugerida" conectado al paso pendiente real;
+- lista de bloqueos operativos explicita para destrabar cierre editorial;
+- continuidad del flujo sin saltos manuales (`ajustar -> guardar -> generar -> QA`).
+
+Sprint 10 (QA server sync en Composer) en avance:
+- sincronizacion manual `1-click` para refrescar output + QA + bitacora sin cambiar de vista;
+- auto-sync silencioso al volver foco a la pestana (evita score viejo en Composer);
+- timestamp de ultima sincronizacion para trazabilidad de lectura activa.
+
+Sprint 11 (QA hard gate de cierre) en avance:
+- gate de cierre `LOCKED/UNLOCKED` con bloqueos explicitos en lenguaje operativo;
+- CTA de siguiente paso bloquea cierre final cuando QA servidor no llega a 9.5 o no esta alineado;
+- mensaje de desbloqueo/accion correctiva dentro del mismo flujo Composer.
+
+Sprint 12 (Batch Control Plane MVP) en avance:
+- endpoints batch en Composer (`run`, `status`, `retry-failed`) sobre `generation_runs`;
+- ejecucion secuencial de lote contra pipeline real (`/studio/generate-visual-atlas-page`);
+- panel operativo Batch Runner dentro de Composer para iniciar lote, refrescar estado y reintentar fallidas.
+
+Sprint 13 (QA post-render real) en avance:
+- el renderer escribe marcas medibles en el HTML final (`data-zone`, alturas y slot visual);
+- QA genera evidencia post-render: upper, rail inferior, densidad, bloqueos y alertas;
+- Composer y QA editorial consumen la misma evidencia para explicar por que una pagina se aleja del 9.5.
+
+Sprint 14 (modo operador Composer) en avance:
+- Composer separa modo `Operador` y modo `Diagnostico`;
+- la accion primaria queda visible arriba como siguiente paso sugerido;
+- la lectura post-render se muestra en el flujo operativo para decidir si compactar rail, usar mejor el upper o pasar a QA.
 
 ---
 
@@ -158,6 +229,7 @@ Meta editorial:
 - [docs/editorial-composer-transition-and-red-team.md](/C:/Users/jguerra/OneDrive%20-%20Datco%20S.A/Documentos/Editorial%20IA/cloudbooks-studio/docs/editorial-composer-transition-and-red-team.md)
 - [docs/composer-market-state-2026-05-31.md](/C:/Users/jguerra/OneDrive%20-%20Datco%20S.A/Documentos/Editorial%20IA/cloudbooks-studio/docs/composer-market-state-2026-05-31.md)
 - [docs/composer-red-team-premortem-2026-05-31.md](/C:/Users/jguerra/OneDrive%20-%20Datco%20S.A/Documentos/Editorial%20IA/cloudbooks-studio/docs/composer-red-team-premortem-2026-05-31.md)
+- [docs/sprint-closure-checklist.md](/C:/Users/jguerra/OneDrive%20-%20Datco%20S.A/Documentos/Editorial%20IA/cloudbooks-studio/docs/sprint-closure-checklist.md)
 
 ---
 

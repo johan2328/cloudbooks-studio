@@ -12,12 +12,14 @@ import {
 import Layout from "@/components/Layout";
 import { cn, scoreColorDark } from "@/lib/utils";
 import { useStudio } from "@/lib/studio-store";
+import type { StudioLayoutEvidence } from "@/lib/studio-api";
 
 interface RealQA {
   verdict: string;
   scores: Record<string, number>;
   observations: string[];
   redTeamLog: string[];
+  layoutEvidence?: StudioLayoutEvidence | null;
   raw?: string;
 }
 
@@ -201,6 +203,60 @@ export default function QAReportPage() {
                     </p>
                   </div>
                 </div>
+
+                {report.layoutEvidence && (
+                  <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div>
+                        <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Evidencia post-render</p>
+                        <p className="text-[10px] text-white/40 mt-1">
+                          Medicion tomada del HTML final, no del draft ni de la proyeccion Composer.
+                        </p>
+                      </div>
+                      <span className={cn(
+                        "text-sm font-black",
+                        report.layoutEvidence.score >= 9 ? "text-emerald-300" : report.layoutEvidence.score >= 8 ? "text-cyan-300" : "text-amber-300",
+                      )}>
+                        {report.layoutEvidence.score.toFixed(1)}/10
+                      </span>
+                    </div>
+                    <div className="grid md:grid-cols-4 gap-2">
+                      <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                        <p className="text-[8px] text-white/30 uppercase tracking-widest">Canvas</p>
+                        <p className="text-[10px] text-white/70 font-semibold mt-1">
+                          {report.layoutEvidence.page.width}x{report.layoutEvidence.page.height}
+                        </p>
+                      </div>
+                      <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                        <p className="text-[8px] text-white/30 uppercase tracking-widest">Upper</p>
+                        <p className="text-[10px] text-white/70 font-semibold mt-1">
+                          {report.layoutEvidence.upper.rowHeight}px · aire {report.layoutEvidence.upper.freeVerticalPx}px
+                        </p>
+                      </div>
+                      <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                        <p className="text-[8px] text-white/30 uppercase tracking-widest">Rail</p>
+                        <p className="text-[10px] text-white/70 font-semibold mt-1">
+                          {report.layoutEvidence.examRail.rowHeight}px · {report.layoutEvidence.examRail.sharePct}%
+                        </p>
+                      </div>
+                      <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                        <p className="text-[8px] text-white/30 uppercase tracking-widest">Densidad</p>
+                        <p className="text-[10px] text-white/70 font-semibold mt-1">
+                          {report.layoutEvidence.examRail.densityBand}
+                        </p>
+                      </div>
+                    </div>
+                    {[...report.layoutEvidence.blockers, ...report.layoutEvidence.warnings].length > 0 && (
+                      <div className="mt-3 grid md:grid-cols-2 gap-2">
+                        {[...report.layoutEvidence.blockers, ...report.layoutEvidence.warnings].slice(0, 6).map((item) => (
+                          <div key={item} className="rounded-sm border border-amber-500/18 bg-amber-500/8 px-3 py-2 text-[10px] text-amber-100/80 leading-relaxed">
+                            {item}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="grid lg:grid-cols-2 gap-4">
                   <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">

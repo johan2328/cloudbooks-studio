@@ -140,6 +140,7 @@ export function actionLabel(type: string): string {
     case "asset_linked":          return "Asset vinculado";
     case "asset_approved":        return "Asset aprobado";
     case "asset_replaced":        return "Asset reemplazado";
+    case "composer_action":       return "Composer acción";
     case "composer_draft_saved":  return "Composer guardado";
     case "composer_autofix_applied": return "Composer autofix";
     default: return type;
@@ -161,6 +162,7 @@ export function actionColor(type: string): string {
     case "asset_linked":          return "text-cyan-400";
     case "asset_approved":        return "text-emerald-400";
     case "asset_replaced":        return "text-amber-400";
+    case "composer_action":       return "text-cyan-300";
     case "composer_draft_saved":  return "text-violet-300";
     case "composer_autofix_applied": return "text-fuchsia-300";
     default: return "text-white/30";

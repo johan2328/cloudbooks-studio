@@ -14,6 +14,7 @@ import {
 } from "../services/studio/editorial-events";
 
 const router = Router();
+type ComposerRegenerationScope = "full" | "technical_core" | "exam_rail";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object") return null;
@@ -57,17 +58,24 @@ function compactText(value: string, maxChars: number): string {
   return `${normalized.slice(0, maxChars).trim()}...`;
 }
 
-function mergeComposerDraftIntoSeed(seed: VisualAtlasPageData, draftPayload: unknown): VisualAtlasPageData {
+function mergeComposerDraftIntoSeed(
+  seed: VisualAtlasPageData,
+  draftPayload: unknown,
+  scope: ComposerRegenerationScope = "full",
+): VisualAtlasPageData {
   const blocks = readComposerBlocks(draftPayload);
   if (!blocks.length) return seed;
 
   const next: VisualAtlasPageData = { ...seed };
+  const allowNarrative = scope === "full";
+  const allowTechnical = scope === "full" || scope === "technical_core";
+  const allowExam = scope === "full" || scope === "exam_rail";
 
   const contextBlock = pickBlock(blocks, "context_deck");
   const contextValue = asString(asRecord(contextBlock?.content)?.context);
   const contextVariant = asString(contextBlock?.variant);
-  if (contextValue) next.context = contextValue;
-  if (contextVariant === "expanded") {
+  if (allowNarrative && contextValue) next.context = contextValue;
+  if (allowNarrative && contextVariant === "expanded") {
     const appendix = [
       next.traps[0]?.wrong ? `Prioriza ${next.traps[0].wrong.toLowerCase()}.` : null,
       next.guideQuestion ? `La pregunta guia orienta la decision de examen.` : null,
@@ -79,12 +87,12 @@ function mergeComposerDraftIntoSeed(seed: VisualAtlasPageData, draftPayload: unk
 
   const guideBlock = pickBlock(blocks, "guide_question");
   const guideValue = asString(asRecord(guideBlock?.content)?.question);
-  if (guideValue) next.guideQuestion = guideValue;
+  if (allowNarrative && guideValue) next.guideQuestion = guideValue;
 
   const trapsBlock = pickBlock(blocks, "exam_traps");
   const trapsVariant = asString(trapsBlock?.variant);
   const trapsRaw = asRecord(trapsBlock?.content)?.traps;
-  if (Array.isArray(trapsRaw)) {
+  if (allowExam && Array.isArray(trapsRaw)) {
     const parsed = trapsRaw
       .map((item) => asRecord(item))
       .filter((item): item is Record<string, unknown> => Boolean(item))
@@ -104,7 +112,7 @@ function mergeComposerDraftIntoSeed(seed: VisualAtlasPageData, draftPayload: unk
   const autocheckBlock = pickBlock(blocks, "autocheck");
   const autocheckVariant = asString(autocheckBlock?.variant);
   const autocheckContent = asRecord(autocheckBlock?.content);
-  if (autocheckContent) {
+  if (allowExam && autocheckContent) {
     const question = asString(autocheckContent.question);
     const explanation = asString(autocheckContent.explanation);
     const optionsRaw = autocheckContent.options;
@@ -135,12 +143,14 @@ function mergeComposerDraftIntoSeed(seed: VisualAtlasPageData, draftPayload: unk
     };
   }
 
-  const technicalBlocks = blocks
+  const technicalBlocks = allowTechnical
+    ? blocks
     .filter((block) => {
       const type = asString(block.type);
       return type === "diagram_panel" || type === "comparison_panel" || type === "decision_tree" || type === "map_panel";
     })
-    .sort((a, b) => (asFiniteNumber(a.priority) ?? 999) - (asFiniteNumber(b.priority) ?? 999));
+    .sort((a, b) => (asFiniteNumber(a.priority) ?? 999) - (asFiniteNumber(b.priority) ?? 999))
+    : [];
   const moduleCandidates = technicalBlocks
     .flatMap((block) => {
       const modules = asRecord(block.content)?.modules;
@@ -224,7 +234,12 @@ function buildComposerQaOverride(
 }
 
 router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void> => {
-  const body = req.body as { certificationId?: string; pageId?: string; useComposerDraft?: boolean };
+  const body = req.body as {
+    certificationId?: string;
+    pageId?: string;
+    useComposerDraft?: boolean;
+    regenerationScope?: ComposerRegenerationScope;
+  };
 
   if (!body.pageId || typeof body.pageId !== "string") {
     res.status(400).json({ error: "Se requiere pageId en el body" });
@@ -233,6 +248,9 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
 
   const { pageId } = body;
   const useComposerDraft = body.useComposerDraft === true;
+  const regenerationScope: ComposerRegenerationScope = body.regenerationScope === "technical_core" || body.regenerationScope === "exam_rail"
+    ? body.regenerationScope
+    : "full";
   const seedResult = getSeed(pageId);
 
   if (!seedResult.found) {
@@ -290,7 +308,7 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
       });
       return;
     }
-    generationSeed = mergeComposerDraftIntoSeed(seedResult.data, draft.draft);
+    generationSeed = mergeComposerDraftIntoSeed(seedResult.data, draft.draft, regenerationScope);
     composerDraftMeta = {
       id: draft.id,
       updatedAt: new Date(draft.updatedAt).toISOString(),
@@ -310,7 +328,7 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
       userName: authUser.displayName,
       result: "Generacion iniciada desde Studio sobre plantilla golden master",
       note: useComposerDraft
-        ? `Fuente compositiva: draft composer #${composerDraftMeta?.id ?? "?"}`
+        ? `Fuente compositiva: draft composer #${composerDraftMeta?.id ?? "?"} · scope=${regenerationScope}`
         : "Fuente compositiva: seed locked",
     });
 
@@ -322,7 +340,7 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
     });
 
     if (pageRecord) {
-      const qaDims = result.qaDimensions ?? computeQaDimensionScores(result.imageGenerated);
+      const qaDims = result.qaDimensions ?? computeQaDimensionScores(result.imageGenerated, result.qaStructural.layoutEvidence);
       const qaAfterTotal = qaDims.avg * 10;
       await persistGenerationResult({
         pageDbId: pageRecord.id,
@@ -362,6 +380,7 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
       res.status(201).json({
         success: true,
         ...result,
+        regenerationScope,
         qaDelta: {
           before: qaBaselineTotal,
           after: qaAfterTotal,
@@ -370,7 +389,7 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
       });
       return;
     } else {
-      const qaDims = computeQaDimensionScores(result.imageGenerated);
+      const qaDims = result.qaDimensions ?? computeQaDimensionScores(result.imageGenerated, result.qaStructural.layoutEvidence);
       await insertEditorialEvent({
         actionType: "generation_completed",
         pageId: null,
@@ -392,6 +411,7 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
     res.status(201).json({
       success: true,
       ...result,
+      regenerationScope,
       qaDelta: {
         before: qaBaselineTotal,
         after: null,

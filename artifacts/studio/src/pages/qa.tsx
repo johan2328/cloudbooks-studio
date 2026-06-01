@@ -8,6 +8,7 @@ import {
   fetchStudioCatalog,
   type ComposerDraftRecord,
   type StudioCatalogPage,
+  type StudioLayoutEvidence,
 } from "@/lib/studio-api";
 import { normalizeQaScoreToTen, qaScoreToHundred, resolveQaScoreSource } from "@/lib/qa-score-source";
 import {
@@ -22,6 +23,7 @@ interface RealQA {
   observations: string[];
   redTeamLog: string[];
   generatedAt: string | null;
+  layoutEvidence?: StudioLayoutEvidence | null;
 }
 
 type GenerationMode = "openai_image" | "placeholder_image" | "fallback_html" | "none";
@@ -695,6 +697,54 @@ export default function QAPage() {
                     </div>
                   )}
                 </div>
+
+                {realQA?.layoutEvidence && (
+                  <div className="bg-[#0d1629] border border-white/[0.08] rounded-sm p-4">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div>
+                        <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Evidencia post-render</p>
+                        <p className="text-[10px] text-white/45 mt-1">
+                          Lectura real del HTML generado: no es proyeccion del Composer.
+                        </p>
+                      </div>
+                      <span className={cn(
+                        "text-[10px] font-black",
+                        realQA.layoutEvidence.score >= 9 ? "text-emerald-300" : realQA.layoutEvidence.score >= 8 ? "text-cyan-300" : "text-amber-300",
+                      )}>
+                        {realQA.layoutEvidence.score.toFixed(1)}/10
+                      </span>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-2">
+                      <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                        <p className="text-[8px] text-white/30 uppercase tracking-widest">Upper visual</p>
+                        <p className="text-[10px] text-white/72 font-semibold mt-1">
+                          {realQA.layoutEvidence.upper.rowHeight}px row · {realQA.layoutEvidence.upper.freeVerticalPx}px aire
+                        </p>
+                      </div>
+                      <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                        <p className="text-[8px] text-white/30 uppercase tracking-widest">Rail examen</p>
+                        <p className="text-[10px] text-white/72 font-semibold mt-1">
+                          {realQA.layoutEvidence.examRail.rowHeight}px · {realQA.layoutEvidence.examRail.sharePct}%
+                        </p>
+                      </div>
+                      <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                        <p className="text-[8px] text-white/30 uppercase tracking-widest">Densidad</p>
+                        <p className="text-[10px] text-white/72 font-semibold mt-1">
+                          {realQA.layoutEvidence.examRail.densityBand} · {realQA.layoutEvidence.examRail.fillerBlocks} notas
+                        </p>
+                      </div>
+                    </div>
+                    {[...realQA.layoutEvidence.blockers, ...realQA.layoutEvidence.warnings].length > 0 && (
+                      <div className="mt-3 space-y-1.5">
+                        {[...realQA.layoutEvidence.blockers, ...realQA.layoutEvidence.warnings].slice(0, 4).map((item) => (
+                          <p key={item} className="text-[9px] text-amber-200/80 leading-relaxed">
+                            - {item}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className={cn(
                   "bg-[#0d1629] border rounded-sm p-4",

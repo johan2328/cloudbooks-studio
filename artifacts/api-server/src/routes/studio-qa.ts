@@ -31,6 +31,7 @@ function extractScore(raw: string, pattern: RegExp): number | null {
 router.get("/studio/qa-report/:pageId", async (req, res): Promise<void> => {
   const { pageId } = req.params;
   const qaPath = join(pageOutputDir(pageId), "qa-report.md");
+  const metadataPath = join(pageOutputDir(pageId), "metadata.json");
 
   if (!existsSync(qaPath)) {
     res.status(404).json({ error: "qa-report.md not found" });
@@ -39,6 +40,19 @@ router.get("/studio/qa-report/:pageId", async (req, res): Promise<void> => {
 
   try {
     const raw = await readFile(qaPath, "utf-8");
+    let metadata: {
+      generatedAt?: string;
+      qaDimensions?: Record<string, number>;
+      layoutEvidence?: unknown;
+      qaStructural?: { layoutEvidence?: unknown };
+    } | null = null;
+    if (existsSync(metadataPath)) {
+      try {
+        metadata = JSON.parse(await readFile(metadataPath, "utf-8"));
+      } catch {
+        metadata = null;
+      }
+    }
 
     const scorePatterns: Record<string, RegExp> = {
       art_direction: /^-\s+Direcci[oó]n de arte:\s+\*\*(\d+(?:\.\d+)?)\/10\*\*/im,
@@ -56,6 +70,22 @@ router.get("/studio/qa-report/:pageId", async (req, res): Promise<void> => {
       if (value === null) continue;
       scores[key] = value;
     }
+    if (metadata?.qaDimensions) {
+      const dimensionKeyMap: Record<string, string> = {
+        artDirection: "art_direction",
+        editorialConsistency: "editorial_consistency",
+        readability: "readability",
+        technicalAccuracy: "technical_accuracy",
+        density: "useful_density",
+        commercialRisk: "commercial_risk",
+        avg: "total",
+      };
+      for (const [key, value] of Object.entries(metadata.qaDimensions)) {
+        if (typeof value !== "number") continue;
+        scores[dimensionKeyMap[key] ?? key] = normalizeScoreToTen(value);
+      }
+    }
+    const layoutEvidence = metadata?.layoutEvidence ?? metadata?.qaStructural?.layoutEvidence ?? null;
 
     const isApproved = /APROBADO|approved/i.test(raw);
     const verdict = isApproved ? "approved" : "needs_revision";
@@ -70,7 +100,15 @@ router.get("/studio/qa-report/:pageId", async (req, res): Promise<void> => {
       .map((line) => line.trim())
       .slice(0, 10);
 
-    res.json({ verdict, scores, observations, redTeamLog, raw });
+    res.json({
+      verdict,
+      scores,
+      observations,
+      redTeamLog,
+      layoutEvidence,
+      generatedAt: metadata?.generatedAt ?? null,
+      raw,
+    });
   } catch (err) {
     req.log.error({ err }, "Error parsing qa-report.md");
     res.status(500).json({ error: "Failed to parse QA report" });

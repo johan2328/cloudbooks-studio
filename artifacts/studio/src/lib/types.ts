@@ -162,6 +162,7 @@ export type ActionType =
   | "asset_linked"
   | "asset_approved"
   | "asset_replaced"
+  | "composer_action"
   | "composer_draft_saved"
   | "composer_autofix_applied";
 

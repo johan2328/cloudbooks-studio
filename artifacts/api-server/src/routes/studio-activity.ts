@@ -3,6 +3,36 @@ import { db, activityLogsTable } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
 
 const router = Router();
+const COMPOSER_ACTION_NOTE_PREFIX = "composer_action_v1:";
+
+function normalizeActivityLog(log: typeof activityLogsTable.$inferSelect) {
+  if (log.actionType !== "composer_action" || !log.note?.startsWith(COMPOSER_ACTION_NOTE_PREFIX)) {
+    return log;
+  }
+  try {
+    const payload = JSON.parse(log.note.slice(COMPOSER_ACTION_NOTE_PREFIX.length)) as {
+      kind?: string;
+      action?: string;
+      status?: string;
+      delta?: number | null;
+      changedBlocks?: number;
+      note?: string;
+    };
+    const deltaText = typeof payload.delta === "number" && Number.isFinite(payload.delta)
+      ? `${payload.delta >= 0 ? "+" : ""}${payload.delta.toFixed(1)}`
+      : "--";
+    const blockText = typeof payload.changedBlocks === "number" && Number.isFinite(payload.changedBlocks)
+      ? String(payload.changedBlocks)
+      : "0";
+    return {
+      ...log,
+      result: `${payload.kind ?? "composer"}: ${payload.action ?? log.result} (${payload.status ?? "info"})`,
+      note: `delta=${deltaText} · bloques=${blockText} · ${payload.note ?? "sin nota"}`,
+    };
+  } catch {
+    return log;
+  }
+}
 
 router.get("/studio/activity", async (req, res): Promise<void> => {
   const actionType = typeof req.query.actionType === "string" ? req.query.actionType : undefined;
@@ -25,7 +55,8 @@ router.get("/studio/activity", async (req, res): Promise<void> => {
     query = query.where(and(...conditions));
   }
 
-  const logs = await query.orderBy(desc(activityLogsTable.createdAt)).limit(300);
+  const logsRaw = await query.orderBy(desc(activityLogsTable.createdAt)).limit(300);
+  const logs = logsRaw.map(normalizeActivityLog);
   const ordered = [...logs].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   const startByPage = new Map<string, Date>();
   const computed: Array<{ pageNumber: string; startedAt: string; approvedAt: string; minutes: number }> = [];
