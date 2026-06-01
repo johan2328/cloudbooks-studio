@@ -306,7 +306,7 @@ export default function StudioDashboard() {
               <div>
                 <p className="text-[8px] text-white/25 uppercase tracking-widest font-bold">Gate de lote · Batch 01</p>
                 <p className="text-[10px] text-white/40 mt-1">
-                  Criterio: QA >= 9.5 y visual real en al menos 85% de paginas del lote.
+                  Criterio: QA {" >= "} 9.5 y visual real en al menos 85% de paginas del lote.
                 </p>
               </div>
               <span className={cn(

@@ -6,8 +6,8 @@ if ! command -v git >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v pnpm >/dev/null 2>&1; then
-  echo "[sync] pnpm no esta disponible en este entorno" >&2
+if ! command -v npm >/dev/null 2>&1; then
+  echo "[sync] npm no esta disponible en este entorno" >&2
   exit 1
 fi
 
@@ -50,11 +50,15 @@ else
   echo "[sync] Ya estabas alineado con origin/main"
 fi
 
-echo "[sync] Instalando dependencias bloqueadas"
-pnpm install --frozen-lockfile
+echo "[sync] Instalando dependencias con npm"
+if [ -f package-lock.json ]; then
+  npm ci
+else
+  npm install --no-package-lock
+fi
 
 echo "[sync] Empujando esquema DB"
-pnpm --filter @workspace/db run push
+npm --workspace @workspace/db run push
 
 if [ "${created_stash}" = "true" ]; then
   echo "[sync] Restaurando cambios locales"

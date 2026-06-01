@@ -21,7 +21,7 @@ export function getRuntimeInfo() {
     gitSha,
     gitBranch,
     gitDirty,
-    syncCommand: "pnpm sync:replit",
+    syncCommand: "npm run sync:replit",
     secretsSource: "replit_secrets_only",
   };
 }

@@ -4,18 +4,18 @@ Consola editorial full-stack para un equipo de 4 personas que produce el libro d
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — API server (port 8080)
-- `pnpm --filter @workspace/studio run dev` — Frontend React+Vite (port 18425)
-- `pnpm run typecheck` — typecheck completo
-- `pnpm run build` — typecheck + build de todos los paquetes
-- `pnpm --filter @workspace/api-spec run codegen` — regenerar hooks Zod + React Query desde spec OpenAPI
-- `pnpm --filter @workspace/db run push` — push de cambios de esquema DB (solo dev)
+- `npm run dev:api` — API server (port 8080)
+- `npm run dev:studio` — Frontend React+Vite (port 18425)
+- `npm run typecheck` — typecheck completo
+- `npm run build` — typecheck + build de todos los paquetes
+- `npm --workspace @workspace/api-spec run codegen` — regenerar hooks Zod + React Query desde spec OpenAPI
+- `npm run db:push` — push de cambios de esquema DB (solo dev)
 - Required env: `DATABASE_URL` — Postgres connection string
 - Optional env: `OPENAI_API_KEY` — si no está presente, generación corre en modo demo
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
+- npm workspaces, Node.js 24, TypeScript 5.9
 - API: Express 5 — port 8080, paths `/api`
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
@@ -86,11 +86,11 @@ lib/
 ## Gotchas
 
 - Siempre reiniciar el workflow del API server tras cambios en `artifacts/api-server/src/` (el dev script hace `build && start`).
-- `pnpm run dev` en la raíz NO existe por diseño. Usar los workflows de Replit.
+- `npm run dev` en la raiz NO existe por diseno. Usar los workflows de Replit o `npm run dev:api` + `npm run dev:studio`.
 - El token de auth se inyecta en `main.tsx` via `setAuthTokenGetter` — si se refactoriza el entry point, replicar esa llamada.
 - La columna `runCount` en `pages` es un entero simple (no auto-increment correcto) — al registrar una corrida se debe hacer UPDATE manualmente.
 
 ## Pointers
 
-- Ver skill `pnpm-workspace` para estructura del workspace y TypeScript
+- Ver `package.json` para estructura de npm workspaces y TypeScript
 - Ver `lib/api-spec/openapi.yaml` para el contrato completo de la API

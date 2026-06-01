@@ -38,7 +38,7 @@ Lo estable hoy:
 - renderer deterministico para pagina 768x1152;
 - guardrail de costo (`gpt-image-2` en `medium`);
 - deteccion de output desactualizado por `layoutRevision`;
-- sync operativo en Replit con `pnpm sync:replit`.
+- sync operativo en Replit con `npm run sync:replit`.
 
 Lo prioritario en curso:
 - Composer util para cerrar brecha al 9.5 con baseline real;
@@ -179,7 +179,7 @@ Pieza clave:
 ## Requisitos
 
 - Node.js 24+
-- pnpm 9+
+- npm 10+ (incluido con Node.js 24)
 - PostgreSQL
 
 Variables de entorno:
@@ -195,10 +195,10 @@ SESSION_SECRET=...
 ## Desarrollo local
 
 ```bash
-pnpm install
-pnpm --filter @workspace/db run push
-pnpm --filter @workspace/api-server run dev
-pnpm --filter @workspace/studio run dev
+npm install
+npm run db:push
+npm run dev:api
+npm run dev:studio
 ```
 
 ---
@@ -206,7 +206,7 @@ pnpm --filter @workspace/studio run dev
 ## Operacion en Replit
 
 ```bash
-pnpm sync:replit
+npm run sync:replit
 ```
 
 Este comando:
