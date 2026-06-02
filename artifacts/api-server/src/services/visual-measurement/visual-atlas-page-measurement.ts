@@ -101,7 +101,7 @@ const MEASURE_SCRIPT = `(() => {
   });
   const pageEl = document.querySelector(".page") || document.body;
   const pageRect = pageEl.getBoundingClientRect();
-  const zoneNames = ["topbar", "hero", "guide", "body", "upper_visual", "exam_rail", "footer"];
+  const zoneNames = ["topbar", "hero", "guide", "body", "upper_visual", "upper_support", "exam_rail", "footer"];
   const zones = {};
   const zoneUsage = {};
   for (const name of zoneNames) {

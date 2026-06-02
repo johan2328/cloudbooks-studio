@@ -56,10 +56,11 @@ Sprint 2 (Composer accionable) en avance:
 - flujo rapido `preset -> generar -> QA`;
 - receta aplicada persistida en bitacora (`composer_action`) para reproducibilidad por pagina.
 
-Sprint 3 (Composer operativo + alineacion QA) en avance:
+Sprint 3 (Composer operativo + alineacion QA) cerrado en codigo:
 - panel de alineacion QA/Composer con fuente activa explicita (`QA servidor` vs `draft pendiente`);
 - CTA unico de ejecucion (`aplicar recomendacion + generar + abrir QA`) para evitar pasos ambiguos;
 - score por dimension mostrando valor activo y delta de proyeccion contra baseline QA oficial.
+- medicion real de `upper_support` expuesta en QA, QA Report y Composer para distinguir hueco resuelto vs hueco pendiente.
 
 Sprint 4 (Composer UX de produccion) en avance:
 - paneles principales rebatibles para reducir ruido cognitivo en sesiones editoriales largas;
