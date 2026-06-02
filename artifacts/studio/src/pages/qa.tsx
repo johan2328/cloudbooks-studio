@@ -774,7 +774,7 @@ export default function QAPage() {
                         {realQA.visualMeasurement.available ? `${realQA.visualMeasurement.score.toFixed(1)}/10` : "offline"}
                       </span>
                     </div>
-                    <div className="grid md:grid-cols-5 gap-2">
+                    <div className="grid md:grid-cols-4 gap-2">
                       <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
                         <p className="text-[8px] text-white/30 uppercase tracking-widest">Canvas</p>
                         <p className="text-[10px] text-white/72 font-semibold mt-1">
@@ -797,14 +797,6 @@ export default function QAPage() {
                         <p className="text-[8px] text-white/30 uppercase tracking-widest">Rail libre</p>
                         <p className="text-[10px] text-white/72 font-semibold mt-1">
                           {realQA.visualMeasurement.zoneUsage.exam_rail?.freeBottomPx ?? "-"}px
-                        </p>
-                      </div>
-                      <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-                        <p className="text-[8px] text-white/30 uppercase tracking-widest">Soporte sup.</p>
-                        <p className="text-[10px] text-white/72 font-semibold mt-1">
-                          {realQA.visualMeasurement.zoneUsage.upper_support
-                            ? `${realQA.visualMeasurement.zoneUsage.upper_support.occupancyPct}%`
-                            : "sin banda"}
                         </p>
                       </div>
                     </div>

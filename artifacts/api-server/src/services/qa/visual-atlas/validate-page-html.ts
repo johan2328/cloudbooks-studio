@@ -135,8 +135,8 @@ export function measureVisualAtlasRender(html: string, data: VisualAtlasPageData
   }
   if (trapItems !== 3) blockers.push(`Trampas esperadas: 3; detectadas: ${trapItems}.`);
   if (autocheckOptions < 4) blockers.push(`Autocheck esperado: 4 opciones; detectadas: ${autocheckOptions}.`);
-  if (examRailHeight > 225) warnings.push(`Rail inferior alto (${examRailHeight}px); puede competir con el nucleo visual.`);
-  if (examRailHeight < 142) warnings.push(`Rail inferior muy compacto (${examRailHeight}px); revisar legibilidad de traps/autocheck.`);
+  if (examRailHeight > 278) warnings.push(`Rail inferior alto (${examRailHeight}px); puede competir con el nucleo visual.`);
+  if (examRailHeight < 168) warnings.push(`Rail inferior muy compacto (${examRailHeight}px); revisar legibilidad de traps/autocheck.`);
   if (freeVerticalPx > 92) warnings.push(`Upper visual deja ${freeVerticalPx}px verticales sin uso activo dentro del row.`);
   if (imageSlotSharePct < 78) warnings.push(`La imagen ocupa solo ${imageSlotSharePct}% del alto disponible del upper row.`);
   if (densityBand === "thin") warnings.push("Rail inferior con baja densidad util: conviene compactar o enriquecer microexplicaciones.");

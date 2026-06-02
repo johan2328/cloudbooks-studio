@@ -291,7 +291,6 @@ ${qa.layoutEvidence.warnings.length > 0 ? `\n### Alertas post-render\n${qa.layou
 - Overflow: **${visualMeasurement.overflow.count}** elemento(s) · horizontal **${visualMeasurement.page.horizontalOverflowPx}px** · vertical **${visualMeasurement.page.verticalOverflowPx}px**
 - Tipografia minima: **${visualMeasurement.typography.minFontPx ?? "n/a"}px** · textos pequenos **${visualMeasurement.typography.smallTextCount}**
 - Upper visual ocupado: **${visualMeasurement.zoneUsage.upper_visual?.occupancyPct ?? "n/a"}%** · aire inferior real **${visualMeasurement.zoneUsage.upper_visual?.freeBottomPx ?? "n/a"}px**
-- Soporte superior ocupado: **${visualMeasurement.zoneUsage.upper_support?.occupancyPct ?? "n/a"}%** · alto usado **${visualMeasurement.zoneUsage.upper_support?.usedHeight ?? "n/a"}px**
 - Rail inferior ocupado: **${visualMeasurement.zoneUsage.exam_rail?.occupancyPct ?? "n/a"}%** · aire inferior real **${visualMeasurement.zoneUsage.exam_rail?.freeBottomPx ?? "n/a"}px**
 ${visualMeasurement.blockers.length > 0 ? `\n### Bloqueos visuales reales\n${visualMeasurement.blockers.map((item) => `- ${item}`).join("\n")}\n` : ""}
 ${visualMeasurement.warnings.length > 0 ? `\n### Alertas visuales reales\n${visualMeasurement.warnings.map((item) => `- ${item}`).join("\n")}\n` : ""}

@@ -4,7 +4,7 @@ import { IMAGE_MODEL, IMAGE_QUALITY, TEMPLATE_VERSION, TEXT_MODEL } from "../../
 export const VISUAL_ATLAS_V24_CONTRACT = {
   id: "visual-atlas-v24",
   version: TEMPLATE_VERSION,
-  renderRevision: "visual-atlas-2026-06-01-a",
+  renderRevision: "visual-atlas-2026-06-02-a",
   name: "Visual Atlas v24",
   generation: {
     textModel: TEXT_MODEL,
@@ -107,6 +107,7 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
       "exam traps section",
       "autocheck section",
       "question block",
+      "HTML-generated support notes below the four cards",
       "thick enclosing rectangle around all four cards",
       "high-saturation card outlines with inconsistent stroke width",
       "per-card numbering style changes",

@@ -9,7 +9,7 @@ function estimateTrapRailHeight(data: VisualAtlasPageData): number {
   const trapChars = data.traps
     .slice(0, 3)
     .reduce((sum, item) => sum + item.wrong.length + item.correction.length, 0);
-  return Math.round(clampNumber(102 + trapChars * 0.14, 130, 208));
+  return Math.round(clampNumber(112 + trapChars * 0.13, 142, 238));
 }
 
 function estimateAutocheckRailHeight(data: VisualAtlasPageData): number {
@@ -18,14 +18,16 @@ function estimateAutocheckRailHeight(data: VisualAtlasPageData): number {
     + data.autocheck.explanation.length
     + data.autocheck.options.join(" ").length
     + data.autocheck.discardNotes.join(" ").length;
-  return Math.round(clampNumber(108 + autocheckChars * 0.09, 136, 216));
+  const optionLoad = data.autocheck.options.length * 20;
+  const discardLoad = Math.min(2, data.autocheck.discardNotes.length) * 10;
+  return Math.round(clampNumber(104 + optionLoad + discardLoad + autocheckChars * 0.065, 168, 278));
 }
 
 function estimateExamRailHeight(data: VisualAtlasPageData): number {
   const trapDemand = estimateTrapRailHeight(data);
   const checkDemand = estimateAutocheckRailHeight(data);
   const dominantDemand = Math.max(trapDemand, checkDemand);
-  return Math.round(clampNumber(dominantDemand + 8, 146, 220));
+  return Math.round(clampNumber(dominantDemand + 10, 168, 278));
 }
 
 function firstSentence(value: string): string {
@@ -51,27 +53,6 @@ function buildAutocheckFillerNotes(data: VisualAtlasPageData): string[] {
   notes.push(`Hint técnico: ${firstSentence(data.autocheck.explanation).toLowerCase()}`);
   notes.push(`Patrón de decisión: elimina primero opciones sin permiso o sin ruta de red válida.`);
   return notes.slice(0, 2);
-}
-
-function shortText(value: string, maxLength: number): string {
-  const normalized = value.replace(/\s+/g, " ").trim();
-  if (normalized.length <= maxLength) return normalized;
-  const clipped = normalized.slice(0, maxLength - 1).replace(/\s+\S*$/, "").trim();
-  return `${clipped}.`;
-}
-
-function buildUpperSupportNotes(data: VisualAtlasPageData): { label: string; text: string }[] {
-  const moduleA = data.visualModules[0];
-  const moduleB = data.visualModules[1];
-  const trap = data.traps[0];
-  const answer = data.autocheck.options[data.autocheck.correctOption]?.replace(/^[A-D]\.\s*/, "");
-  const notes = [
-    moduleA ? { label: "Nucleo tecnico", text: shortText(`${moduleA.title}: ${moduleA.description}`, 118) } : null,
-    moduleB ? { label: "Decision de examen", text: shortText(`${moduleB.title}: ${moduleB.description}`, 118) } : null,
-    trap ? { label: "Evita la trampa", text: shortText(`${trap.wrong} -> ${trap.correction}`, 124) } : null,
-    answer ? { label: "Respuesta guia", text: shortText(`${answer}: ${data.autocheck.explanation}`, 124) } : null,
-  ].filter((note): note is { label: string; text: string } => Boolean(note));
-  return notes.slice(0, 4);
 }
 
 function inferTopicFamily(data: VisualAtlasPageData): "containers" | "identity" | "networking" | "security" | "lifecycle" | "generic" {
@@ -167,16 +148,10 @@ export function renderVisualAtlasPage(data: VisualAtlasPageData): string {
   const upperVisualHeight = bodyTotalHeight - examRailHeight;
   const trapDemand = estimateTrapRailHeight(data);
   const checkDemand = estimateAutocheckRailHeight(data);
-  const trapFillEnabled = examRailHeight - trapDemand >= 24;
-  const checkFillEnabled = examRailHeight - checkDemand >= 24;
+  const trapFillEnabled = examRailHeight - trapDemand >= 44;
+  const checkFillEnabled = examRailHeight - checkDemand >= 44;
   const trapFillerNotes = trapFillEnabled ? buildTrapFillerNotes(data) : [];
   const checkFillerNotes = checkFillEnabled ? buildAutocheckFillerNotes(data) : [];
-  const upperSupportEnabled = data.upperVisualSrc !== "placeholder" && upperVisualHeight > contract.upperVisual.slotHeight + 70;
-  const upperSupportCount = upperVisualHeight > contract.upperVisual.slotHeight + 145 ? 4 : 2;
-  const upperSupportNotes = buildUpperSupportNotes(data).slice(0, upperSupportCount);
-  const upperMeasuredContentHeight = upperSupportEnabled
-    ? Math.max(contract.upperVisual.slotHeight, upperVisualHeight - 18)
-    : contract.upperVisual.slotHeight;
 
   /* ── Icono de título ─────────────────────────────────────────────────── */
   const titleIconSvg = renderHeroIcon(data);
@@ -196,14 +171,6 @@ export function renderVisualAtlasPage(data: VisualAtlasPageData): string {
         <div class="upper-placeholder-sub">Se insertará upper-art generado con gpt-image-2 medium</div>
       </div>`
     : `<img src="${data.upperVisualSrc}" alt="${data.upperVisualAlt}">`;
-  const upperSupportHtml = upperSupportEnabled
-    ? `<div class="upper-support" data-zone="upper_support">
-        ${upperSupportNotes.map((note) => `<div class="upper-note">
-          <div class="upper-note-label">${note.label}</div>
-          <div class="upper-note-text">${note.text}</div>
-        </div>`).join("\n        ")}
-      </div>`
-    : "";
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -370,36 +337,6 @@ section.body {
   color: #6b7a99;
 }
 .upper-placeholder-sub { font-size: 10px; color: #9ca3af; }
-.upper-support {
-  width: ${contract.upperVisual.slotWidth}px;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 7px;
-  padding: 0 6px;
-}
-.upper-note {
-  min-height: 50px;
-  border: 1px solid #d7e6f8;
-  background: #f8fbff;
-  border-radius: 5px;
-  padding: 6px 8px;
-  overflow: hidden;
-}
-.upper-note-label {
-  font-size: 6.8px;
-  line-height: 1;
-  color: #0969DA;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 3px;
-}
-.upper-note-text {
-  font-size: 7.6px;
-  color: #24324f;
-  line-height: 1.24;
-}
-
 /* ── EXAM (trampas + autocheck) ─────────────────────────────────────────── */
 .exam {
   display: grid;
@@ -570,10 +507,9 @@ section.body {
     <span><strong>PREGUNTA GUÍA:</strong>${data.guideQuestion}</span>
   </section>
 
-  <section class="body" data-zone="body" data-upper-height="${upperVisualHeight}" data-exam-rail-height="${examRailHeight}" data-upper-slot-width="${contract.upperVisual.slotWidth}" data-upper-slot-height="${upperMeasuredContentHeight}" data-trap-demand="${trapDemand}" data-check-demand="${checkDemand}">
+  <section class="body" data-zone="body" data-upper-height="${upperVisualHeight}" data-exam-rail-height="${examRailHeight}" data-upper-slot-width="${contract.upperVisual.slotWidth}" data-upper-slot-height="${contract.upperVisual.slotHeight}" data-trap-demand="${trapDemand}" data-check-demand="${checkDemand}">
     <div class="upper" data-zone="upper_visual">
       ${upperVisualHtml}
-      ${upperSupportHtml}
     </div>
     <div class="exam" data-zone="exam_rail">
 

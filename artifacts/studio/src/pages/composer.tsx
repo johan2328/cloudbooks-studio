@@ -594,7 +594,6 @@ function derivePostRenderRemediation(
         ? [
           `Visual real: ${visual.score.toFixed(1)}/10, overflow ${visual.overflow.count}, microtexto ${visual.typography.smallTextCount}.`,
           `Rail real: ${visual.zoneUsage.exam_rail?.freeBottomPx ?? "-"}px libres; upper ${visual.zoneUsage.upper_visual?.occupancyPct ?? "-"}% ocupado.`,
-          `Soporte superior: ${visual.zoneUsage.upper_support ? `${visual.zoneUsage.upper_support.occupancyPct}% ocupado` : "sin banda activa"}.`,
         ]
       : visual
         ? [`Visual real: no disponible (${visual.note}).`]
@@ -645,7 +644,6 @@ function derivePostRenderRemediation(
     const visualItems = [
       `Visual real: ${visual.score.toFixed(1)}/10; canvas ${visual.page.width}x${visual.page.height}.`,
       `Overflow: ${visual.overflow.count}; microtexto: ${visual.typography.smallTextCount}; rail libre: ${visual.zoneUsage.exam_rail?.freeBottomPx ?? "-"}px.`,
-      `Soporte superior: ${visual.zoneUsage.upper_support ? `${visual.zoneUsage.upper_support.occupancyPct}% ocupado` : "sin banda activa"}.`,
     ];
     if (visual.blockers.length > 0) {
       return {
@@ -2938,7 +2936,7 @@ export default function ComposerPage() {
                 ) : null}
               </div>
               {lockedQa?.layoutEvidence ? (
-                <div className="mt-2 grid md:grid-cols-5 gap-2">
+                <div className="mt-2 grid md:grid-cols-4 gap-2">
                   <div className="rounded-sm border border-cyan-500/18 bg-cyan-500/8 px-2.5 py-2">
                     <p className="text-[8px] font-bold text-cyan-100/75 uppercase tracking-widest">Upper real</p>
                     <p className="text-[10px] text-white/78 mt-1">
@@ -2949,14 +2947,6 @@ export default function ComposerPage() {
                     <p className="text-[8px] font-bold text-cyan-100/75 uppercase tracking-widest">Rail inferior</p>
                     <p className="text-[10px] text-white/78 mt-1">
                       {lockedQa.layoutEvidence.examRail.rowHeight}px · {lockedQa.layoutEvidence.examRail.densityBand}
-                    </p>
-                  </div>
-                  <div className="rounded-sm border border-cyan-500/18 bg-cyan-500/8 px-2.5 py-2">
-                    <p className="text-[8px] font-bold text-cyan-100/75 uppercase tracking-widest">Soporte sup.</p>
-                    <p className="text-[10px] text-white/78 mt-1">
-                      {lockedQa.visualMeasurement?.zoneUsage.upper_support
-                        ? `${lockedQa.visualMeasurement.zoneUsage.upper_support.occupancyPct}% ocupado`
-                        : "sin banda"}
                     </p>
                   </div>
                   <div className={cn(
@@ -3527,14 +3517,6 @@ export default function ComposerPage() {
                               <p className="text-[8px] text-white/35 uppercase tracking-widest">Densidad</p>
                               <p className="text-[9px] text-white/72 mt-1">
                                 {lockedQa.layoutEvidence.examRail.densityBand}
-                              </p>
-                            </div>
-                            <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] px-2 py-1.5">
-                              <p className="text-[8px] text-white/35 uppercase tracking-widest">Soporte</p>
-                              <p className="text-[9px] text-white/72 mt-1">
-                                {lockedQa.visualMeasurement?.zoneUsage.upper_support
-                                  ? `${lockedQa.visualMeasurement.zoneUsage.upper_support.occupancyPct}%`
-                                  : "sin banda"}
                               </p>
                             </div>
                           </div>

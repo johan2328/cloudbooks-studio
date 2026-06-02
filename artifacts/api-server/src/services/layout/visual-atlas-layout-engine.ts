@@ -51,7 +51,7 @@ const CONSTRAINTS = {
   targetScore: 9.5,
   maxUpperFreeVerticalPx: 92,
   minUpperImageSharePct: 78,
-  maxExamRailSharePct: 28,
+  maxExamRailSharePct: 32,
   minLayoutScoreForBatch: 8.8,
 } as const;
 
@@ -88,18 +88,12 @@ function fingerprint(evidence: VisualAtlasLayoutEvidence, qa: QaDimensionScores)
   ].join("|");
 }
 
-function hasUsefulUpperSupport(context: LayoutEngineContext): boolean {
-  const supportUsage = context.visualMeasurement?.zoneUsage.upper_support;
-  return Boolean(context.visualMeasurement?.available && supportUsage && supportUsage.occupancyPct >= 55 && supportUsage.usedHeight >= 38);
-}
-
 export function evaluateVisualAtlasLayoutEngine(
   evidence: VisualAtlasLayoutEvidence,
   qa: QaDimensionScores,
   context: LayoutEngineContext,
 ): VisualAtlasLayoutEngineReport {
   const actions: LayoutEngineAction[] = [];
-  const upperSupportActive = hasUsefulUpperSupport(context);
 
   if (evidence.blockers.length > 0) {
     actions.push(action(
@@ -123,7 +117,7 @@ export function evaluateVisualAtlasLayoutEngine(
     ));
   }
 
-  if (!upperSupportActive && (evidence.upper.freeVerticalPx > CONSTRAINTS.maxUpperFreeVerticalPx || evidence.upper.imageSlotSharePct < CONSTRAINTS.minUpperImageSharePct)) {
+  if (evidence.upper.freeVerticalPx > CONSTRAINTS.maxUpperFreeVerticalPx || evidence.upper.imageSlotSharePct < CONSTRAINTS.minUpperImageSharePct) {
     actions.push(action(
       "boost_technical_core",
       "Reforzar nucleo visual",
@@ -185,16 +179,6 @@ export function evaluateVisualAtlasLayoutEngine(
         76,
         `La captura real detecto ${context.visualMeasurement.zoneUsage.exam_rail?.freeBottomPx ?? 0}px libres al fondo del rail.`,
         "Reduce vacio visible o enriquece microexplicaciones sin inflar el bloque.",
-      ));
-    }
-    if (upperSupportActive && qa.avg < CONSTRAINTS.targetScore && evidence.examRail.densityBand !== "thin") {
-      actions.push(action(
-        "human_visual_review",
-        "Revisar calidad editorial",
-        "qa_review",
-        42,
-        "El hueco superior ya esta compensado por soporte editorial; la brecha restante parece de arte, jerarquia o precision de contenido.",
-        "Evita regeneracion abierta y dirige la revision a criterio editorial humano.",
       ));
     }
   }

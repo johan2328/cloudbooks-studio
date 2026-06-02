@@ -60,7 +60,8 @@ Sprint 3 (Composer operativo + alineacion QA) cerrado en codigo:
 - panel de alineacion QA/Composer con fuente activa explicita (`QA servidor` vs `draft pendiente`);
 - CTA unico de ejecucion (`aplicar recomendacion + generar + abrir QA`) para evitar pasos ambiguos;
 - score por dimension mostrando valor activo y delta de proyeccion contra baseline QA oficial.
-- medicion real de `upper_support` expuesta en QA, QA Report y Composer para distinguir hueco resuelto vs hueco pendiente.
+- descartada la banda automatica `upper_support`: repetia contenido, no aportaba valor editorial y podia empujar autocheck contra el footer.
+- rail inferior protegido por demanda real de traps/autocheck para evitar overflow y falsos cierres de Composer.
 
 Sprint 4 (Composer UX de produccion) en avance:
 - paneles principales rebatibles para reducir ruido cognitivo en sesiones editoriales largas;
