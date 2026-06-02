@@ -15,6 +15,10 @@ export interface VisualModule {
   num: string;
   title: string;
   description: string;
+  idea?: string;
+  recommendedDiagram?: string;
+  maxMicrocopy?: string;
+  examSignal?: string;
 }
 
 export interface VisualAtlasPageData {

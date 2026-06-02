@@ -220,15 +220,26 @@ function scoreMeasurement(raw: BrowserMeasurementRaw, expectedWidth: number, exp
     blockers.push(`Canvas renderizado fuera de contrato: ${raw.page.width}x${raw.page.height}.`);
   }
   if (raw.page.horizontalOverflowPx > 2) blockers.push(`Overflow horizontal de ${raw.page.horizontalOverflowPx}px.`);
-  if (raw.page.verticalOverflowPx > 6) warnings.push(`Scroll vertical de ${raw.page.verticalOverflowPx}px; revisar corte de pagina.`);
+  if (raw.page.verticalOverflowPx > 6) blockers.push(`Overflow vertical de ${raw.page.verticalOverflowPx}px: la pagina completa excede el formato libro.`);
   if (raw.overflow.count > 0) warnings.push(`${raw.overflow.count} elemento(s) con overflow interno detectado.`);
   if (raw.typography.smallTextCount > 0) warnings.push(`${raw.typography.smallTextCount} texto(s) por debajo de 7.5px detectados.`);
   const upperUsage = raw.zoneUsage.upper_visual;
   if (upperUsage && upperUsage.occupancyPct < 78) warnings.push(`Upper visual ocupa ${upperUsage.occupancyPct}% de su zona real.`);
   const examUsage = raw.zoneUsage.exam_rail;
   if (examUsage && examUsage.freeBottomPx > 58) warnings.push(`Rail inferior deja ${examUsage.freeBottomPx}px libres al fondo.`);
+  const examZone = raw.zones.exam_rail;
+  const footerZone = raw.zones.footer;
+  if (examZone && footerZone && examZone.bottom > footerZone.y + 1) {
+    blockers.push(`Rail/autocheck invade footer: rail termina en ${examZone.bottom}px y footer inicia en ${footerZone.y}px.`);
+  }
+  if (raw.overflow.count > 0 && examUsage && examUsage.freeBottomPx < 8) {
+    blockers.push("Overflow interno dentro del rail inferior: posible autocheck cortado o pisando footer.");
+  }
+  if ((raw.typography.smallTextCount > 0 || raw.overflow.count > 0) && upperUsage && upperUsage.occupancyPct >= 82) {
+    warnings.push("Densidad falsa: el upper parece ocupado, pero contiene microtexto u overflow.");
+  }
 
-  const penalty = blockers.length * 1.6 + warnings.length * 0.35 + Math.min(1.2, raw.typography.smallTextCount * 0.08);
+  const penalty = blockers.length * 2.1 + warnings.length * 0.38 + Math.min(1.4, raw.typography.smallTextCount * 0.09);
   return {
     warnings,
     blockers,

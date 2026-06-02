@@ -45,6 +45,7 @@ import {
   type StudioCatalog,
   type StudioOutputStatus,
   type StudioQaReport,
+  type StudioVisualModule,
 } from "@/lib/studio-api";
 
 interface ComposerGenerationResponse {
@@ -121,9 +122,9 @@ const COMPOSER_OBJECTIVES: Array<{
 }> = [
   {
     id: "fill_density",
-    label: "Recuperar densidad útil",
-    hint: "Expande contexto y refuerza núcleo técnico para llenar huecos informativos.",
-    actions: ["expand_context", "boost_technical", "enforce_four_cards"],
+    label: "Recomponer núcleo visual",
+    hint: "Recompone tarjetas con mini-diagramas e intención visual sin estirar textos ni duplicar autocheck.",
+    actions: ["boost_technical", "enforce_four_cards"],
     scope: "technical_core",
     openQa: false,
   },
@@ -269,6 +270,75 @@ function summarizeBlockContent(block: ComposerBlock): string {
     return `${content.options.length} opciones de validacion`;
   }
   return "Bloque listo para composicion editorial";
+}
+
+function compactComposerSentence(value: string, maxLength: number): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLength) return normalized;
+  const sentence = normalized.match(/^.{1,180}?[.!?](\s|$)/)?.[0]?.trim();
+  const source = sentence && sentence.length <= maxLength ? sentence : normalized;
+  return source.slice(0, maxLength).replace(/\s+\S*$/, "").trim();
+}
+
+function diagramForComposerModule(title: string, family: ComposerProposal["draft"]["family"]): string {
+  const text = title.toLowerCase();
+  if (/(build|push|task|yaml|trigger|automat)/.test(text)) return "secuencia operacional con flechas, origen, ejecucion y resultado";
+  if (/(tier|sku|basic|standard|premium|compar)/.test(text)) return "matriz comparativa compacta con checks y senales de examen";
+  if (/(geo|region|zone|zona|replic|map)/.test(text)) return "mapa o ruta regional con boundary claro y leyenda minima";
+  if (/(identity|identidad|token|rol|permiso|acrpull|acrpush)/.test(text)) return "arbol de decision de identidad y permisos con camino correcto resaltado";
+  if (/(dns|network|firewall|endpoint|private|vnet|red)/.test(text)) return "diagrama de frontera de red con DNS, firewall y endpoint";
+  if (family === "comparison") return "comparativa visual con dos o tres columnas y una decision destacada";
+  if (family === "coverage_map") return "mapa o boundary diagram con conectividad y bloqueo";
+  if (family === "decision") return "decision tree breve con ramas permitidas y no permitidas";
+  return "mini flujo causa-efecto con iconos Azure planos y una regla visual";
+}
+
+function enrichModulesForComposerDensity(
+  modules: StudioVisualModule[],
+  family: ComposerProposal["draft"]["family"],
+  guideQuestion?: string,
+  trapSignal?: string,
+) {
+  return modules.slice(0, 4).map((moduleItem) => ({
+    ...moduleItem,
+    idea: moduleItem.idea ?? compactComposerSentence(moduleItem.description, 96),
+    recommendedDiagram: moduleItem.recommendedDiagram ?? diagramForComposerModule(moduleItem.title, family),
+    maxMicrocopy: moduleItem.maxMicrocopy ?? "titulo + 1 takeaway de maximo 12 palabras; evitar parrafos y microtexto",
+    examSignal: moduleItem.examSignal ?? compactComposerSentence(trapSignal ?? guideQuestion ?? moduleItem.description, 82),
+  }));
+}
+
+function buildVisualDensityPlanFromBlocks(
+  blocks: ComposerBlock[],
+  family: ComposerProposal["draft"]["family"],
+  source?: {
+    upperFreePx?: number | null;
+    railFreePx?: number | null;
+    visualOverflow?: number | null;
+    smallTextCount?: number | null;
+  },
+): NonNullable<ComposerProposal["draft"]["visualDensityPlan"]> {
+  const space = computeSpacePlan(blocks);
+  const railBlocked = (source?.visualOverflow ?? 0) > 0 || (source?.railFreePx ?? 0) > 90 || space.railMode === "compactar";
+  if (railBlocked) {
+    return {
+      problem: "El rail inferior o el overflow de pagina estan condicionando la lectura; no conviene regenerar el upper para resolver esto.",
+      affectedZone: "exam_rail",
+      proposedAction: "Compactar traps/autocheck y validar footer antes de recomponer el asset visual.",
+      expectedImpact: "Evita que autocheck caiga contra el footer y separa problemas de layout de problemas de arte.",
+      risk: "Si se recomponen tarjetas primero, se puede mejorar la imagen pero mantener rota la pagina completa.",
+    };
+  }
+  const upperFree = source?.upperFreePx ?? null;
+  return {
+    problem: upperFree != null && upperFree > 92
+      ? `El upper visual deja ${upperFree}px de aire; la pagina pide mas densidad sin agrandar por fuerza.`
+      : "La pagina pide mas presencia visual, pero el riesgo es resolverlo con escalado o texto comprimido.",
+    affectedZone: "upper_visual",
+    proposedAction: `Recomponer tarjetas ${family}: mini-diagramas mas claros, takeaways cortos y jerarquia interna estable.`,
+    expectedImpact: "Aumenta ocupacion util por contenido diagramable, no por deformacion ni duplicacion de guia/autocheck.",
+    risk: "Si el contenido fuente es generico, conviene grounding selectivo antes de regenerar.",
+  };
 }
 
 function withCacheBust(url: string | null, version: string | null | undefined): string | null {
@@ -440,6 +510,7 @@ function recalculateDraft(draft: ComposerProposal["draft"]): ComposerProposal["d
   return {
     ...draft,
     blocks,
+    visualDensityPlan: buildVisualDensityPlanFromBlocks(blocks, draft.family),
     coverage: {
       technicalCore,
       examSignals,
@@ -663,7 +734,7 @@ function derivePostRenderRemediation(
         severity: "warning",
         label: "Ajuste visual medido",
         reason: visual.warnings[0] ?? "La captura real detecto detalles visuales que no aparecen en el QA estructural.",
-        actionLabel: "Reforzar nucleo tecnico",
+        actionLabel: "Recomponer nucleo visual",
         shortcutAction: "boost_technical",
         scope: "technical_core",
         objectiveId: "fill_density",
@@ -709,7 +780,7 @@ function derivePostRenderRemediation(
       severity: "warning",
       label: "Upper visual subutilizado",
       reason: "La composicion central no esta usando suficiente altura disponible; el cuerpo visual queda timido y aparecen huecos.",
-      actionLabel: "Reforzar nucleo tecnico",
+        actionLabel: "Recomponer nucleo visual",
       shortcutAction: "boost_technical",
       scope: "technical_core",
       objectiveId: "fill_density",
@@ -823,6 +894,12 @@ function makeBlock(
 function buildClientProposal(page: StudioCatalogPage): ComposerProposal {
   const family = inferFamilyFromPage(page);
   const modules = page.visualModules;
+  const densityModules = enrichModulesForComposerDensity(
+    modules,
+    family,
+    page.guideQuestion,
+    page.traps[0]?.wrong,
+  );
 
   const commonIntro: ComposerBlock[] = [
     makeBlock("hero_title", "full", 10, { title: page.title, subtitle: page.domain }),
@@ -848,9 +925,9 @@ function buildClientProposal(page: StudioCatalogPage): ComposerProposal {
     case "comparison":
       blocks = [
         ...commonIntro,
-        makeBlock("comparison_panel", "sku_matrix", 40, { modules: modules.slice(0, 2) }),
-        makeBlock("diagram_panel", "two_column", 50, { modules: modules.slice(0, 2) }),
-        makeBlock("map_panel", "replication_path", 60, { modules: modules.slice(2, 4) }),
+        makeBlock("comparison_panel", "sku_matrix", 40, { modules: densityModules.slice(0, 2) }),
+        makeBlock("diagram_panel", "two_column", 50, { modules: densityModules.slice(0, 2) }),
+        makeBlock("map_panel", "replication_path", 60, { modules: densityModules.slice(2, 4) }),
         makeBlock("exam_signal", "rule", 70, {
           message: "Las senales de examen pesan mas que el nombre del SKU cuando hay geo-replicacion o acceso privado.",
         }),
@@ -860,8 +937,8 @@ function buildClientProposal(page: StudioCatalogPage): ComposerProposal {
     case "decision":
       blocks = [
         ...commonIntro,
-        makeBlock("decision_tree", "multi_branch", 40, { modules: modules.slice(0, 2) }),
-        makeBlock("diagram_panel", "single_focus", 50, { modules: modules.slice(2, 4) }),
+        makeBlock("decision_tree", "multi_branch", 40, { modules: densityModules.slice(0, 2) }),
+        makeBlock("diagram_panel", "single_focus", 50, { modules: densityModules.slice(2, 4) }),
         makeBlock("exam_signal", "warning", 70, {
           message: "En examen, elegir identidad o permiso equivocado rompe el flujo aunque ACR este bien configurado.",
         }),
@@ -871,8 +948,8 @@ function buildClientProposal(page: StudioCatalogPage): ComposerProposal {
     case "coverage_map":
       blocks = [
         ...commonIntro,
-        makeBlock("map_panel", "network_boundary", 40, { modules: modules.slice(0, 2) }),
-        makeBlock("diagram_panel", "multi_step", 50, { modules: modules.slice(2, 4) }),
+        makeBlock("map_panel", "network_boundary", 40, { modules: densityModules.slice(0, 2) }),
+        makeBlock("diagram_panel", "multi_step", 50, { modules: densityModules.slice(2, 4) }),
         makeBlock("exam_signal", "memory_hook", 70, {
           message: "Si el acceso falla, piensa primero en conectividad, DNS y boundary de red antes que en permisos de imagen.",
         }),
@@ -882,8 +959,8 @@ function buildClientProposal(page: StudioCatalogPage): ComposerProposal {
     case "lifecycle":
       blocks = [
         ...commonIntro,
-        makeBlock("diagram_panel", "multi_step", 40, { modules: modules.slice(0, 2) }),
-        makeBlock("decision_tree", "binary_path", 50, { modules: modules.slice(2, 4) }),
+        makeBlock("diagram_panel", "multi_step", 40, { modules: densityModules.slice(0, 2) }),
+        makeBlock("decision_tree", "binary_path", 50, { modules: densityModules.slice(2, 4) }),
         makeBlock("exam_signal", "rule", 70, {
           message: "Politica, limpieza y automatizacion deben leerse como un ciclo operativo, no como features aisladas.",
         }),
@@ -894,8 +971,8 @@ function buildClientProposal(page: StudioCatalogPage): ComposerProposal {
     default:
       blocks = [
         ...commonIntro,
-        makeBlock("diagram_panel", "two_column", 40, { modules: modules.slice(0, 2) }),
-        makeBlock("diagram_panel", "multi_step", 50, { modules: modules.slice(2, 4) }),
+        makeBlock("diagram_panel", "two_column", 40, { modules: densityModules.slice(0, 2) }),
+        makeBlock("diagram_panel", "multi_step", 50, { modules: densityModules.slice(2, 4) }),
         makeBlock("exam_signal", "memory_hook", 70, {
           message: "El lector debe recordar el flujo principal y la senal de examen, no solo los nombres de los servicios.",
         }),
@@ -980,6 +1057,7 @@ function buildClientProposal(page: StudioCatalogPage): ComposerProposal {
         consistencyScore,
         total,
       },
+      visualDensityPlan: buildVisualDensityPlanFromBlocks(blocks, family),
     },
     nextActions: [
       "Comparar esta propuesta contra la referencia locked.",
@@ -1436,10 +1514,10 @@ export default function ComposerPage() {
       return { action: "expand_context" as ShortcutAction, label: "Expandir contexto", reason: "la continuidad narrativa entre guía y bloque técnico aún es débil" };
     }
     if (!checks.get("variant-discipline")) {
-      return { action: "boost_technical" as ShortcutAction, label: "Reforzar núcleo técnico", reason: "las variantes de bloque todavía no están consolidadas" };
+      return { action: "boost_technical" as ShortcutAction, label: "Recomponer nucleo visual", reason: "las variantes de bloque todavia no estan consolidadas" };
     }
     if ((projectedGap ?? 0) > 0.4) {
-      return { action: "boost_technical" as ShortcutAction, label: "Reforzar núcleo técnico", reason: "la brecha contra 9.5 todavía requiere más impacto visual/técnico" };
+      return { action: "boost_technical" as ShortcutAction, label: "Recomponer nucleo visual", reason: "la brecha contra 9.5 todavia requiere mas impacto visual/tecnico" };
     }
     return null;
   }, [benchmark, projectedGap, postRenderRemediation]);
@@ -1611,19 +1689,35 @@ export default function ComposerPage() {
       next = next.map((block) => (block.type === "context_deck" ? { ...block, variant: "expanded" } : block));
     }
     if (action === "boost_technical") {
+      const densityModules = enrichModulesForComposerDensity(
+        pageSummary?.visualModules ?? [],
+        editableDraft?.family ?? "architecture",
+        pageSummary?.guideQuestion,
+        pageSummary?.traps?.[0]?.wrong,
+      );
       const hasTechnical = next.some((block) => TECHNICAL_BLOCK_TYPES.includes(block.type));
       if (!hasTechnical) {
         next.push(
           makeBlock("diagram_panel", "two_column", 55, {
-            modules: pageSummary?.visualModules?.slice(0, 2) ?? [],
+            modules: densityModules.slice(0, 2),
           }),
         );
       } else {
         next = next.map((block) => {
+          if (!TECHNICAL_BLOCK_TYPES.includes(block.type)) return block;
+          const currentModules = "modules" in block.content && Array.isArray(block.content.modules)
+            ? (block.content.modules as StudioVisualModule[])
+            : densityModules;
+          const enriched = enrichModulesForComposerDensity(
+            currentModules.length > 0 ? currentModules : densityModules,
+            editableDraft?.family ?? "architecture",
+            pageSummary?.guideQuestion,
+            pageSummary?.traps?.[0]?.wrong,
+          );
           if (block.type === "diagram_panel" && block.variant !== "multi_step") {
-            return { ...block, variant: "multi_step" };
+            return { ...block, variant: "multi_step", content: { ...block.content, modules: enriched.slice(0, 2) } };
           }
-          return block;
+          return { ...block, content: { ...block.content, modules: enriched.slice(0, 4) } };
         });
       }
     }
@@ -1633,7 +1727,12 @@ export default function ComposerPage() {
       const technicalByType = new Map(
         next.filter((block) => TECHNICAL_BLOCK_TYPES.includes(block.type)).map((block) => [block.type, block]),
       );
-      const modules = pageSummary?.visualModules ?? [];
+      const modules = enrichModulesForComposerDensity(
+        pageSummary?.visualModules ?? [],
+        editableDraft?.family ?? "architecture",
+        pageSummary?.guideQuestion,
+        pageSummary?.traps?.[0]?.wrong,
+      );
       const rebuiltTechnical: ComposerBlock[] = [
         technicalByType.get("diagram_panel")
           ?? makeBlock("diagram_panel", "two_column", 40, { modules: modules.slice(0, 2) }),
@@ -1673,7 +1772,12 @@ export default function ComposerPage() {
       const technicalByType = new Map(
         nextBlocks.filter((block) => TECHNICAL_BLOCK_TYPES.includes(block.type)).map((block) => [block.type, block]),
       );
-      const modules = pageSummary?.visualModules ?? [];
+      const modules = enrichModulesForComposerDensity(
+        pageSummary?.visualModules ?? [],
+        currentDraft.family,
+        pageSummary?.guideQuestion,
+        pageSummary?.traps?.[0]?.wrong,
+      );
       const rebuiltTechnical: ComposerBlock[] = [
         technicalByType.get("diagram_panel") ??
           makeBlock("diagram_panel", "two_column", 40, { modules: modules.slice(0, 2) }),
@@ -2071,25 +2175,47 @@ export default function ComposerPage() {
     setCanvasMode("real");
   }
 
+  function shouldProtectRailBeforeUpper(): boolean {
+    const visual = lockedQa?.visualMeasurement;
+    const evidence = lockedQa?.layoutEvidence;
+    const visualBlockers = visual?.blockers.join(" ").toLowerCase() ?? "";
+    return Boolean(
+      (visual?.available && (
+        visual.page.verticalOverflowPx > 6
+        || visualBlockers.includes("footer")
+        || visualBlockers.includes("rail")
+        || visualBlockers.includes("autocheck")
+        || ((visual.zoneUsage.exam_rail?.freeBottomPx ?? 0) > 58)
+      ))
+      || (evidence && (evidence.examRail.sharePct > 32 || evidence.examRail.densityBand === "thin")),
+    );
+  }
+
   async function runShortcutAction(action: ShortcutAction, label: string) {
     if (!editableDraft || !proposal || quickActionBusy || generatingFromComposer) return;
-    setQuickActionBusy(action);
+    const effectiveAction: ShortcutAction = action === "boost_technical" && shouldProtectRailBeforeUpper()
+      ? "compact_rail"
+      : action;
+    const effectiveLabel = action === "boost_technical" && effectiveAction === "compact_rail"
+      ? "Compactar rail antes de recomponer nucleo visual"
+      : label;
+    setQuickActionBusy(effectiveAction);
     setQuickActionFeedback(null);
     setGenerationFeedback(null);
     setQaDelta(null);
     setLastShortcutSnapshot(cloneDraftRecord(editableDraft));
-    setLastShortcutLabel(label);
+    setLastShortcutLabel(effectiveLabel);
     try {
       const beforeSerialized = JSON.stringify(editableDraft.blocks);
-      const updatedBlocks = applyComposerActionToBlocks(action, editableDraft.blocks);
+      const updatedBlocks = applyComposerActionToBlocks(effectiveAction, editableDraft.blocks);
       const nextDraft = recalculateDraft({ ...editableDraft, blocks: updatedBlocks });
       const afterSerialized = JSON.stringify(nextDraft.blocks);
 
       if (beforeSerialized === afterSerialized) {
-        setQuickActionFeedback(`Atajo "${label}" no produjo cambios efectivos en esta pagina.`);
+        setQuickActionFeedback(`Atajo "${effectiveLabel}" no produjo cambios efectivos en esta pagina.`);
         pushActionLog({
           kind: "shortcut",
-          action: label,
+          action: effectiveLabel,
           status: "info",
           beforeTotal: projectedQaScores?.total ?? null,
           afterTotal: projectedQaScores?.total ?? null,
@@ -2113,11 +2239,15 @@ export default function ComposerPage() {
       const afterTotal = afterScores.total;
       setEditableDraft(nextDraft);
       setGeneratingFromComposer(true);
-      await generateFromDraft(nextDraft, `Atajo operativo aplicado: ${label}`);
-      setQuickActionFeedback(`Atajo "${label}" aplicado + regeneracion completada.`);
+      await generateFromDraft(
+        nextDraft,
+        `Atajo operativo aplicado: ${effectiveLabel}`,
+        effectiveAction === "compact_rail" ? "exam_rail" : "technical_core",
+      );
+      setQuickActionFeedback(`Atajo "${effectiveLabel}" aplicado + regeneracion completada.`);
       pushActionLog({
         kind: "shortcut",
-        action: label,
+        action: effectiveLabel,
         status: "ok",
         beforeTotal,
         afterTotal,
@@ -2126,10 +2256,10 @@ export default function ComposerPage() {
         note: "Aplicado y regenerado.",
       });
     } catch (err) {
-      setQuickActionFeedback(err instanceof Error ? err.message : `Fallo al ejecutar atajo "${label}".`);
+      setQuickActionFeedback(err instanceof Error ? err.message : `Fallo al ejecutar atajo "${effectiveLabel}".`);
       pushActionLog({
         kind: "shortcut",
-        action: label,
+        action: effectiveLabel,
         status: "error",
         beforeTotal: projectedQaScores?.total ?? null,
         afterTotal: null,
@@ -2157,7 +2287,11 @@ export default function ComposerPage() {
     try {
       const beforeTotal = projectedQaScores?.total ?? null;
       const beforeDraft = cloneDraftRecord(editableDraft);
-      const nextBlocks = applyShortcutChain(editableDraft.blocks, objective.actions);
+      const railProtected = objective.id === "fill_density" && shouldProtectRailBeforeUpper();
+      const effectiveActions = railProtected ? (["compact_rail"] as ShortcutAction[]) : objective.actions;
+      const effectiveScope: ComposerRegenerationScope = railProtected ? "exam_rail" : objective.scope;
+      const effectiveLabel = railProtected ? "Compactar rail antes de recomponer nucleo visual" : objective.label;
+      const nextBlocks = applyShortcutChain(editableDraft.blocks, effectiveActions);
       const nextDraft = recalculateDraft({ ...editableDraft, blocks: nextBlocks });
 
       const changedBlocks = nextDraft.blocks.filter((block, idx) => {
@@ -2179,22 +2313,22 @@ export default function ComposerPage() {
 
       pushActionLog({
         kind: "generate",
-        action: `Objetivo Sprint 5: ${objective.label}`,
+        action: `Objetivo editorial: ${effectiveLabel}`,
         status: "ok",
         beforeTotal,
         afterTotal,
         delta: beforeTotal != null && afterTotal != null ? Number((afterTotal - beforeTotal).toFixed(1)) : null,
         changedBlocks,
-        note: `Playbook aplicado (${objective.actions.join(" -> ")}) + regeneracion ${objective.scope}.`,
+        note: `Playbook aplicado (${effectiveActions.join(" -> ")}) + regeneracion ${effectiveScope}.`,
       });
 
       await generateFromDraft(
         nextDraft,
-        `Sprint 5 objetivo editorial: ${objective.label}`,
-        objective.scope,
+        `Objetivo editorial: ${effectiveLabel}`,
+        effectiveScope,
       );
 
-      setGenerationFeedback(`Objetivo ejecutado: ${objective.label}.`);
+      setGenerationFeedback(`Objetivo ejecutado: ${effectiveLabel}.`);
       if (objective.openQa) {
         setLocation(`/qa/${parseInt(pageIdFromRoute, 10)}`);
       }
@@ -2792,6 +2926,42 @@ export default function ComposerPage() {
                     ) : null}
                   </section>
 
+                  {editableDraft?.visualDensityPlan ? (
+                    <section className="rounded-sm border border-cyan-400/15 bg-cyan-500/8 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-[8px] font-bold text-cyan-200/60 uppercase tracking-widest">Plan de densidad visual</p>
+                          <p className="text-sm font-black text-white mt-2">
+                            {editableDraft.visualDensityPlan.affectedZone === "exam_rail"
+                              ? "Primero corregir rail"
+                              : "Recomponer sin deformar"}
+                          </p>
+                        </div>
+                        <span className="rounded-sm border border-cyan-300/20 bg-cyan-300/10 px-2 py-1 text-[8px] font-bold text-cyan-100 uppercase">
+                          {editableDraft.visualDensityPlan.affectedZone.replace("_", " ")}
+                        </span>
+                      </div>
+                      <div className="mt-3 space-y-2 text-[10px] leading-relaxed">
+                        <p className="text-white/62">
+                          <span className="font-bold text-white/82">Problema: </span>
+                          {editableDraft.visualDensityPlan.problem}
+                        </p>
+                        <p className="text-cyan-100/78">
+                          <span className="font-bold text-cyan-100">Accion: </span>
+                          {editableDraft.visualDensityPlan.proposedAction}
+                        </p>
+                        <p className="text-white/56">
+                          <span className="font-bold text-white/78">Impacto: </span>
+                          {editableDraft.visualDensityPlan.expectedImpact}
+                        </p>
+                        <p className="text-amber-100/70">
+                          <span className="font-bold text-amber-100">Riesgo: </span>
+                          {editableDraft.visualDensityPlan.risk}
+                        </p>
+                      </div>
+                    </section>
+                  ) : null}
+
                   <section className="rounded-sm border border-white/[0.08] bg-[#0d1629] p-4">
                     <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Acciones de maquetacion</p>
                     <div className="mt-3 space-y-2">
@@ -2811,7 +2981,7 @@ export default function ComposerPage() {
                         className="w-full h-10 rounded-sm border border-cyan-400/30 bg-cyan-500/14 text-[10px] font-bold text-cyan-50 hover:bg-cyan-500/22 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
                         <Layers3 className="w-3.5 h-3.5" />
-                        Rellenar huecos utiles
+                        Recomponer nucleo visual
                       </button>
                       <button
                         type="button"
@@ -3688,11 +3858,11 @@ export default function ComposerPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => runShortcutAction("boost_technical", "Reforzar nucleo tecnico")}
+                  onClick={() => runShortcutAction("boost_technical", "Recomponer nucleo visual")}
                     disabled={Boolean(quickActionBusy) || generatingFromComposer}
                     className="px-3 py-1.5 rounded-sm border border-emerald-400/25 bg-emerald-500/10 text-[10px] font-semibold text-emerald-100 hover:bg-emerald-500/15 transition-colors disabled:opacity-55 disabled:cursor-not-allowed"
                   >
-                    Elevar nucleo tecnico
+                    Recomponer nucleo visual
                   </button>
                 </div>
                 {autofixFeedback ? (
@@ -4161,11 +4331,11 @@ export default function ComposerPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => runShortcutAction("boost_technical", "Reforzar nucleo tecnico")}
+                          onClick={() => runShortcutAction("boost_technical", "Recomponer nucleo visual")}
                           disabled={Boolean(quickActionBusy) || generatingFromComposer}
                           className="w-full h-8 rounded-sm border border-emerald-400/25 bg-emerald-500/10 text-[9px] font-semibold text-emerald-100 hover:bg-emerald-500/15 disabled:opacity-55 disabled:cursor-not-allowed"
                         >
-                          {quickActionBusy === "boost_technical" ? "Aplicando..." : "Reforzar nucleo tecnico"}
+                          {quickActionBusy === "boost_technical" ? "Aplicando..." : "Recomponer nucleo visual"}
                         </button>
                         <button
                           type="button"

@@ -4,7 +4,7 @@ import { IMAGE_MODEL, IMAGE_QUALITY, TEMPLATE_VERSION, TEXT_MODEL } from "../../
 export const VISUAL_ATLAS_V24_CONTRACT = {
   id: "visual-atlas-v24",
   version: TEMPLATE_VERSION,
-  renderRevision: "visual-atlas-2026-06-02-a",
+  renderRevision: "visual-atlas-2026-06-02-b",
   name: "Visual Atlas v24",
   generation: {
     textModel: TEXT_MODEL,
@@ -93,6 +93,9 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
       "no 3D",
       "no glossy app icons",
       "no random mixed illustration styles",
+      "fill space by recomposing diagrams, hierarchy and relationships, never by stretching existing elements",
+      "use fewer larger labels instead of many tiny labels",
+      "every card must include one explanatory mini-diagram plus one short readable takeaway",
     ],
     forbiddenComposition: [
       "full page infographic",
@@ -108,6 +111,9 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
       "autocheck section",
       "question block",
       "HTML-generated support notes below the four cards",
+      "stretched diagrams or non-proportional scaling",
+      "squeezed, horizontally compressed or vertically compressed text",
+      "inflated cards that only enlarge empty white interiors",
       "thick enclosing rectangle around all four cards",
       "high-saturation card outlines with inconsistent stroke width",
       "per-card numbering style changes",
@@ -173,7 +179,15 @@ function list(values: readonly string[]): string {
 export function buildUpperVisualPrompt(data: VisualAtlasPageData): string {
   const contract = VISUAL_ATLAS_V24_CONTRACT;
   const modulesText = data.visualModules
-    .map((m) => `${m.num}. ${m.title}: ${m.description}`)
+    .map((m) => {
+      const guidance = [
+        m.idea ? `idea: ${m.idea}` : null,
+        m.recommendedDiagram ? `recommended diagram: ${m.recommendedDiagram}` : null,
+        m.maxMicrocopy ? `max microcopy: ${m.maxMicrocopy}` : null,
+        m.examSignal ? `exam signal: ${m.examSignal}` : null,
+      ].filter(Boolean).join(" | ");
+      return `${m.num}. ${m.title}: ${m.description}${guidance ? `\n   ${guidance}` : ""}`;
+    })
     .join("\n");
   const dynamicForbiddenText = [
     data.title,
@@ -196,6 +210,9 @@ Canvas and composition:
 - Reserve only a very thin internal safety edge on all four sides of the image; no important shape, label, arrow or icon may touch the crop edge.
 - The four concept cards should visually occupy most of the canvas. Avoid a timid composition floating in too much white space.
 - Push the 2x2 card composition close to the available frame. Do not add a generous white moat around the grid.
+- Fill unused space by changing the internal composition: add clearer flows, larger icons, relationship arrows, decision paths or callout chips.
+- Never fill unused space by stretching diagrams, scaling text non-proportionally, squeezing labels, or simply enlarging a sparse card.
+- Preserve natural aspect ratios for icons, arrows, people, service symbols, maps and text blocks.
 - Use exactly ${contract.upperVisual.requiredCardCount} internal concept cards in a balanced ${contract.upperVisual.requiredGrid} grid.
 - Each internal card may have a small number badge (${data.visualModules.map((m) => m.num).join(", ")}) and a short card title.
 - No global header above the cards. No book/page title. No footer.
@@ -206,6 +223,7 @@ Canvas and composition:
 - Internal text must be easy to read after the image is inserted into a ${contract.upperVisual.slotWidth}x${contract.upperVisual.slotHeight}px slot.
 - Prefer fewer labels with larger type rather than many tiny labels.
 - Never use spreadsheet-like microtext. Aim for bold, editorial microcopy that remains readable when the full page is viewed at normal screen size.
+- If a card feels empty, add one meaningful mini-diagram or decision cue; do not duplicate the guide question or autocheck answer.
 
 Forbidden composition:
 ${list(contract.upperVisual.forbiddenComposition)}
@@ -219,6 +237,7 @@ ${list(contract.upperVisual.style)}
 Editorial intent:
 - Make the learner understand faster, not merely decorate.
 - Each card must combine a compact explanation with a useful mini diagram.
+- Each card should follow the supplied intent when present: idea, recommended diagram, maximum microcopy and exam signal.
 - Prefer arrows, sequence flows, region maps, decision trees, SKU matrices, security boundaries and cause/effect diagrams when appropriate.
 - Spanish labels are allowed only inside the cards and only when they clarify the diagram.
 

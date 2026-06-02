@@ -104,6 +104,13 @@ export interface ComposerPageDraft {
   mode: "composer";
   family: ComposerCompositionFamily;
   blocks: ComposerBlock[];
+  visualDensityPlan?: {
+    problem: string;
+    affectedZone: "upper_visual" | "exam_rail" | "full_page";
+    proposedAction: string;
+    expectedImpact: string;
+    risk: string;
+  };
   coverage: ComposerCoverageResult;
   structuralValidation: ComposerStructuralValidation;
   editorialValidation: ComposerEditorialValidation;

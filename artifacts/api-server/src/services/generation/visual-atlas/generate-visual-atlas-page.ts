@@ -88,7 +88,7 @@ function applyVisualMeasurementToQaDimensions(
   const upperUsage = visual.zoneUsage.upper_visual;
   const examUsage = visual.zoneUsage.exam_rail;
   const visualWarningPenalty = visual.warnings.length * 0.08;
-  const visualBlockerPenalty = visual.blockers.length * 0.25;
+  const visualBlockerPenalty = visual.blockers.length * 0.45;
 
   const upperOccupancyPenalty =
     upperUsage && upperUsage.occupancyPct < 82
@@ -100,6 +100,9 @@ function applyVisualMeasurementToQaDimensions(
       : 0;
   const microTypographyPenalty = Math.min(0.8, visual.typography.smallTextCount * 0.06);
   const overflowPenalty = Math.min(0.7, visual.overflow.count * 0.07);
+  const pageOverflowPenalty = visual.page.verticalOverflowPx > 6
+    ? Math.min(1.2, visual.page.verticalOverflowPx * 0.04)
+    : 0;
 
   const visualPenalty =
     visualWarningPenalty
@@ -107,16 +110,17 @@ function applyVisualMeasurementToQaDimensions(
     + upperOccupancyPenalty
     + examFreeBottomPenalty
     + microTypographyPenalty
-    + overflowPenalty;
+    + overflowPenalty
+    + pageOverflowPenalty;
 
   const artDirection = roundOne(clamp(base.artDirection - visualPenalty, 0, 10));
-  const readability = roundOne(clamp(base.readability - (examFreeBottomPenalty * 0.65 + microTypographyPenalty * 0.35), 0, 10));
-  const density = roundOne(clamp(base.density - (examFreeBottomPenalty * 0.9 + upperOccupancyPenalty * 0.4), 0, 10));
+  const readability = roundOne(clamp(base.readability - (examFreeBottomPenalty * 0.65 + microTypographyPenalty * 0.35 + pageOverflowPenalty * 0.7), 0, 10));
+  const density = roundOne(clamp(base.density - (examFreeBottomPenalty * 0.9 + upperOccupancyPenalty * 0.4 + pageOverflowPenalty * 0.85), 0, 10));
   const editorialConsistency = roundOne(
-    clamp(base.editorialConsistency - (visualWarningPenalty + visualBlockerPenalty + overflowPenalty * 0.4), 0, 10),
+    clamp(base.editorialConsistency - (visualWarningPenalty + visualBlockerPenalty + overflowPenalty * 0.4 + pageOverflowPenalty * 0.5), 0, 10),
   );
   const technicalAccuracy = base.technicalAccuracy;
-  const commercialRisk = roundOne(clamp(base.commercialRisk - (visualBlockerPenalty + visualWarningPenalty * 0.5), 0, 10));
+  const commercialRisk = roundOne(clamp(base.commercialRisk - (visualBlockerPenalty + visualWarningPenalty * 0.5 + pageOverflowPenalty * 0.6), 0, 10));
   const avg = roundOne(
     (artDirection + editorialConsistency + readability + technicalAccuracy + density + commercialRisk) / 6,
   );

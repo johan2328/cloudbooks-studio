@@ -55,7 +55,52 @@ function block(
   };
 }
 
+function compactSentence(value: string, maxLength: number): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLength) return normalized;
+  const sentence = normalized.match(/^.{1,180}?[.!?](\s|$)/)?.[0]?.trim();
+  const source = sentence && sentence.length <= maxLength ? sentence : normalized;
+  return source.slice(0, maxLength).replace(/\s+\S*$/, "").trim();
+}
+
+function diagramForModule(title: string, family: ComposerCompositionFamily): string {
+  const text = title.toLowerCase();
+  if (/(build|push|task|yaml|trigger|automat)/.test(text)) return "secuencia operacional con flechas, origen, ejecucion y resultado";
+  if (/(tier|sku|basic|standard|premium|compar)/.test(text)) return "matriz comparativa compacta con checks y señales de examen";
+  if (/(geo|region|zone|zona|replic|map)/.test(text)) return "mapa o ruta regional con boundary claro y leyenda minima";
+  if (/(identity|identidad|token|rol|permiso|acrpull|acrpush)/.test(text)) return "árbol de decision de identidad y permisos con camino correcto resaltado";
+  if (/(dns|network|firewall|endpoint|private|vnet|red)/.test(text)) return "diagrama de frontera de red con DNS, firewall y endpoint";
+  if (family === "comparison") return "comparativa visual con dos o tres columnas y una decision destacada";
+  if (family === "coverage_map") return "mapa o boundary diagram con conectividad y bloqueo";
+  if (family === "decision") return "decision tree breve con ramas permitidas y no permitidas";
+  return "mini flujo causa-efecto con iconos Azure planos y una regla visual";
+}
+
+function enrichModulesForDensity(data: VisualAtlasPageData, family: ComposerCompositionFamily) {
+  return data.visualModules.slice(0, 4).map((moduleItem) => ({
+    ...moduleItem,
+    idea: compactSentence(moduleItem.description, 96),
+    recommendedDiagram: diagramForModule(moduleItem.title, family),
+    maxMicrocopy: "titulo + 1 takeaway de maximo 12 palabras; evitar parrafos y microtexto",
+    examSignal: compactSentence(data.traps[0]?.wrong ?? data.guideQuestion, 82),
+  }));
+}
+
+function buildVisualDensityPlan(data: VisualAtlasPageData, family: ComposerCompositionFamily): ComposerPageDraft["visualDensityPlan"] {
+  const genericModules = data.visualModules.filter((moduleItem) => moduleItem.description.length < 58).length;
+  return {
+    problem: genericModules > 0
+      ? "Hay tarjetas con poco material diagramable; conviene enriquecer la intencion visual antes de regenerar."
+      : "El hueco debe resolverse con recomposicion interna, no con escalado ni relleno textual.",
+    affectedZone: "upper_visual",
+    proposedAction: `Recomponer ${data.visualModules.length} tarjetas con mini-diagramas ${family}, mayor jerarquia y takeaways cortos.`,
+    expectedImpact: "Mayor ocupacion util del upper visual sin deformar tipografia ni duplicar guia/autocheck.",
+    risk: "Si el rail inferior esta roto, esta accion debe posponerse y compactar primero traps/autocheck.",
+  };
+}
+
 function createBlocks(data: VisualAtlasPageData, family: ComposerCompositionFamily): ComposerBlock[] {
+  const densityModules = enrichModulesForDensity(data, family);
   const commonIntro = [
     block("hero_title", "full", 10, { title: data.title, subtitle: data.subtitle }),
     block("context_deck", data.context.length > 240 ? "short" : "expanded", 20, { context: data.context }),
@@ -79,9 +124,9 @@ function createBlocks(data: VisualAtlasPageData, family: ComposerCompositionFami
     case "comparison":
       return [
         ...commonIntro,
-        block("comparison_panel", "sku_matrix", 40, { modules: data.visualModules.slice(0, 2) }),
-        block("diagram_panel", "two_column", 50, { modules: data.visualModules.slice(0, 2) }),
-        block("map_panel", "replication_path", 60, { modules: data.visualModules.slice(2, 4) }),
+        block("comparison_panel", "sku_matrix", 40, { modules: densityModules.slice(0, 2) }),
+        block("diagram_panel", "two_column", 50, { modules: densityModules.slice(0, 2) }),
+        block("map_panel", "replication_path", 60, { modules: densityModules.slice(2, 4) }),
         block("exam_signal", "rule", 70, {
           message: "Las señales de examen pesan más que el nombre del SKU cuando hay geo-replicación o acceso privado.",
         }),
@@ -90,8 +135,8 @@ function createBlocks(data: VisualAtlasPageData, family: ComposerCompositionFami
     case "decision":
       return [
         ...commonIntro,
-        block("decision_tree", "multi_branch", 40, { modules: data.visualModules.slice(0, 2) }),
-        block("diagram_panel", "single_focus", 50, { modules: data.visualModules.slice(2, 4) }),
+        block("decision_tree", "multi_branch", 40, { modules: densityModules.slice(0, 2) }),
+        block("diagram_panel", "single_focus", 50, { modules: densityModules.slice(2, 4) }),
         block("exam_signal", "warning", 70, {
           message: "En examen, elegir identidad o permiso equivocado rompe el flujo aunque ACR esté bien configurado.",
         }),
@@ -100,8 +145,8 @@ function createBlocks(data: VisualAtlasPageData, family: ComposerCompositionFami
     case "coverage_map":
       return [
         ...commonIntro,
-        block("map_panel", "network_boundary", 40, { modules: data.visualModules.slice(0, 2) }),
-        block("diagram_panel", "multi_step", 50, { modules: data.visualModules.slice(2, 4) }),
+        block("map_panel", "network_boundary", 40, { modules: densityModules.slice(0, 2) }),
+        block("diagram_panel", "multi_step", 50, { modules: densityModules.slice(2, 4) }),
         block("exam_signal", "memory_hook", 70, {
           message: "Si el acceso falla, piensa primero en conectividad, DNS y boundary de red antes que en permisos de imagen.",
         }),
@@ -110,8 +155,8 @@ function createBlocks(data: VisualAtlasPageData, family: ComposerCompositionFami
     case "lifecycle":
       return [
         ...commonIntro,
-        block("diagram_panel", "multi_step", 40, { modules: data.visualModules.slice(0, 2) }),
-        block("decision_tree", "binary_path", 50, { modules: data.visualModules.slice(2, 4) }),
+        block("diagram_panel", "multi_step", 40, { modules: densityModules.slice(0, 2) }),
+        block("decision_tree", "binary_path", 50, { modules: densityModules.slice(2, 4) }),
         block("exam_signal", "rule", 70, {
           message: "Política, limpieza y automatización deben leerse como un ciclo operativo, no como features aisladas.",
         }),
@@ -121,8 +166,8 @@ function createBlocks(data: VisualAtlasPageData, family: ComposerCompositionFami
     default:
       return [
         ...commonIntro,
-        block("diagram_panel", "two_column", 40, { modules: data.visualModules.slice(0, 2) }),
-        block("diagram_panel", "multi_step", 50, { modules: data.visualModules.slice(2, 4) }),
+        block("diagram_panel", "two_column", 40, { modules: densityModules.slice(0, 2) }),
+        block("diagram_panel", "multi_step", 50, { modules: densityModules.slice(2, 4) }),
         block("exam_signal", "memory_hook", 70, {
           message: "El lector debe recordar el flujo principal y la señal de examen, no solo los nombres de los servicios.",
         }),
@@ -262,6 +307,7 @@ export function buildComposerProposal(pageId: string, data: VisualAtlasPageData)
     mode: "composer",
     family,
     blocks,
+    visualDensityPlan: buildVisualDensityPlan(data, family),
     coverage,
     structuralValidation,
     editorialValidation,

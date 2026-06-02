@@ -187,6 +187,10 @@ export interface StudioVisualModule {
   num: string;
   title: string;
   description: string;
+  idea?: string;
+  recommendedDiagram?: string;
+  maxMicrocopy?: string;
+  examSignal?: string;
 }
 
 export interface StudioTrap {
@@ -298,6 +302,13 @@ export interface ComposerProposal {
     mode: "composer";
     family: "comparison" | "architecture" | "decision" | "coverage_map" | "lifecycle";
     blocks: ComposerBlock[];
+    visualDensityPlan?: {
+      problem: string;
+      affectedZone: "upper_visual" | "exam_rail" | "full_page";
+      proposedAction: string;
+      expectedImpact: string;
+      risk: string;
+    };
     coverage: {
       technicalCore: boolean;
       examSignals: boolean;

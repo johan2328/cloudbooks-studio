@@ -152,13 +152,21 @@ export function evaluateVisualAtlasLayoutEngine(
 
   if (context.visualMeasurement?.available) {
     if (context.visualMeasurement.blockers.length > 0) {
+      const blockerText = context.visualMeasurement.blockers.join(" ").toLowerCase();
+      const railOrFooterBlocker =
+        blockerText.includes("rail")
+        || blockerText.includes("footer")
+        || blockerText.includes("autocheck")
+        || blockerText.includes("overflow vertical");
       actions.push(action(
-        "regenerate_full",
-        "Corregir medicion visual",
-        "full",
-        98,
+        railOrFooterBlocker ? "compact_exam_rail" : "regenerate_full",
+        railOrFooterBlocker ? "Corregir rail/footer antes de recomponer" : "Corregir medicion visual",
+        railOrFooterBlocker ? "exam_rail" : "full",
+        railOrFooterBlocker ? 99 : 98,
         context.visualMeasurement.blockers[0],
-        "La captura real detecto un problema que no debe entrar a produccion.",
+        railOrFooterBlocker
+          ? "Primero estabiliza traps/autocheck/footer; regenerar upper no corrige un desborde de pagina."
+          : "La captura real detecto un problema que no debe entrar a produccion.",
       ));
     }
     if (context.visualMeasurement.typography.smallTextCount > 0) {

@@ -162,17 +162,32 @@ function mergeComposerDraftIntoSeed(
           num: asString(item.num) ?? "",
           title: asString(item.title) ?? "",
           description: asString(item.description) ?? "",
+          idea: asString(item.idea) ?? undefined,
+          recommendedDiagram: asString(item.recommendedDiagram) ?? undefined,
+          maxMicrocopy: asString(item.maxMicrocopy) ?? undefined,
+          examSignal: asString(item.examSignal) ?? undefined,
         }))
         .filter((item) => item.title.length > 0);
     });
   if (moduleCandidates.length > 0) {
-    const unique = new Map<string, { title: string; description: string }>();
+    const unique = new Map<string, {
+      title: string;
+      description: string;
+      idea?: string;
+      recommendedDiagram?: string;
+      maxMicrocopy?: string;
+      examSignal?: string;
+    }>();
     for (const moduleItem of moduleCandidates) {
       const key = moduleItem.title.toLowerCase();
       if (!unique.has(key)) {
         unique.set(key, {
           title: moduleItem.title,
           description: moduleItem.description || "Bloque tecnico de referencia para examen.",
+          idea: moduleItem.idea,
+          recommendedDiagram: moduleItem.recommendedDiagram,
+          maxMicrocopy: moduleItem.maxMicrocopy,
+          examSignal: moduleItem.examSignal,
         });
       }
       if (unique.size >= 4) break;
@@ -181,6 +196,10 @@ function mergeComposerDraftIntoSeed(
       num: String(idx + 1).padStart(2, "0"),
       title: item.title,
       description: item.description,
+      idea: item.idea,
+      recommendedDiagram: item.recommendedDiagram,
+      maxMicrocopy: item.maxMicrocopy,
+      examSignal: item.examSignal,
     }));
     if (remapped.length === 4) {
       next.visualModules = remapped;
