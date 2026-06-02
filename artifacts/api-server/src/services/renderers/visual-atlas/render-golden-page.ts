@@ -28,6 +28,10 @@ function estimateExamRailHeight(data: VisualAtlasPageData, bodyTotalHeight: numb
   const trapDemand = estimateTrapRailHeight(data);
   const checkDemand = estimateAutocheckRailHeight(data);
   const dominantDemand = Math.max(trapDemand, checkDemand);
+  const compactRail = data.layoutRecipe?.railStrategy === "compact";
+  if (compactRail) {
+    return Math.round(clampNumber(dominantDemand + 20, 236, 272));
+  }
   const preferredUpperHeight = contract.upperVisual.slotHeight + 18;
   const railFromFixedUpper = bodyTotalHeight - preferredUpperHeight;
   const demandHeight = clampNumber(dominantDemand + 10, 168, 334);
@@ -57,6 +61,14 @@ function buildAutocheckFillerNotes(data: VisualAtlasPageData): string[] {
   notes.push(`Hint técnico: ${firstSentence(data.autocheck.explanation).toLowerCase()}`);
   notes.push(`Patrón de decisión: elimina primero opciones sin permiso o sin ruta de red válida.`);
   return notes.slice(0, 2);
+}
+
+function complementaryCards(data: VisualAtlasPageData) {
+  const complementIds = new Set(data.layoutRecipe?.complementaryCardIds ?? []);
+  const cards = data.editorialDeck?.cards ?? [];
+  return cards
+    .filter((card) => card.status === "selected" && (card.targetZone === "complement" || complementIds.has(card.id)))
+    .slice(0, 2);
 }
 
 function inferTopicFamily(data: VisualAtlasPageData): "containers" | "identity" | "networking" | "security" | "lifecycle" | "generic" {
@@ -150,10 +162,16 @@ export function renderVisualAtlasPage(data: VisualAtlasPageData): string {
   const bodyTotalHeight = 872;
   const examRailHeight = estimateExamRailHeight(data, bodyTotalHeight);
   const upperVisualHeight = bodyTotalHeight - examRailHeight;
+  const upperComplements = complementaryCards(data);
+  const hasUpperComplements = upperComplements.length > 0;
+  const upperSlotHeight = hasUpperComplements
+    ? Math.max(440, Math.min(contract.upperVisual.slotHeight, upperVisualHeight - 96))
+    : Math.max(460, Math.min(contract.upperVisual.slotHeight, upperVisualHeight - 18));
   const trapDemand = estimateTrapRailHeight(data);
   const checkDemand = estimateAutocheckRailHeight(data);
-  const trapFillEnabled = examRailHeight - trapDemand >= 44;
-  const checkFillEnabled = examRailHeight - checkDemand >= 44;
+  const compactRail = data.layoutRecipe?.railStrategy === "compact";
+  const trapFillEnabled = !compactRail && examRailHeight - trapDemand >= 44;
+  const checkFillEnabled = !compactRail && examRailHeight - checkDemand >= 44;
   const trapFillerNotes = trapFillEnabled ? buildTrapFillerNotes(data) : [];
   const checkFillerNotes = checkFillEnabled ? buildAutocheckFillerNotes(data) : [];
 
@@ -318,10 +336,52 @@ section.body {
 }
 .upper img {
   width: ${contract.upperVisual.slotWidth}px;
-  height: ${contract.upperVisual.slotHeight}px;
+  height: ${upperSlotHeight}px;
   object-fit: contain;
   object-position: center top;
   display: block;
+}
+.upper-complements {
+  width: ${contract.upperVisual.slotWidth}px;
+  display: grid;
+  grid-template-columns: repeat(${Math.max(1, upperComplements.length)}, 1fr);
+  gap: 6px;
+}
+.upper-complement {
+  min-height: 58px;
+  border: 1px solid #c9d8ea;
+  border-radius: 4px;
+  background: #f8fbff;
+  padding: 6px 9px;
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  column-gap: 7px;
+  align-items: start;
+}
+.upper-complement-mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #0f766e;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.upper-complement-title {
+  font-size: 7.8px;
+  font-weight: 900;
+  color: #06133E;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.upper-complement-claim {
+  margin-top: 2px;
+  font-size: 7.4px;
+  color: #334155;
+  line-height: 1.25;
 }
 .upper-placeholder {
   display: flex;
@@ -511,9 +571,18 @@ section.body {
     <span><strong>PREGUNTA GUÍA:</strong>${data.guideQuestion}</span>
   </section>
 
-  <section class="body" data-zone="body" data-upper-height="${upperVisualHeight}" data-exam-rail-height="${examRailHeight}" data-upper-slot-width="${contract.upperVisual.slotWidth}" data-upper-slot-height="${contract.upperVisual.slotHeight}" data-trap-demand="${trapDemand}" data-check-demand="${checkDemand}">
+  <section class="body" data-zone="body" data-upper-height="${upperVisualHeight}" data-exam-rail-height="${examRailHeight}" data-upper-slot-width="${contract.upperVisual.slotWidth}" data-upper-slot-height="${upperSlotHeight}" data-trap-demand="${trapDemand}" data-check-demand="${checkDemand}" data-layout-mode="${data.layoutRecipe?.mode ?? "4P"}" data-rail-strategy="${data.layoutRecipe?.railStrategy ?? "standard"}">
     <div class="upper" data-zone="upper_visual">
       ${upperVisualHtml}
+      ${upperComplements.length > 0 ? `<div class="upper-complements" data-zone="upper_complements">
+        ${upperComplements.map((card, idx) => `<div class="upper-complement" data-card-id="${card.id}">
+          <div class="upper-complement-mark">${idx + 1}</div>
+          <div>
+            <div class="upper-complement-title">${card.title}</div>
+            <div class="upper-complement-claim">${card.claim}</div>
+          </div>
+        </div>`).join("\n        ")}
+      </div>` : ""}
     </div>
     <div class="exam" data-zone="exam_rail">
 

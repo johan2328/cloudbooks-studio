@@ -1,0 +1,75 @@
+export type FormatAffinity =
+  | "master_book"
+  | "visual_atlas"
+  | "exam_traps"
+  | "question_bank"
+  | "cheat_sheet"
+  | "rapid_review";
+
+export type EditorialCardRole =
+  | "concept"
+  | "flow"
+  | "comparison"
+  | "decision"
+  | "trap"
+  | "autocheck"
+  | "exam_signal"
+  | "example"
+  | "micro_case"
+  | "checklist";
+
+export type EditorialCardStatus = "candidate" | "selected" | "rejected";
+export type EditorialCardZone = "primary" | "complement" | "rail" | "reserve";
+export type VisualAtlasLayoutMode = "4P" | "4P+2C" | "3P+1D+2C" | "Rail Compact";
+export type RailStrategy = "compact" | "standard";
+
+export interface EditorialCard {
+  id: string;
+  pageId: string;
+  role: EditorialCardRole;
+  status: EditorialCardStatus;
+  targetZone: EditorialCardZone;
+  title: string;
+  claim: string;
+  explanation: string;
+  diagramIntent: string;
+  examSignal: string;
+  sourceRefs: string[];
+  formatAffinity: FormatAffinity[];
+  densityScore: number;
+  visualRisk: "low" | "medium" | "high";
+}
+
+export interface EditorialCardDeck {
+  version: "editorial-card-deck-v1";
+  pageId: string;
+  source: "seed" | "composer" | "grounding";
+  generatedAt: string;
+  cards: EditorialCard[];
+  selectedCardIds: string[];
+  rejectedCardIds: string[];
+}
+
+export interface VisualAtlasLayoutRecipe {
+  mode: VisualAtlasLayoutMode;
+  primaryCardIds: string[];
+  complementaryCardIds: string[];
+  railCardIds: string[];
+  upperCardCount: number;
+  railStrategy: RailStrategy;
+  promptDirective: string;
+  reason: string;
+}
+
+export interface DensityPlan {
+  version: "useful-density-agent-v1";
+  targetScore: 9.5;
+  score: number;
+  usefulDensityScore: number;
+  groundingNeeded: boolean;
+  groundingRationale: string;
+  problems: string[];
+  recommendations: string[];
+  rejectedCards: Array<{ cardId: string; reason: string }>;
+  layoutRecipe: VisualAtlasLayoutRecipe;
+}

@@ -4,7 +4,7 @@ import { IMAGE_MODEL, IMAGE_QUALITY, TEMPLATE_VERSION, TEXT_MODEL } from "../../
 export const VISUAL_ATLAS_V24_CONTRACT = {
   id: "visual-atlas-v24",
   version: TEMPLATE_VERSION,
-  renderRevision: "visual-atlas-2026-06-02-c",
+  renderRevision: "visual-atlas-2026-06-02-d",
   name: "Visual Atlas v24",
   generation: {
     textModel: TEXT_MODEL,
@@ -73,6 +73,7 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
     slotHeight: 520,
     requiredCardCount: 4,
     requiredGrid: "2x2",
+    flexibleDeckModes: ["4P", "4P+2C", "3P+1D+2C", "Rail Compact"],
     role: "upper_visual_asset_only",
     safeMargin: "keep all important content inside a thin production-safe margin",
     style: [
@@ -97,6 +98,7 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
       "the internal content bounding box should occupy at least 85% of the image height and 88% of the image width",
       "use fewer larger labels instead of many tiny labels",
       "every card must include one explanatory mini-diagram plus one short readable takeaway",
+      "when a deck includes complementary cards, use them as small editorial bridges with new information, never as filler",
     ],
     forbiddenComposition: [
       "full page infographic",
@@ -179,6 +181,22 @@ function list(values: readonly string[]): string {
 
 export function buildUpperVisualPrompt(data: VisualAtlasPageData): string {
   const contract = VISUAL_ATLAS_V24_CONTRACT;
+  const layoutRecipe = data.layoutRecipe ?? data.densityPlan?.layoutRecipe;
+  const selectedCards = data.editorialDeck?.cards
+    .filter((card) => card.status === "selected")
+    .sort((a, b) => {
+      const zoneOrder = { primary: 0, complement: 1, rail: 2, reserve: 3 } as const;
+      return zoneOrder[a.targetZone] - zoneOrder[b.targetZone] || b.densityScore - a.densityScore;
+    }) ?? [];
+  const cardsText = selectedCards.length > 0
+    ? selectedCards.map((card, idx) => [
+      `${idx + 1}. [${card.targetZone}/${card.role}] ${card.title}`,
+      `   claim: ${card.claim}`,
+      `   diagram: ${card.diagramIntent}`,
+      `   exam signal: ${card.examSignal}`,
+      `   microcopy limit: one short readable takeaway; do not repeat guide/autocheck`,
+    ].join("\n")).join("\n")
+    : "";
   const modulesText = data.visualModules
     .map((m) => {
       const guidance = [
@@ -216,6 +234,10 @@ Canvas and composition:
 - Never fill unused space by stretching diagrams, scaling text non-proportionally, squeezing labels, or simply enlarging a sparse card.
 - Preserve natural aspect ratios for icons, arrows, people, service symbols, maps and text blocks.
 - Use exactly ${contract.upperVisual.requiredCardCount} internal concept cards in a balanced ${contract.upperVisual.requiredGrid} grid.
+- If an Editorial Card Deck is provided, follow its layout recipe instead of inventing filler. Allowed recipe modes: ${contract.upperVisual.flexibleDeckModes.join(", ")}.
+- Current layout recipe: ${layoutRecipe ? `${layoutRecipe.mode}; ${layoutRecipe.promptDirective}` : "4P; four primary cards only"}.
+- Primary cards must dominate. Complementary cards, when present, must be smaller, clearly useful and visually subordinate.
+- Rail cards belong to the HTML exam rail, not to the upper visual, unless they provide a compact exam-signal chip that does not duplicate traps/autocheck.
 - Each internal card may have a small number badge (${data.visualModules.map((m) => m.num).join(", ")}) and a short card title.
 - No global header above the cards. No book/page title. No footer.
 - Do not wrap all four cards inside one extra outer master frame or giant container box. The cards should read as the primary composition themselves.
@@ -242,6 +264,10 @@ Editorial intent:
 - Each card should follow the supplied intent when present: idea, recommended diagram, maximum microcopy and exam signal.
 - Prefer arrows, sequence flows, region maps, decision trees, SKU matrices, security boundaries and cause/effect diagrams when appropriate.
 - Spanish labels are allowed only inside the cards and only when they clarify the diagram.
+- Do not create density by increasing card borders, empty panels, repeated labels, duplicated answers or generic rule boxes.
+
+Editorial Card Deck:
+${cardsText || "- No card deck supplied; use the four module intents below."}
 
 Internal card content:
 ${modulesText}`;

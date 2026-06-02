@@ -1,3 +1,5 @@
+import type { DensityPlan, EditorialCardDeck, VisualAtlasLayoutRecipe } from "../domain/editorial-cards/types";
+
 export interface TrapItem {
   wrong: string;
   correction: string;
@@ -36,4 +38,7 @@ export interface VisualAtlasPageData {
   autocheck:      AutocheckData;
   contractVersion: string;
   visualModules:  VisualModule[];
+  editorialDeck?: EditorialCardDeck;
+  densityPlan?: DensityPlan;
+  layoutRecipe?: VisualAtlasLayoutRecipe;
 }

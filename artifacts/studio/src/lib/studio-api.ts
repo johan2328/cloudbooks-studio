@@ -287,6 +287,79 @@ export interface ComposerBlock {
   content: Record<string, unknown>;
 }
 
+export type FormatAffinity =
+  | "master_book"
+  | "visual_atlas"
+  | "exam_traps"
+  | "question_bank"
+  | "cheat_sheet"
+  | "rapid_review";
+
+export type EditorialCardRole =
+  | "concept"
+  | "flow"
+  | "comparison"
+  | "decision"
+  | "trap"
+  | "autocheck"
+  | "exam_signal"
+  | "example"
+  | "micro_case"
+  | "checklist";
+
+export type EditorialCardZone = "primary" | "complement" | "rail" | "reserve";
+
+export interface EditorialCard {
+  id: string;
+  pageId: string;
+  role: EditorialCardRole;
+  status: "candidate" | "selected" | "rejected";
+  targetZone: EditorialCardZone;
+  title: string;
+  claim: string;
+  explanation: string;
+  diagramIntent: string;
+  examSignal: string;
+  sourceRefs: string[];
+  formatAffinity: FormatAffinity[];
+  densityScore: number;
+  visualRisk: "low" | "medium" | "high";
+}
+
+export interface EditorialCardDeck {
+  version: "editorial-card-deck-v1";
+  pageId: string;
+  source: "seed" | "composer" | "grounding";
+  generatedAt: string;
+  cards: EditorialCard[];
+  selectedCardIds: string[];
+  rejectedCardIds: string[];
+}
+
+export interface VisualAtlasLayoutRecipe {
+  mode: "4P" | "4P+2C" | "3P+1D+2C" | "Rail Compact";
+  primaryCardIds: string[];
+  complementaryCardIds: string[];
+  railCardIds: string[];
+  upperCardCount: number;
+  railStrategy: "compact" | "standard";
+  promptDirective: string;
+  reason: string;
+}
+
+export interface DensityPlan {
+  version: "useful-density-agent-v1";
+  targetScore: 9.5;
+  score: number;
+  usefulDensityScore: number;
+  groundingNeeded: boolean;
+  groundingRationale: string;
+  problems: string[];
+  recommendations: string[];
+  rejectedCards: Array<{ cardId: string; reason: string }>;
+  layoutRecipe: VisualAtlasLayoutRecipe;
+}
+
 export interface ComposerProposal {
   source: "api_visual_atlas_composer_v1";
   pageId: string;
@@ -317,6 +390,9 @@ export interface ComposerProposal {
       expectedImpact: string;
       risk: string;
     };
+    editorialDeck?: EditorialCardDeck;
+    densityPlan?: DensityPlan;
+    layoutRecipe?: VisualAtlasLayoutRecipe;
     coverage: {
       technicalCore: boolean;
       examSignals: boolean;

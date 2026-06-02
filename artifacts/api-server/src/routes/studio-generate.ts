@@ -6,6 +6,8 @@ import { getSeed } from "../data/page-seeds";
 import { generateVisualAtlasPage } from "../services/generation/visual-atlas/generate-visual-atlas-page";
 import { computeQaDimensionScores } from "../services/qa/visual-atlas/validate-page-html";
 import type { VisualAtlasPageData } from "../lib/visual-atlas-types";
+import { evaluateUsefulDensity } from "../domain/editorial-cards/density-agent";
+import type { DensityPlan, EditorialCard, EditorialCardDeck, VisualAtlasLayoutRecipe } from "../domain/editorial-cards/types";
 import {
   ensurePageByNumber,
   getAuthUserFromHeader,
@@ -44,6 +46,102 @@ function readComposerBlocks(draftPayload: unknown): Array<Record<string, unknown
   return blocks.map((item) => asRecord(item)).filter((item): item is Record<string, unknown> => Boolean(item));
 }
 
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.map((item) => asString(item)).filter((item): item is string => Boolean(item))
+    : [];
+}
+
+function normalizeEditorialCard(raw: unknown, pageId: string): EditorialCard | null {
+  const item = asRecord(raw);
+  if (!item) return null;
+  const id = asString(item.id);
+  const title = asString(item.title);
+  const claim = asString(item.claim);
+  if (!id || !title || !claim) return null;
+  const roleRaw = asString(item.role) ?? "concept";
+  const targetZoneRaw = asString(item.targetZone) ?? "reserve";
+  const statusRaw = asString(item.status) ?? "candidate";
+  const densityScore = asFiniteNumber(item.densityScore) ?? 7.4;
+  return {
+    id,
+    pageId,
+    role: (["concept", "flow", "comparison", "decision", "trap", "autocheck", "exam_signal", "example", "micro_case", "checklist"].includes(roleRaw) ? roleRaw : "concept") as EditorialCard["role"],
+    status: (["candidate", "selected", "rejected"].includes(statusRaw) ? statusRaw : "candidate") as EditorialCard["status"],
+    targetZone: (["primary", "complement", "rail", "reserve"].includes(targetZoneRaw) ? targetZoneRaw : "reserve") as EditorialCard["targetZone"],
+    title,
+    claim,
+    explanation: asString(item.explanation) ?? claim,
+    diagramIntent: asString(item.diagramIntent) ?? "mini-diagrama editorial con una decision visible",
+    examSignal: asString(item.examSignal) ?? claim,
+    sourceRefs: asStringArray(item.sourceRefs).length > 0 ? asStringArray(item.sourceRefs) : ["composer-draft"],
+    formatAffinity: asStringArray(item.formatAffinity) as EditorialCard["formatAffinity"],
+    densityScore: clamp(roundOne(densityScore), 0, 10),
+    visualRisk: (["low", "medium", "high"].includes(asString(item.visualRisk) ?? "") ? asString(item.visualRisk) : "medium") as EditorialCard["visualRisk"],
+  };
+}
+
+function normalizeEditorialDeck(draftPayload: unknown, pageId: string): EditorialCardDeck | null {
+  const draft = asRecord(draftPayload);
+  const rawDeck = asRecord(draft?.editorialDeck);
+  const rawCards = rawDeck?.cards;
+  if (!Array.isArray(rawCards)) return null;
+  const cards = rawCards
+    .map((item) => normalizeEditorialCard(item, pageId))
+    .filter((item): item is EditorialCard => Boolean(item));
+  if (cards.length === 0) return null;
+  const selectedCardIds = asStringArray(rawDeck?.selectedCardIds);
+  const rejectedCardIds = asStringArray(rawDeck?.rejectedCardIds);
+  return {
+    version: "editorial-card-deck-v1",
+    pageId,
+    source: "composer",
+    generatedAt: asString(rawDeck?.generatedAt) ?? new Date().toISOString(),
+    cards,
+    selectedCardIds: selectedCardIds.length > 0 ? selectedCardIds : cards.filter((card) => card.status === "selected").map((card) => card.id),
+    rejectedCardIds: rejectedCardIds.length > 0 ? rejectedCardIds : cards.filter((card) => card.status === "rejected").map((card) => card.id),
+  };
+}
+
+function normalizeLayoutRecipe(raw: unknown): VisualAtlasLayoutRecipe | null {
+  const recipe = asRecord(raw);
+  if (!recipe) return null;
+  const modeRaw = asString(recipe.mode) ?? "4P";
+  const railStrategyRaw = asString(recipe.railStrategy) ?? "standard";
+  return {
+    mode: (["4P", "4P+2C", "3P+1D+2C", "Rail Compact"].includes(modeRaw) ? modeRaw : "4P") as VisualAtlasLayoutRecipe["mode"],
+    primaryCardIds: asStringArray(recipe.primaryCardIds),
+    complementaryCardIds: asStringArray(recipe.complementaryCardIds),
+    railCardIds: asStringArray(recipe.railCardIds),
+    upperCardCount: asFiniteNumber(recipe.upperCardCount) ?? 4,
+    railStrategy: (railStrategyRaw === "compact" ? "compact" : "standard"),
+    promptDirective: asString(recipe.promptDirective) ?? "Use selected editorial cards; do not add filler.",
+    reason: asString(recipe.reason) ?? "Composer editorial deck",
+  };
+}
+
+function normalizeDensityPlan(raw: unknown, data: VisualAtlasPageData, deck: EditorialCardDeck): DensityPlan {
+  const plan = asRecord(raw);
+  const layoutRecipe = normalizeLayoutRecipe(plan?.layoutRecipe) ?? evaluateUsefulDensity(data, deck).layoutRecipe;
+  return {
+    version: "useful-density-agent-v1",
+    targetScore: 9.5,
+    score: asFiniteNumber(plan?.score) ?? evaluateUsefulDensity(data, deck).score,
+    usefulDensityScore: asFiniteNumber(plan?.usefulDensityScore) ?? evaluateUsefulDensity(data, deck).usefulDensityScore,
+    groundingNeeded: typeof plan?.groundingNeeded === "boolean" ? plan.groundingNeeded : false,
+    groundingRationale: asString(plan?.groundingRationale) ?? "Deck composer sin grounding adicional.",
+    problems: asStringArray(plan?.problems),
+    recommendations: asStringArray(plan?.recommendations),
+    rejectedCards: Array.isArray(plan?.rejectedCards)
+      ? plan.rejectedCards.map((item) => asRecord(item)).filter((item): item is Record<string, unknown> => Boolean(item)).map((item) => ({
+        cardId: asString(item.cardId) ?? "",
+        reason: asString(item.reason) ?? "fuera del cupo editorial",
+      })).filter((item) => item.cardId.length > 0)
+      : [],
+    layoutRecipe,
+  };
+}
+
 function pickBlock(blocks: Array<Record<string, unknown>>, blockType: string): Record<string, unknown> | null {
   return blocks.find((block) => block.type === blockType) ?? null;
 }
@@ -64,7 +162,9 @@ function mergeComposerDraftIntoSeed(
   scope: ComposerRegenerationScope = "full",
 ): VisualAtlasPageData {
   const blocks = readComposerBlocks(draftPayload);
-  if (!blocks.length) return seed;
+  const draftRecord = asRecord(draftPayload);
+  const deck = normalizeEditorialDeck(draftPayload, seed.pageNumber);
+  if (!blocks.length && !deck) return seed;
 
   const next: VisualAtlasPageData = { ...seed };
   const allowNarrative = scope === "full";
@@ -203,6 +303,38 @@ function mergeComposerDraftIntoSeed(
     }));
     if (remapped.length === 4) {
       next.visualModules = remapped;
+    }
+  }
+
+  if (deck) {
+    const densityPlan = normalizeDensityPlan(draftRecord?.densityPlan, next, deck);
+    next.editorialDeck = deck;
+    next.densityPlan = densityPlan;
+    next.layoutRecipe = normalizeLayoutRecipe(draftRecord?.layoutRecipe) ?? densityPlan.layoutRecipe;
+
+    const primaryCards = deck.cards
+      .filter((card) => card.status === "selected" && card.targetZone === "primary")
+      .sort((a, b) => b.densityScore - a.densityScore)
+      .slice(0, 4);
+    if (allowTechnical && primaryCards.length >= 4) {
+      next.visualModules = primaryCards.map((card, idx) => ({
+        num: String(idx + 1).padStart(2, "0"),
+        title: card.title,
+        description: card.explanation || card.claim,
+        idea: card.claim,
+        recommendedDiagram: card.diagramIntent,
+        maxMicrocopy: "titulo + 1 takeaway legible; sin microtexto ni duplicacion",
+        examSignal: card.examSignal,
+      }));
+    }
+
+    const railTrapCards = deck.cards.filter((card) => card.status === "selected" && card.targetZone === "rail" && card.role === "trap").slice(0, 3);
+    if (allowExam && railTrapCards.length >= 1) {
+      const mergedTraps = railTrapCards.map((card) => ({
+        wrong: card.claim.replace(/^Mito:\s*/i, ""),
+        correction: card.explanation,
+      }));
+      next.traps = [...mergedTraps, ...next.traps].slice(0, 3);
     }
   }
 

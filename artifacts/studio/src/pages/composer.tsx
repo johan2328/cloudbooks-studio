@@ -41,6 +41,11 @@ import {
   type ComposerBatchRunStatus,
   type ComposerDraftRecord,
   type ComposerProposal,
+  type DensityPlan,
+  type EditorialCard,
+  type EditorialCardDeck,
+  type EditorialCardZone,
+  type VisualAtlasLayoutRecipe,
   type StudioCatalogPage,
   type StudioCatalog,
   type StudioOutputStatus,
@@ -308,6 +313,187 @@ function enrichModulesForComposerDensity(
   }));
 }
 
+function scoreEditorialCard(card: Pick<EditorialCard, "role" | "claim" | "diagramIntent" | "examSignal" | "formatAffinity">): number {
+  const diagramBonus = card.diagramIntent.length > 28 ? 1.1 : 0.2;
+  const examBonus = card.examSignal.length > 18 ? 0.8 : 0;
+  const roleBonus = ["decision", "comparison", "flow", "trap", "autocheck"].includes(card.role) ? 0.8 : 0.35;
+  const reuseBonus = Math.min(0.8, card.formatAffinity.length * 0.16);
+  const claimPenalty = card.claim.length < 38 ? 0.45 : 0;
+  return roundToOne(clamp(7.1 + diagramBonus + examBonus + roleBonus + reuseBonus - claimPenalty, 5.8, 9.8));
+}
+
+function makeEditorialCard(args: {
+  pageId: string;
+  id: string;
+  role: EditorialCard["role"];
+  targetZone: EditorialCardZone;
+  title: string;
+  claim: string;
+  explanation: string;
+  diagramIntent: string;
+  examSignal: string;
+  formatAffinity: EditorialCard["formatAffinity"];
+  status?: EditorialCard["status"];
+}): EditorialCard {
+  const base = {
+    pageId: args.pageId,
+    id: args.id,
+    role: args.role,
+    status: args.status ?? "candidate",
+    targetZone: args.targetZone,
+    title: compactComposerSentence(args.title, 58),
+    claim: compactComposerSentence(args.claim, 118),
+    explanation: compactComposerSentence(args.explanation, 190),
+    diagramIntent: compactComposerSentence(args.diagramIntent, 150),
+    examSignal: compactComposerSentence(args.examSignal, 120),
+    sourceRefs: ["seed-editorial"],
+    formatAffinity: args.formatAffinity,
+  };
+  const densityScore = scoreEditorialCard(base);
+  return {
+    ...base,
+    densityScore,
+    visualRisk: densityScore >= 8.8 ? "low" : densityScore >= 7.4 ? "medium" : "high",
+  };
+}
+
+function roleForComposerModule(moduleItem: StudioVisualModule): EditorialCard["role"] {
+  const text = `${moduleItem.title} ${moduleItem.description}`.toLowerCase();
+  if (/(tier|sku|basic|standard|premium|compar)/.test(text)) return "comparison";
+  if (/(identity|identidad|token|rol|permiso|acrpull|acrpush|decision)/.test(text)) return "decision";
+  if (/(build|push|task|yaml|trigger|automat|flow|flujo|network|dns|firewall|endpoint|geo|region)/.test(text)) return "flow";
+  return "concept";
+}
+
+function buildClientEditorialDeck(page: StudioCatalogPage, family: ComposerProposal["draft"]["family"]): EditorialCardDeck {
+  const modules = enrichModulesForComposerDensity(page.visualModules, family, page.guideQuestion, page.traps[0]?.wrong);
+  const moduleCards = modules.map((moduleItem, idx) => makeEditorialCard({
+    pageId: page.pageId,
+    id: `m${idx + 1}-${moduleItem.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 28)}`,
+    role: roleForComposerModule(moduleItem),
+    targetZone: "primary",
+    status: "selected",
+    title: moduleItem.title,
+    claim: moduleItem.idea ?? moduleItem.description,
+    explanation: moduleItem.description,
+    diagramIntent: moduleItem.recommendedDiagram ?? diagramForComposerModule(moduleItem.title, family),
+    examSignal: moduleItem.examSignal ?? page.traps[0]?.wrong ?? page.guideQuestion,
+    formatAffinity: ["visual_atlas", "master_book", "cheat_sheet", "rapid_review"],
+  }));
+  const complementCards = [
+    makeEditorialCard({
+      pageId: page.pageId,
+      id: "guide-decision",
+      role: "exam_signal",
+      targetZone: "complement",
+      status: "selected",
+      title: "Decision de examen",
+      claim: page.guideQuestion,
+      explanation: page.context,
+      diagramIntent: "regla de decision compacta que conecta pregunta guia con el nucleo visual",
+      examSignal: page.guideQuestion,
+      formatAffinity: ["visual_atlas", "exam_traps", "cheat_sheet", "rapid_review"],
+    }),
+    makeEditorialCard({
+      pageId: page.pageId,
+      id: "context-insight",
+      role: "micro_case",
+      targetZone: "complement",
+      status: "selected",
+      title: "Caso minimo",
+      claim: page.context,
+      explanation: "Puente entre diagrama, decision y pregunta de certificacion.",
+      diagramIntent: "micro-caso con condicion, decision y consecuencia",
+      examSignal: page.traps[1]?.wrong ?? page.guideQuestion,
+      formatAffinity: ["visual_atlas", "master_book", "question_bank"],
+    }),
+  ];
+  const trapCards = page.traps.slice(0, 3).map((trap, idx) => makeEditorialCard({
+    pageId: page.pageId,
+    id: `trap-${idx + 1}`,
+    role: "trap",
+    targetZone: idx === 0 ? "rail" : "reserve",
+    status: idx === 0 ? "selected" : "rejected",
+    title: `Mito ${idx + 1}`,
+    claim: trap.wrong,
+    explanation: trap.correction,
+    diagramIntent: "contraste mito versus correccion con senal de peligro discreta",
+    examSignal: trap.wrong,
+    formatAffinity: ["visual_atlas", "exam_traps", "question_bank", "rapid_review"],
+  }));
+  const answer = page.autocheck.options[page.autocheck.correctOption] ?? "respuesta correcta";
+  const autocheckCard = makeEditorialCard({
+    pageId: page.pageId,
+    id: "autocheck-core",
+    role: "autocheck",
+    targetZone: "rail",
+    status: "selected",
+    title: "Validacion",
+    claim: page.autocheck.question,
+    explanation: `${answer}: ${page.autocheck.explanation}`,
+    diagramIntent: "seleccion de respuesta con justificacion breve y descarte de distractores",
+    examSignal: answer,
+    formatAffinity: ["visual_atlas", "question_bank", "rapid_review"],
+  });
+  const cards = [...moduleCards, ...complementCards, ...trapCards, autocheckCard];
+  return {
+    version: "editorial-card-deck-v1",
+    pageId: page.pageId,
+    source: "seed",
+    generatedAt: new Date().toISOString(),
+    cards,
+    selectedCardIds: cards.filter((card) => card.status === "selected").map((card) => card.id),
+    rejectedCardIds: cards.filter((card) => card.status === "rejected").map((card) => card.id),
+  };
+}
+
+function evaluateClientDensityPlan(deck: EditorialCardDeck, blocks: ComposerBlock[]): DensityPlan {
+  const primary = deck.cards.filter((card) => card.status === "selected" && card.targetZone === "primary").slice(0, 4);
+  const complement = deck.cards.filter((card) => card.status === "selected" && card.targetZone === "complement").slice(0, 2);
+  const rail = deck.cards.filter((card) => card.status === "selected" && card.targetZone === "rail").slice(0, 3);
+  const spacePlan = computeSpacePlan(blocks);
+  const problems: string[] = [];
+  if (primary.length < 4) problems.push("faltan cuatro cartas primarias");
+  if (spacePlan.examShare >= 31) problems.push("rail inferior absorbe demasiada altura");
+  if (complement.length < 2) problems.push("faltan cartas complementarias para cerrar aire util");
+  const selected = deck.cards.filter((card) => card.status === "selected");
+  const avg = selected.reduce((sum, card) => sum + card.densityScore / Math.max(1, selected.length), 0);
+  const usefulDensityScore = roundToOne(clamp(avg - problems.length * 0.25 + complement.length * 0.15, 6.0, 9.5));
+  const mode: VisualAtlasLayoutRecipe["mode"] =
+    spacePlan.examShare >= 31 ? "Rail Compact" : complement.length >= 2 ? "4P+2C" : "4P";
+  const layoutRecipe: VisualAtlasLayoutRecipe = {
+    mode,
+    primaryCardIds: primary.map((card) => card.id),
+    complementaryCardIds: complement.map((card) => card.id),
+    railCardIds: rail.map((card) => card.id),
+    upperCardCount: primary.length + complement.length,
+    railStrategy: spacePlan.examShare >= 28 ? "compact" : "standard",
+    promptDirective: mode === "4P+2C"
+      ? "Use four dominant cards plus two compact complementary cards with new exam value."
+      : mode === "Rail Compact"
+        ? "Keep rail compact and solve density in the selected card deck."
+        : "Use four strong primary cards with readable mini-diagrams.",
+    reason: problems[0] ?? "deck listo para recomposicion controlada",
+  };
+  return {
+    version: "useful-density-agent-v1",
+    targetScore: 9.5,
+    score: usefulDensityScore,
+    usefulDensityScore,
+    groundingNeeded: problems.some((problem) => problem.includes("complementarias")),
+    groundingRationale: problems.some((problem) => problem.includes("complementarias"))
+      ? "Pedir grounding puntual si no hay cartas complementarias reales."
+      : "El deck actual puede regenerar sin grounding adicional.",
+    problems,
+    recommendations: [
+      layoutRecipe.railStrategy === "compact" ? "No usar rail para absorber huecos." : "Rail estandar solo si aporta lectura.",
+      "Regenerar desde cartas seleccionadas; no estirar la imagen existente.",
+    ],
+    rejectedCards: deck.cards.filter((card) => card.status === "rejected").map((card) => ({ cardId: card.id, reason: "fuera del cupo editorial" })),
+    layoutRecipe,
+  };
+}
+
 function buildVisualDensityPlanFromBlocks(
   blocks: ComposerBlock[],
   family: ComposerProposal["draft"]["family"],
@@ -499,10 +685,18 @@ function recalculateDraft(draft: ComposerProposal["draft"]): ComposerProposal["d
     && blocks.some((block) => block.type === "autocheck" && block.variant === "short");
   const hasExpandedContext = blocks.some((block) => block.type === "context_deck" && block.variant === "expanded");
   const hasExamSignal = blocks.some((block) => block.type === "exam_signal");
+  const editorialDeck = draft.editorialDeck
+    ? {
+      ...draft.editorialDeck,
+      selectedCardIds: draft.editorialDeck.cards.filter((card) => card.status === "selected").map((card) => card.id),
+      rejectedCardIds: draft.editorialDeck.cards.filter((card) => card.status === "rejected").map((card) => card.id),
+    }
+    : undefined;
+  const densityPlan = editorialDeck ? evaluateClientDensityPlan(editorialDeck, blocks) : draft.densityPlan;
 
   const coverageScore = clamp(7.1 + technicalCoreCount * 0.75 + (validationPresent ? 0.4 : 0), 6.8, 9.8);
   const readabilityScore = clamp(7.6 + (hasExpandedContext ? 0.5 : 0.2) + (compactExam ? 0.35 : 0), 6.8, 9.6);
-  const usefulDensityScore = clamp(7.4 + (spacePlan.technicalShare >= 44 ? 0.7 : 0.2) + (compactExam ? 0.55 : 0), 6.8, 9.7);
+  const usefulDensityScore = densityPlan?.usefulDensityScore ?? clamp(7.4 + (spacePlan.technicalShare >= 44 ? 0.7 : 0.2) + (compactExam ? 0.55 : 0), 6.8, 9.7);
   const examUtilityScore = clamp(7.7 + (hasExamSignal ? 0.8 : 0.2) + (validationPresent ? 0.5 : 0), 6.8, 9.8);
   const consistencyScore = clamp(7.8 + (missing.length === 0 ? 0.55 : 0) + (warnings.length <= 1 ? 0.35 : 0), 6.8, 9.7);
   const total = roundToOne((coverageScore + readabilityScore + usefulDensityScore + examUtilityScore + consistencyScore) / 5);
@@ -510,6 +704,9 @@ function recalculateDraft(draft: ComposerProposal["draft"]): ComposerProposal["d
   return {
     ...draft,
     blocks,
+    editorialDeck,
+    densityPlan,
+    layoutRecipe: densityPlan?.layoutRecipe ?? draft.layoutRecipe,
     visualDensityPlan: buildVisualDensityPlanFromBlocks(blocks, draft.family),
     coverage: {
       technicalCore,
@@ -1009,9 +1206,11 @@ function buildClientProposal(page: StudioCatalogPage): ComposerProposal {
 
   const coverageScore = technicalCoreCount >= 2 ? 9 : 7;
   const readabilityScore = blocks.some((b) => b.type === "autocheck" && b.variant === "short") ? 8.8 : 8.2;
-  const usefulDensityScore = blocks.some((b) => b.type === "exam_traps" && b.variant === "compact") ? 9 : 8;
   const examUtilityScore = blocks.some((b) => b.type === "exam_signal") ? 9.2 : 8.4;
   const consistencyScore = family === "comparison" || family === "architecture" ? 8.8 : 8.5;
+  const editorialDeck = buildClientEditorialDeck(page, family);
+  const densityPlan = evaluateClientDensityPlan(editorialDeck, blocks);
+  const usefulDensityScore = densityPlan.usefulDensityScore;
   const total = Number(((coverageScore + readabilityScore + usefulDensityScore + examUtilityScore + consistencyScore) / 5).toFixed(1));
   const structuralLevel = family === "comparison" && (page.context.length > 260 || page.autocheck.discardNotes.length > 2);
 
@@ -1044,6 +1243,9 @@ function buildClientProposal(page: StudioCatalogPage): ComposerProposal {
       mode: "composer",
       family,
       blocks,
+      editorialDeck,
+      densityPlan,
+      layoutRecipe: densityPlan.layoutRecipe,
       coverage: {
         technicalCore,
         examSignals,
@@ -1457,6 +1659,17 @@ export default function ComposerPage() {
     () => (editableDraft?.blocks ?? []).slice().sort((a, b) => a.priority - b.priority),
     [editableDraft],
   );
+  const activeCardDeck = editableDraft?.editorialDeck ?? null;
+  const activeDensityPlan = editableDraft?.densityPlan ?? null;
+  const cardsByZone = useMemo(() => {
+    const cards = activeCardDeck?.cards ?? [];
+    return {
+      primary: cards.filter((card) => card.status === "selected" && card.targetZone === "primary"),
+      complement: cards.filter((card) => card.status === "selected" && card.targetZone === "complement"),
+      rail: cards.filter((card) => card.status === "selected" && card.targetZone === "rail"),
+      reserve: cards.filter((card) => card.status !== "selected" || card.targetZone === "reserve"),
+    };
+  }, [activeCardDeck]);
   const realHtmlPreviewUrl = withCacheBust(lockedStatus?.htmlPath ?? null, lockedStatus?.generatedAt);
   const technicalBlockCount = useMemo(
     () => sortedBlocks.filter((block) => TECHNICAL_BLOCK_TYPES.includes(block.type)).length,
@@ -2278,6 +2491,98 @@ export default function ComposerPage() {
       setGeneratingFromComposer(false);
       setQuickActionBusy(null);
     }
+  }
+
+  function updateDeck(mutator: (deck: EditorialCardDeck) => EditorialCardDeck, actionLabel: string) {
+    if (!editableDraft || !proposal) return;
+    const baseDeck = editableDraft.editorialDeck
+      ?? (pageSummary ? buildClientEditorialDeck(pageSummary, editableDraft.family) : null);
+    if (!baseDeck) return;
+    const beforeTotal = projectedQaScores?.total ?? null;
+    const nextDeck = mutator(JSON.parse(JSON.stringify(baseDeck)) as EditorialCardDeck);
+    const nextDraft = recalculateDraft({
+      ...editableDraft,
+      editorialDeck: nextDeck,
+      densityPlan: evaluateClientDensityPlan(nextDeck, editableDraft.blocks),
+      layoutRecipe: evaluateClientDensityPlan(nextDeck, editableDraft.blocks).layoutRecipe,
+    });
+    setEditableDraft(nextDraft);
+    const afterScores = buildProjectedQaScores(
+      nextDraft,
+      lockedQa?.scores?.technical_accuracy == null ? null : normalizeQaScoreToTen(lockedQa.scores.technical_accuracy),
+    );
+    pushActionLog({
+      kind: "shortcut",
+      action: actionLabel,
+      status: "ok",
+      beforeTotal,
+      afterTotal: afterScores.total,
+      delta: beforeTotal != null ? Number((afterScores.total - beforeTotal).toFixed(1)) : null,
+      changedBlocks: 0,
+      note: "Operacion sobre deck editorial; guardar y generar para consolidar en QA servidor.",
+      pendingSync: true,
+    });
+  }
+
+  function applyCardZone(cardId: string, zone: EditorialCardZone, roleOverride?: EditorialCard["role"]) {
+    updateDeck((deck) => {
+      const nextCards = deck.cards.map((card) => {
+        if (card.id !== cardId) return card;
+        return {
+          ...card,
+          role: roleOverride ?? card.role,
+          targetZone: zone,
+          status: zone === "reserve" ? "rejected" as const : "selected" as const,
+        };
+      });
+      const primary = nextCards.filter((card) => card.status === "selected" && card.targetZone === "primary");
+      const normalizedCards = primary.length <= 4
+        ? nextCards
+        : nextCards.map((card) => {
+          if (card.id === cardId || card.targetZone !== "primary") return card;
+          const extraPrimaryIds = primary.sort((a, b) => a.densityScore - b.densityScore).slice(0, primary.length - 4).map((item) => item.id);
+          return extraPrimaryIds.includes(card.id) ? { ...card, targetZone: "complement" as const } : card;
+        });
+      return {
+        ...deck,
+        source: "composer",
+        generatedAt: new Date().toISOString(),
+        cards: normalizedCards,
+        selectedCardIds: normalizedCards.filter((card) => card.status === "selected").map((card) => card.id),
+        rejectedCardIds: normalizedCards.filter((card) => card.status === "rejected").map((card) => card.id),
+      };
+    }, zone === "primary" ? "Promover carta a primaria" : zone === "rail" ? "Enviar carta a rail" : "Reservar carta");
+  }
+
+  function addSelectiveGroundingCard() {
+    if (!editableDraft || !pageSummary) return;
+    updateDeck((deck) => {
+      const existing = new Set(deck.cards.map((card) => card.id));
+      const id = `grounding-${Date.now().toString(36)}`;
+      const sourceText = pageSummary.traps[0]?.correction || pageSummary.context;
+      const card = makeEditorialCard({
+        pageId: pageSummary.pageId,
+        id: existing.has(id) ? `${id}-2` : id,
+        role: "micro_case",
+        targetZone: "complement",
+        status: "selected",
+        title: "Insight puntual",
+        claim: compactComposerSentence(sourceText, 112),
+        explanation: "Carta creada para pedir grounding puntual del tema antes de producir en lote.",
+        diagramIntent: "micro-caso tecnico con condicion, decision y consecuencia visual",
+        examSignal: pageSummary.guideQuestion,
+        formatAffinity: ["visual_atlas", "master_book", "question_bank", "rapid_review"],
+      });
+      const cards = [...deck.cards, { ...card, sourceRefs: ["grounding-selectivo-pendiente"] }];
+      return {
+        ...deck,
+        source: "composer",
+        generatedAt: new Date().toISOString(),
+        cards,
+        selectedCardIds: cards.filter((item) => item.status === "selected").map((item) => item.id),
+        rejectedCardIds: cards.filter((item) => item.status === "rejected").map((item) => item.id),
+      };
+    }, "Buscar grounding puntual");
   }
 
   async function handleRunObjective(objectiveId: ComposerObjectiveId) {
@@ -3502,6 +3807,121 @@ export default function ComposerPage() {
             </div>
           ) : proposal ? (
             <div className="max-w-6xl mx-auto space-y-4">
+              {!focusMode && activeCardDeck && (
+                <section className="bg-[#0d1629] border border-teal-400/18 rounded-sm p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[8px] font-bold text-teal-300 uppercase tracking-widest">Mesa de cartas editoriales</p>
+                      <h2 className="text-base font-black text-white/90 mt-1">Deck de densidad util</h2>
+                      <p className="text-[10px] text-white/48 mt-1 max-w-3xl leading-relaxed">
+                        Las cartas seleccionadas gobiernan el upper visual, las complementarias cierran aire con contenido nuevo y el rail queda compacto.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 min-w-[260px]">
+                      <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] px-2 py-2">
+                        <p className="text-[8px] text-white/35 uppercase tracking-widest">Modo</p>
+                        <p className="text-[11px] font-black text-teal-200 mt-1">{activeDensityPlan?.layoutRecipe.mode ?? "4P"}</p>
+                      </div>
+                      <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] px-2 py-2">
+                        <p className="text-[8px] text-white/35 uppercase tracking-widest">Densidad</p>
+                        <p className="text-[11px] font-black text-white/85 mt-1">{activeDensityPlan?.usefulDensityScore?.toFixed(1) ?? "-"}/10</p>
+                      </div>
+                      <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] px-2 py-2">
+                        <p className="text-[8px] text-white/35 uppercase tracking-widest">Rail</p>
+                        <p className="text-[11px] font-black text-amber-200 mt-1">{activeDensityPlan?.layoutRecipe.railStrategy ?? "standard"}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid lg:grid-cols-[1.2fr_0.9fr] gap-3 mt-4">
+                    <div className="grid md:grid-cols-2 gap-3">
+                      {[
+                        { key: "primary" as const, label: "Primarias upper", cards: cardsByZone.primary, tone: "border-blue-400/20 bg-blue-500/8" },
+                        { key: "complement" as const, label: "Complementarias", cards: cardsByZone.complement, tone: "border-teal-400/20 bg-teal-500/8" },
+                        { key: "rail" as const, label: "Rail examen", cards: cardsByZone.rail, tone: "border-amber-400/20 bg-amber-500/8" },
+                        { key: "reserve" as const, label: "Reserva / rechazadas", cards: cardsByZone.reserve, tone: "border-white/[0.08] bg-white/[0.02]" },
+                      ].map((group) => (
+                        <div key={group.key} className={cn("rounded-sm border p-3 min-h-[136px]", group.tone)}>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest">{group.label}</p>
+                            <span className="text-[8px] font-bold text-white/35">{group.cards.length}</span>
+                          </div>
+                          <div className="mt-2 space-y-2">
+                            {group.cards.slice(0, 4).map((card) => (
+                              <div key={card.id} className="rounded-sm border border-white/[0.08] bg-[#091428]/70 px-2 py-2">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div>
+                                    <p className="text-[9px] font-black text-white/85 leading-tight">{card.title}</p>
+                                    <p className="text-[8px] text-white/50 mt-1 leading-snug line-clamp-2">{card.claim}</p>
+                                  </div>
+                                  <span className={cn(
+                                    "text-[8px] font-black",
+                                    card.densityScore >= 8.8 ? "text-emerald-300" : card.densityScore >= 7.4 ? "text-amber-300" : "text-red-300",
+                                  )}>
+                                    {card.densityScore.toFixed(1)}
+                                  </span>
+                                </div>
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                  {group.key !== "primary" && (
+                                    <button type="button" onClick={() => applyCardZone(card.id, "primary")} className="px-2 py-1 rounded-sm border border-blue-400/25 bg-blue-500/10 text-[8px] font-semibold text-blue-100">Primaria</button>
+                                  )}
+                                  {group.key !== "complement" && (
+                                    <button type="button" onClick={() => applyCardZone(card.id, "complement")} className="px-2 py-1 rounded-sm border border-teal-400/25 bg-teal-500/10 text-[8px] font-semibold text-teal-100">Complemento</button>
+                                  )}
+                                  {group.key !== "rail" && (
+                                    <button type="button" onClick={() => applyCardZone(card.id, "rail")} className="px-2 py-1 rounded-sm border border-amber-400/25 bg-amber-500/10 text-[8px] font-semibold text-amber-100">Rail</button>
+                                  )}
+                                  {card.role !== "trap" && (
+                                    <button type="button" onClick={() => applyCardZone(card.id, "rail", "trap")} className="px-2 py-1 rounded-sm border border-rose-400/25 bg-rose-500/10 text-[8px] font-semibold text-rose-100">Trampa</button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <aside className="rounded-sm border border-white/[0.08] bg-white/[0.02] p-3">
+                      <p className="text-[8px] font-bold text-white/35 uppercase tracking-widest">Acciones de deck</p>
+                      <div className="mt-3 space-y-2">
+                        <button
+                          type="button"
+                          onClick={addSelectiveGroundingCard}
+                          className="w-full h-8 rounded-sm border border-cyan-400/25 bg-cyan-500/10 text-[9px] font-semibold text-cyan-100 hover:bg-cyan-500/16"
+                        >
+                          Buscar grounding puntual
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => runShortcutAction("boost_technical", "Regenerar con deck")}
+                          disabled={!editableDraft || generatingFromComposer}
+                          className="w-full h-8 rounded-sm border border-emerald-400/25 bg-emerald-500/10 text-[9px] font-semibold text-emerald-100 hover:bg-emerald-500/16 disabled:opacity-50"
+                        >
+                          Regenerar con deck
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveDraft}
+                          disabled={!editableDraft || savingDraft}
+                          className="w-full h-8 rounded-sm border border-white/[0.12] bg-white/[0.04] text-[9px] font-semibold text-white/75 hover:bg-white/[0.07] disabled:opacity-50"
+                        >
+                          Guardar mesa
+                        </button>
+                      </div>
+                      <div className="mt-3 rounded-sm border border-white/[0.08] bg-[#071226] px-2.5 py-2">
+                        <p className="text-[8px] text-white/35 uppercase tracking-widest font-bold">Lectura del agente</p>
+                        <p className="text-[9px] text-white/65 mt-1 leading-relaxed">
+                          {activeDensityPlan?.problems?.[0] ?? "Deck estable: las cartas seleccionadas pueden sostener una regeneracion controlada."}
+                        </p>
+                        {activeDensityPlan?.groundingNeeded ? (
+                          <p className="text-[8px] text-cyan-200/80 mt-2 leading-relaxed">{activeDensityPlan.groundingRationale}</p>
+                        ) : null}
+                      </div>
+                    </aside>
+                  </div>
+                </section>
+              )}
               {!focusMode && (
                 <>
                   <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-4">

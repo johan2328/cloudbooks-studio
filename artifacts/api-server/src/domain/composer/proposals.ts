@@ -1,4 +1,5 @@
 import type { VisualAtlasPageData } from "../../lib/visual-atlas-types";
+import { buildDensityPackage } from "../editorial-cards/density-agent";
 import type {
   ComposerBlock,
   ComposerBlockType,
@@ -279,10 +280,20 @@ function recommendTransition(data: VisualAtlasPageData, family: ComposerComposit
 
 export function buildComposerProposal(pageId: string, data: VisualAtlasPageData): ComposerProposal {
   const family = inferFamily(data);
+  const densityPackage = buildDensityPackage(pageId, data);
   const blocks = createBlocks(data, family);
   const structuralValidation = validateStructure(blocks);
   const coverage = evaluateCoverage(blocks);
-  const editorialValidation = evaluateEditorial(blocks, family);
+  const baseEditorialValidation = evaluateEditorial(blocks, family);
+  const editorialValidation = {
+    ...baseEditorialValidation,
+    usefulDensityScore: densityPackage.densityPlan.usefulDensityScore,
+    total: Number(((baseEditorialValidation.coverageScore
+      + baseEditorialValidation.readabilityScore
+      + densityPackage.densityPlan.usefulDensityScore
+      + baseEditorialValidation.examUtilityScore
+      + baseEditorialValidation.consistencyScore) / 5).toFixed(1)),
+  };
 
   const lockedReference: LockedReferenceSummary = {
     pageId,
@@ -308,6 +319,9 @@ export function buildComposerProposal(pageId: string, data: VisualAtlasPageData)
     family,
     blocks,
     visualDensityPlan: buildVisualDensityPlan(data, family),
+    editorialDeck: densityPackage.editorialDeck,
+    densityPlan: densityPackage.densityPlan,
+    layoutRecipe: densityPackage.layoutRecipe,
     coverage,
     structuralValidation,
     editorialValidation,

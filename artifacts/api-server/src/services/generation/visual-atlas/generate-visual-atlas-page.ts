@@ -249,6 +249,9 @@ export async function generateVisualAtlasPage(
     imageError:       imageError || null,
     generationSource,
     composerDraft: options.composerDraft ?? null,
+    editorialDeck: pageData.editorialDeck ?? null,
+    densityPlan: pageData.densityPlan ?? null,
+    layoutRecipe: pageData.layoutRecipe ?? null,
     qaBaselineTotal: options.qaBaselineTotal ?? null,
     qaStructural:     qa,
     layoutEvidence:   qa.layoutEvidence,
@@ -284,6 +287,7 @@ ${qaLines}
 - Canvas: **${qa.layoutEvidence.page.width}x${qa.layoutEvidence.page.height}px**
 - Upper row: **${qa.layoutEvidence.upper.rowHeight}px** · slot imagen **${qa.layoutEvidence.upper.slotWidth}x${qa.layoutEvidence.upper.slotHeight}px** · aire vertical **${qa.layoutEvidence.upper.freeVerticalPx}px**
 - Rail examen: **${qa.layoutEvidence.examRail.rowHeight}px** (${qa.layoutEvidence.examRail.sharePct}% del body) · densidad **${qa.layoutEvidence.examRail.densityBand}**
+- Receta editorial: **${pageData.layoutRecipe?.mode ?? "4P"}** · rail **${pageData.layoutRecipe?.railStrategy ?? "standard"}** · cartas seleccionadas **${pageData.editorialDeck?.selectedCardIds.length ?? 0}**
 - Trampas renderizadas: **${qa.layoutEvidence.examRail.trapItems}** · opciones autocheck: **${qa.layoutEvidence.examRail.autocheckOptions}** · notas de descarte: **${qa.layoutEvidence.examRail.discardNotes}**
 - Score layout real: **${qa.layoutEvidence.score}/10**
 ${qa.layoutEvidence.blockers.length > 0 ? `\n### Bloqueos post-render\n${qa.layoutEvidence.blockers.map((item) => `- ${item}`).join("\n")}\n` : ""}

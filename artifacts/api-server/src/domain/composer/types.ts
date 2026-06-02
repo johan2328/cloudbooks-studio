@@ -1,3 +1,5 @@
+import type { DensityPlan, EditorialCardDeck, VisualAtlasLayoutRecipe } from "../editorial-cards/types";
+
 export type PageMode = "locked" | "composer";
 
 export type ComposerTransitionLevel =
@@ -111,6 +113,9 @@ export interface ComposerPageDraft {
     expectedImpact: string;
     risk: string;
   };
+  editorialDeck?: EditorialCardDeck;
+  densityPlan?: DensityPlan;
+  layoutRecipe?: VisualAtlasLayoutRecipe;
   coverage: ComposerCoverageResult;
   structuralValidation: ComposerStructuralValidation;
   editorialValidation: ComposerEditorialValidation;

@@ -140,8 +140,14 @@ export function measureVisualAtlasRender(html: string, data: VisualAtlasPageData
   if (freeVerticalPx > 92) warnings.push(`Upper visual deja ${freeVerticalPx}px verticales sin uso activo dentro del row.`);
   if (imageSlotSharePct < 78) warnings.push(`La imagen ocupa solo ${imageSlotSharePct}% del alto disponible del upper row.`);
   if (densityBand === "thin") warnings.push("Rail inferior con baja densidad util: conviene compactar o enriquecer microexplicaciones.");
+  if (densityBand === "thin" && examRailHeight > 220) {
+    warnings.push("Densidad falsa: el rail ocupa altura relevante pero aporta poca lectura util.");
+  }
   if (densityBand === "dense") warnings.push("Rail inferior denso: verificar microtipografia antes de aprobar.");
   if (fillerBlocks === 0 && densityBand === "thin") warnings.push("No hay notas de cierre para compensar rail liviano.");
+  if (data.layoutRecipe?.railStrategy === "compact" && examRailHeight > 276) {
+    blockers.push(`Rail compact solicitado pero renderizado alto: ${examRailHeight}px.`);
+  }
 
   const penalty = blockers.length * 1.4 + warnings.length * 0.35;
   const score = roundOne(clamp(10 - penalty, 0, 10));
@@ -239,12 +245,16 @@ export function computeQaDimensionScores(imageGenerated: boolean, layoutEvidence
   const warningPenalty = (layoutEvidence?.warnings.length ?? 0) * 0.18;
   const layoutPenalty = blockerPenalty + warningPenalty;
   const usefulDensityBonus = layoutEvidence?.examRail.densityBand === "balanced" ? 0.5 : -0.3;
+  const falseDensityPenalty =
+    layoutEvidence?.examRail.densityBand === "thin" && (layoutEvidence.examRail.rowHeight ?? 0) > 220
+      ? 0.75
+      : 0;
   const upperUsePenalty = (layoutEvidence?.upper.freeVerticalPx ?? 0) > 92 ? 0.5 : 0;
   const artDirection = roundOne(clamp((imageGenerated ? 7 : 5) + (layoutEvidence?.score ?? 7) * 0.08 - layoutPenalty - upperUsePenalty, 0, 10));
   const editorialConsistency = roundOne(clamp((imageGenerated ? 7 : 5) + (layoutEvidence?.blockers.length ? -0.4 : 0.2) - warningPenalty, 0, 10));
   const readability = roundOne(clamp(8 - Math.max(0, (layoutEvidence?.examRail.sharePct ?? 0) - 26) * 0.03 - warningPenalty, 0, 10));
   const technicalAccuracy = 10;
-  const density = roundOne(clamp((imageGenerated ? 7 : 4) + usefulDensityBonus - upperUsePenalty - warningPenalty, 0, 10));
+  const density = roundOne(clamp((imageGenerated ? 7 : 4) + usefulDensityBonus - upperUsePenalty - warningPenalty - falseDensityPenalty, 0, 10));
   const commercialRisk = roundOne(clamp(10 - blockerPenalty - warningPenalty - (imageGenerated ? 0 : 1.5), 0, 10));
   const avg = roundOne(
     (artDirection + editorialConsistency + readability + technicalAccuracy + density + commercialRisk) / 6,
