@@ -337,14 +337,36 @@ export interface EditorialCardDeck {
 }
 
 export interface VisualAtlasLayoutRecipe {
-  mode: "4P" | "4P+2C" | "3P+1D+2C" | "Rail Compact";
+  mode: "4P" | "4P+2C" | "3P+1D+2C" | "Rail Compact" | "Rail Dense";
   primaryCardIds: string[];
   complementaryCardIds: string[];
   railCardIds: string[];
   upperCardCount: number;
-  railStrategy: "compact" | "standard";
+  railStrategy: "compact" | "standard" | "dense";
   promptDirective: string;
   reason: string;
+}
+
+export type ImageGenerationFailureCode =
+  | "missing_api_key"
+  | "invalid_api_key"
+  | "model_not_allowed"
+  | "quality_not_allowed"
+  | "size_not_allowed"
+  | "connectivity_error"
+  | "provider_error"
+  | "no_image_returned"
+  | "timeout"
+  | "unknown";
+
+export interface ImageGenerationFailure {
+  code: ImageGenerationFailureCode;
+  message: string;
+  providerError: string | null;
+  retryable: boolean;
+  model: string;
+  quality: string;
+  promptHash: string;
 }
 
 export interface DensityPlan {

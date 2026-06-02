@@ -20,8 +20,8 @@ export type EditorialCardRole =
 
 export type EditorialCardStatus = "candidate" | "selected" | "rejected";
 export type EditorialCardZone = "primary" | "complement" | "rail" | "reserve";
-export type VisualAtlasLayoutMode = "4P" | "4P+2C" | "3P+1D+2C" | "Rail Compact";
-export type RailStrategy = "compact" | "standard";
+export type VisualAtlasLayoutMode = "4P" | "4P+2C" | "3P+1D+2C" | "Rail Compact" | "Rail Dense";
+export type RailStrategy = "compact" | "standard" | "dense";
 
 export interface EditorialCard {
   id: string;

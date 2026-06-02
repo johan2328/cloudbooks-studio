@@ -1,5 +1,27 @@
 import type { DensityPlan, EditorialCardDeck, VisualAtlasLayoutRecipe } from "../domain/editorial-cards/types";
 
+export type ImageGenerationFailureCode =
+  | "missing_api_key"
+  | "invalid_api_key"
+  | "model_not_allowed"
+  | "quality_not_allowed"
+  | "size_not_allowed"
+  | "connectivity_error"
+  | "provider_error"
+  | "no_image_returned"
+  | "timeout"
+  | "unknown";
+
+export interface ImageGenerationFailure {
+  code: ImageGenerationFailureCode;
+  message: string;
+  providerError: string | null;
+  retryable: boolean;
+  model: string;
+  quality: string;
+  promptHash: string;
+}
+
 export interface TrapItem {
   wrong: string;
   correction: string;
@@ -41,4 +63,5 @@ export interface VisualAtlasPageData {
   editorialDeck?: EditorialCardDeck;
   densityPlan?: DensityPlan;
   layoutRecipe?: VisualAtlasLayoutRecipe;
+  imageFailure?: ImageGenerationFailure | null;
 }

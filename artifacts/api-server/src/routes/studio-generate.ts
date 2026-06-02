@@ -109,12 +109,12 @@ function normalizeLayoutRecipe(raw: unknown): VisualAtlasLayoutRecipe | null {
   const modeRaw = asString(recipe.mode) ?? "4P";
   const railStrategyRaw = asString(recipe.railStrategy) ?? "standard";
   return {
-    mode: (["4P", "4P+2C", "3P+1D+2C", "Rail Compact"].includes(modeRaw) ? modeRaw : "4P") as VisualAtlasLayoutRecipe["mode"],
+    mode: (["4P", "4P+2C", "3P+1D+2C", "Rail Compact", "Rail Dense"].includes(modeRaw) ? modeRaw : "4P") as VisualAtlasLayoutRecipe["mode"],
     primaryCardIds: asStringArray(recipe.primaryCardIds),
     complementaryCardIds: asStringArray(recipe.complementaryCardIds),
     railCardIds: asStringArray(recipe.railCardIds),
     upperCardCount: asFiniteNumber(recipe.upperCardCount) ?? 4,
-    railStrategy: (railStrategyRaw === "compact" ? "compact" : "standard"),
+    railStrategy: (railStrategyRaw === "compact" || railStrategyRaw === "dense" ? railStrategyRaw : "standard"),
     promptDirective: asString(recipe.promptDirective) ?? "Use selected editorial cards; do not add filler.",
     reason: asString(recipe.reason) ?? "Composer editorial deck",
   };

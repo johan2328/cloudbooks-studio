@@ -45,6 +45,7 @@ import {
   type EditorialCard,
   type EditorialCardDeck,
   type EditorialCardZone,
+  type ImageGenerationFailure,
   type VisualAtlasLayoutRecipe,
   type StudioCatalogPage,
   type StudioCatalog,
@@ -57,6 +58,11 @@ interface ComposerGenerationResponse {
   success: boolean;
   pageId: string;
   regenerationScope?: ComposerRegenerationScope;
+  imageGenerated?: boolean;
+  imageAttempted?: boolean;
+  imageError?: string | null;
+  imageFailure?: ImageGenerationFailure | null;
+  promptHash?: string;
   outputs?: {
     html: string;
     metadata: string;
@@ -460,19 +466,23 @@ function evaluateClientDensityPlan(deck: EditorialCardDeck, blocks: ComposerBloc
   const avg = selected.reduce((sum, card) => sum + card.densityScore / Math.max(1, selected.length), 0);
   const usefulDensityScore = roundToOne(clamp(avg - problems.length * 0.25 + complement.length * 0.15, 6.0, 9.5));
   const mode: VisualAtlasLayoutRecipe["mode"] =
-    spacePlan.examShare >= 31 ? "Rail Compact" : complement.length >= 2 ? "4P+2C" : "4P";
+    rail.length >= 3 && spacePlan.examShare < 31 ? "Rail Dense" : spacePlan.examShare >= 31 ? "Rail Compact" : complement.length >= 2 ? "4P+2C" : "4P";
+  const railStrategy: VisualAtlasLayoutRecipe["railStrategy"] =
+    mode === "Rail Dense" ? "dense" : spacePlan.examShare >= 28 ? "compact" : "standard";
   const layoutRecipe: VisualAtlasLayoutRecipe = {
     mode,
     primaryCardIds: primary.map((card) => card.id),
     complementaryCardIds: complement.map((card) => card.id),
     railCardIds: rail.map((card) => card.id),
     upperCardCount: primary.length + complement.length,
-    railStrategy: spacePlan.examShare >= 28 ? "compact" : "standard",
+    railStrategy,
     promptDirective: mode === "4P+2C"
-      ? "Use four dominant cards plus two compact complementary cards with new exam value."
-      : mode === "Rail Compact"
-        ? "Keep rail compact and solve density in the selected card deck."
-        : "Use four strong primary cards with readable mini-diagrams.",
+      ? "Use four dominant cards plus two compact complementary cards inside the image composition."
+      : mode === "Rail Dense"
+        ? "Use four strong primary cards and keep the rail dense only because it has real exam material."
+        : mode === "Rail Compact"
+          ? "Keep rail compact and solve density in the selected card deck."
+          : "Use four strong primary cards with readable mini-diagrams.",
     reason: problems[0] ?? "deck listo para recomposicion controlada",
   };
   return {
@@ -486,7 +496,7 @@ function evaluateClientDensityPlan(deck: EditorialCardDeck, blocks: ComposerBloc
       : "El deck actual puede regenerar sin grounding adicional.",
     problems,
     recommendations: [
-      layoutRecipe.railStrategy === "compact" ? "No usar rail para absorber huecos." : "Rail estandar solo si aporta lectura.",
+      layoutRecipe.railStrategy === "compact" ? "No usar rail para absorber huecos." : layoutRecipe.railStrategy === "dense" ? "Rail denso solo si aporta lectura real." : "Rail estandar solo si aporta lectura.",
       "Regenerar desde cartas seleccionadas; no estirar la imagen existente.",
     ],
     rejectedCards: deck.cards.filter((card) => card.status === "rejected").map((card) => ({ cardId: card.id, reason: "fuera del cupo editorial" })),
@@ -1664,8 +1674,7 @@ export default function ComposerPage() {
   const cardsByZone = useMemo(() => {
     const cards = activeCardDeck?.cards ?? [];
     return {
-      primary: cards.filter((card) => card.status === "selected" && card.targetZone === "primary"),
-      complement: cards.filter((card) => card.status === "selected" && card.targetZone === "complement"),
+      upper: cards.filter((card) => card.status === "selected" && (card.targetZone === "primary" || card.targetZone === "complement")),
       rail: cards.filter((card) => card.status === "selected" && card.targetZone === "rail"),
       reserve: cards.filter((card) => card.status !== "selected" || card.targetZone === "reserve"),
     };
@@ -2361,8 +2370,8 @@ export default function ComposerPage() {
     draft: ComposerProposal["draft"],
     note: string,
     scope: ComposerRegenerationScope = "full",
-  ): Promise<void> {
-    if (!proposal) return;
+  ): Promise<ComposerGenerationResponse | null> {
+    if (!proposal) return null;
     const saved = await saveComposerDraft(proposal.pageId, {
       pageNumber: draft.pageNumber,
       family: draft.family,
@@ -2392,8 +2401,17 @@ export default function ComposerPage() {
     if (data.qaDelta) {
       setQaDelta(data.qaDelta);
     }
+    if (data.imageGenerated === false) {
+      const failure = data.imageFailure;
+      setGenerationFeedback(
+        failure
+          ? `Imagen no generada: ${failure.code}. ${failure.message}${failure.promptHash ? ` Prompt ${failure.promptHash}.` : ""}`
+          : `Imagen no generada: ${data.imageError ?? "fallback placeholder sin detalle."}`,
+      );
+    }
     await refreshLockedArtifacts(proposal.pageId);
     setCanvasMode("real");
+    return data;
   }
 
   function shouldProtectRailBeforeUpper(): boolean {
@@ -2585,6 +2603,22 @@ export default function ComposerPage() {
     }, "Buscar grounding puntual");
   }
 
+  function diagnoseImageGeneration() {
+    if (!lockedStatus?.hasOutput) {
+      setGenerationFeedback("Diagnostico imagen: esta pagina aun no tiene output generado.");
+      return;
+    }
+    if (lockedStatus.generationMode === "openai_image") {
+      setGenerationFeedback("Diagnostico imagen: upper visual real disponible. El siguiente paso es QA de pagina completa.");
+      return;
+    }
+    if (lockedStatus.generationMode === "placeholder_image") {
+      setGenerationFeedback("Diagnostico imagen: placeholder activo. Regenera con deck y revisa imageFailure si OpenAI vuelve a fallar.");
+      return;
+    }
+    setGenerationFeedback(`Diagnostico imagen: modo ${lockedStatus.generationMode}; requiere nueva generacion productiva.`);
+  }
+
   async function handleRunObjective(objectiveId: ComposerObjectiveId) {
     if (!proposal || !editableDraft || generatingFromComposer || pipelineBusy || quickActionBusy) return;
     const objective = COMPOSER_OBJECTIVES.find((item) => item.id === objectiveId);
@@ -2712,8 +2746,10 @@ export default function ComposerPage() {
     setGenerationFeedback(null);
     setQaDelta(null);
     try {
-      await generateFromDraft(editableDraft, "Draft aplicado para generacion desde Composer");
-      setGenerationFeedback("Generacion completada desde Composer y QA recargado.");
+      const data = await generateFromDraft(editableDraft, "Draft aplicado para generacion desde Composer");
+      if (data?.imageGenerated !== false) {
+        setGenerationFeedback("Generacion completada desde Composer y QA recargado.");
+      }
       pushActionLog({
         kind: "generate",
         action: "Generar con draft",
@@ -3836,8 +3872,7 @@ export default function ComposerPage() {
                   <div className="grid lg:grid-cols-[1.2fr_0.9fr] gap-3 mt-4">
                     <div className="grid md:grid-cols-2 gap-3">
                       {[
-                        { key: "primary" as const, label: "Primarias upper", cards: cardsByZone.primary, tone: "border-blue-400/20 bg-blue-500/8" },
-                        { key: "complement" as const, label: "Complementarias", cards: cardsByZone.complement, tone: "border-teal-400/20 bg-teal-500/8" },
+                        { key: "upper" as const, label: "Upper visual", cards: cardsByZone.upper, tone: "border-blue-400/20 bg-blue-500/8" },
                         { key: "rail" as const, label: "Rail examen", cards: cardsByZone.rail, tone: "border-amber-400/20 bg-amber-500/8" },
                         { key: "reserve" as const, label: "Reserva / rechazadas", cards: cardsByZone.reserve, tone: "border-white/[0.08] bg-white/[0.02]" },
                       ].map((group) => (
@@ -3862,11 +3897,8 @@ export default function ComposerPage() {
                                   </span>
                                 </div>
                                 <div className="mt-2 flex flex-wrap gap-1.5">
-                                  {group.key !== "primary" && (
+                                  {group.key !== "upper" && (
                                     <button type="button" onClick={() => applyCardZone(card.id, "primary")} className="px-2 py-1 rounded-sm border border-blue-400/25 bg-blue-500/10 text-[8px] font-semibold text-blue-100">Primaria</button>
-                                  )}
-                                  {group.key !== "complement" && (
-                                    <button type="button" onClick={() => applyCardZone(card.id, "complement")} className="px-2 py-1 rounded-sm border border-teal-400/25 bg-teal-500/10 text-[8px] font-semibold text-teal-100">Complemento</button>
                                   )}
                                   {group.key !== "rail" && (
                                     <button type="button" onClick={() => applyCardZone(card.id, "rail")} className="px-2 py-1 rounded-sm border border-amber-400/25 bg-amber-500/10 text-[8px] font-semibold text-amber-100">Rail</button>
@@ -3887,6 +3919,13 @@ export default function ComposerPage() {
                       <div className="mt-3 space-y-2">
                         <button
                           type="button"
+                          onClick={diagnoseImageGeneration}
+                          className="w-full h-8 rounded-sm border border-white/[0.12] bg-white/[0.04] text-[9px] font-semibold text-white/75 hover:bg-white/[0.07]"
+                        >
+                          Diagnosticar imagen
+                        </button>
+                        <button
+                          type="button"
                           onClick={addSelectiveGroundingCard}
                           className="w-full h-8 rounded-sm border border-cyan-400/25 bg-cyan-500/10 text-[9px] font-semibold text-cyan-100 hover:bg-cyan-500/16"
                         >
@@ -3894,7 +3933,7 @@ export default function ComposerPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => runShortcutAction("boost_technical", "Regenerar con deck")}
+                          onClick={handleGenerateWithDraft}
                           disabled={!editableDraft || generatingFromComposer}
                           className="w-full h-8 rounded-sm border border-emerald-400/25 bg-emerald-500/10 text-[9px] font-semibold text-emerald-100 hover:bg-emerald-500/16 disabled:opacity-50"
                         >

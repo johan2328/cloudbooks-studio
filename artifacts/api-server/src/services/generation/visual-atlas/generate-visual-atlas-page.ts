@@ -9,6 +9,7 @@ import { runStructuralQa, computeQaDimensionScores, type QaDimensionScores, type
 import { evaluateVisualAtlasLayoutEngine, type VisualAtlasLayoutEngineReport } from "../../layout/visual-atlas-layout-engine";
 import { measureVisualAtlasPageVisuals, type VisualAtlasPageVisualMeasurement } from "../../visual-measurement/visual-atlas-page-measurement";
 import { generateUpperVisual } from "./generate-upper-visual";
+import type { ImageGenerationFailure } from "../../../lib/visual-atlas-types";
 
 const GUARDRAIL_LABEL = VISUAL_ATLAS_V24_CONTRACT.generation.costGuardrail;
 const TEXT_MODEL = VISUAL_ATLAS_V24_CONTRACT.generation.textModel;
@@ -30,6 +31,9 @@ export interface GeneratePageResult {
   imageModel:     string | null;
   imageQuality:   string;
   imageError:     string | null;
+  imageAttempted: boolean;
+  promptHash:     string;
+  imageFailure:   ImageGenerationFailure | null;
   costGuardrail:  string;
   qaStructural:   StructuralQaResult;
   textModel:      string;
@@ -141,6 +145,31 @@ function applyVisualMeasurementToQaDimensions(
   };
 }
 
+function capQaDimensionsWithoutRealImage(base: QaDimensionScores): QaDimensionScores {
+  const capped = {
+    ...base,
+    artDirection: Math.min(base.artDirection, 6.2),
+    editorialConsistency: Math.min(base.editorialConsistency, 6.5),
+    readability: Math.min(base.readability, 6.5),
+    technicalAccuracy: Math.min(base.technicalAccuracy, 6.5),
+    density: Math.min(base.density, 6.0),
+    commercialRisk: Math.min(base.commercialRisk, 6.0),
+    verdict: "needs_revision" as const,
+    verdictLabel: "Blocked: upper visual is placeholder; QA max 6.5 until Image 2 succeeds",
+  };
+  return {
+    ...capped,
+    avg: roundOne(Math.min(6.5, (
+      capped.artDirection
+      + capped.editorialConsistency
+      + capped.readability
+      + capped.technicalAccuracy
+      + capped.density
+      + capped.commercialRisk
+    ) / 6)),
+  };
+}
+
 /**
  * Orquestador de generación Visual Atlas (página completa):
  *   1. generateUpperVisual → imagen gpt-image-2 medium o placeholder
@@ -162,12 +191,13 @@ export async function generateVisualAtlasPage(
   log.info({ pageId, textModel: TEXT_MODEL, imageModel: IMAGE_MODEL }, "Starting Visual Atlas generation — golden master template");
 
   /* ── Step 1: Imagen del bloque visual superior ────────────────────────── */
-  const { imageGenerated, imagePath, imageError } = await generateUpperVisual(pageId, seedData, outDir, log);
+  const { imageGenerated, imagePath, imageError, imageAttempted, promptHash, imageFailure } = await generateUpperVisual(pageId, seedData, outDir, log);
 
   /* ── Step 2: Ensamblar HTML con plantilla cerrada ─────────────────────── */
   const pageData: VisualAtlasPageData = {
     ...seedData,
     upperVisualSrc: imageGenerated ? "./upper-art.png" : imagePath,
+    imageFailure,
   };
   log.info({ pageId, hasImage: imageGenerated }, "Assembling HTML from golden master template");
   const pageHtml = renderVisualAtlasPage(pageData);
@@ -207,7 +237,8 @@ export async function generateVisualAtlasPage(
     pageHeight: VISUAL_ATLAS_V24_CONTRACT.page.height,
     log,
   });
-  const dim = applyVisualMeasurementToQaDimensions(provisionalDim, visualMeasurement);
+  const measuredDim = applyVisualMeasurementToQaDimensions(provisionalDim, visualMeasurement);
+  const dim = imageGenerated ? measuredDim : capQaDimensionsWithoutRealImage(measuredDim);
   const layoutEngine = evaluateVisualAtlasLayoutEngine(qa.layoutEvidence, dim, {
     imageGenerated,
     generationSource,
@@ -244,9 +275,12 @@ export async function generateVisualAtlasPage(
     imageModel:       imageGenerated ? IMAGE_MODEL : "none",
     imageQuality:     IMAGE_QUALITY,
     imageGenerated,
+    imageAttempted,
+    promptHash,
     costGuardrail:    GUARDRAIL_LABEL,
     generationMode:   imageGenerated ? "openai_image" : "placeholder_image",
     imageError:       imageError || null,
+    imageFailure,
     generationSource,
     composerDraft: options.composerDraft ?? null,
     editorialDeck: pageData.editorialDeck ?? null,
@@ -270,6 +304,9 @@ export async function generateVisualAtlasPage(
 **Template:** Golden Master Visual Atlas ${VISUAL_ATLAS_V24_CONTRACT.version}
 **Modelo imagen:** ${imageGenerated ? IMAGE_MODEL + " " + IMAGE_QUALITY : "placeholder"}
 **Upper visual:** ${imageGenerated ? "upper_visual_real" : "upper_visual_placeholder"}
+**Intento imagen:** ${imageAttempted ? "si" : "no"}
+**Prompt hash:** ${promptHash}
+${imageFailure ? `**Falla imagen:** ${imageFailure.code} - ${imageFailure.message}` : ""}
 **Veredicto:** ${dim.verdictLabel}
 
 ## Scores (${dim.avg}/10 promedio)
@@ -342,6 +379,9 @@ ${!imageGenerated ? "- Acción requerida: Generar upper visual premium con gpt-i
     imageModel:    imageGenerated ? IMAGE_MODEL : null,
     imageQuality:  IMAGE_QUALITY,
     imageError:    imageError || null,
+    imageAttempted,
+    promptHash,
+    imageFailure,
     costGuardrail: GUARDRAIL_LABEL,
     qaStructural:  qa,
     textModel:     TEXT_MODEL,

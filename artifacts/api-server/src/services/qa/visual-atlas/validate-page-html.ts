@@ -135,7 +135,7 @@ export function measureVisualAtlasRender(html: string, data: VisualAtlasPageData
   }
   if (trapItems !== 3) blockers.push(`Trampas esperadas: 3; detectadas: ${trapItems}.`);
   if (autocheckOptions < 4) blockers.push(`Autocheck esperado: 4 opciones; detectadas: ${autocheckOptions}.`);
-  if (examRailHeight > 278) warnings.push(`Rail inferior alto (${examRailHeight}px); puede competir con el nucleo visual.`);
+  if (examRailHeight > 278 && data.layoutRecipe?.railStrategy !== "dense") warnings.push(`Rail inferior alto (${examRailHeight}px); puede competir con el nucleo visual.`);
   if (examRailHeight < 168) warnings.push(`Rail inferior muy compacto (${examRailHeight}px); revisar legibilidad de traps/autocheck.`);
   if (freeVerticalPx > 92) warnings.push(`Upper visual deja ${freeVerticalPx}px verticales sin uso activo dentro del row.`);
   if (imageSlotSharePct < 78) warnings.push(`La imagen ocupa solo ${imageSlotSharePct}% del alto disponible del upper row.`);
@@ -144,9 +144,14 @@ export function measureVisualAtlasRender(html: string, data: VisualAtlasPageData
     warnings.push("Densidad falsa: el rail ocupa altura relevante pero aporta poca lectura util.");
   }
   if (densityBand === "dense") warnings.push("Rail inferior denso: verificar microtipografia antes de aprobar.");
-  if (fillerBlocks === 0 && densityBand === "thin") warnings.push("No hay notas de cierre para compensar rail liviano.");
-  if (data.layoutRecipe?.railStrategy === "compact" && examRailHeight > 276) {
+  if (fillerBlocks > 0 && data.layoutRecipe?.railStrategy !== "dense") {
+    warnings.push("Notas de cierre detectadas fuera de Rail Dense: posible filler visual.");
+  }
+  if (data.layoutRecipe?.railStrategy === "compact" && examRailHeight > 240) {
     blockers.push(`Rail compact solicitado pero renderizado alto: ${examRailHeight}px.`);
+  }
+  if (data.upperVisualSrc === "placeholder") {
+    blockers.push("Upper visual placeholder: la pagina no es salida editorial evaluable.");
   }
 
   const penalty = blockers.length * 1.4 + warnings.length * 0.35;
@@ -259,6 +264,19 @@ export function computeQaDimensionScores(imageGenerated: boolean, layoutEvidence
   const avg = roundOne(
     (artDirection + editorialConsistency + readability + technicalAccuracy + density + commercialRisk) / 6,
   );
+  if (!imageGenerated) {
+    return {
+      artDirection: Math.min(artDirection, 6.2),
+      editorialConsistency: Math.min(editorialConsistency, 6.5),
+      readability: Math.min(readability, 6.5),
+      technicalAccuracy: Math.min(technicalAccuracy, 6.5),
+      density: Math.min(density, 6),
+      commercialRisk: Math.min(commercialRisk, 6),
+      avg: Math.min(avg, 6.5),
+      verdict: "needs_revision",
+      verdictLabel: "Blocked: upper visual is not a real premium image; QA max 6.5",
+    };
+  }
   const verdict = imageGenerated ? "needs_visual_review" as const : "needs_revision" as const;
   const verdictLabel = imageGenerated
     ? `Requires human visual review: target ${contract.qa.humanArtScoreToProduce}/10 before production`

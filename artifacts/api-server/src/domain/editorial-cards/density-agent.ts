@@ -26,6 +26,27 @@ function compact(value: string, maxChars: number): string {
   return source.slice(0, maxChars).replace(/\s+\S*$/, "").trim();
 }
 
+function normalizeSemantic(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[¿?¡!.,;:()[\]{}"'`´]/g, " ")
+    .replace(/\b(mito|correccion|respuesta|pregunta|guia|correcta|opcion)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isSemanticallyRepeated(value: string, references: string[]): boolean {
+  const normalized = normalizeSemantic(value);
+  if (normalized.length < 18) return false;
+  return references.some((reference) => {
+    const ref = normalizeSemantic(reference);
+    if (ref.length < 18) return false;
+    return normalized === ref || normalized.includes(ref) || ref.includes(normalized);
+  });
+}
+
 function diagramIntentFor(moduleItem: VisualModule, fallback: string): string {
   const text = `${moduleItem.title} ${moduleItem.description}`.toLowerCase();
   if (moduleItem.recommendedDiagram) return moduleItem.recommendedDiagram;
@@ -158,7 +179,27 @@ export function buildEditorialCardDeck(pageId: string, data: VisualAtlasPageData
     formatAffinity: ["visual_atlas", "master_book", "question_bank"],
   });
 
+  const repetitionRefs = [
+    data.guideQuestion,
+    data.autocheck.question,
+    data.autocheck.options[data.autocheck.correctOption] ?? "",
+    data.autocheck.explanation,
+    ...data.traps.flatMap((trap) => [trap.wrong, trap.correction]),
+  ];
+
   const cards = [...moduleCards, guideCard, contextCard, ...trapCards, validationCard]
+    .map((card) => {
+      if (card.targetZone !== "complement") return card;
+      const repeated = isSemanticallyRepeated(card.claim, repetitionRefs) || isSemanticallyRepeated(card.examSignal, repetitionRefs);
+      return repeated
+        ? {
+          ...card,
+          targetZone: "reserve" as const,
+          densityScore: roundOne(Math.max(5.8, card.densityScore - 1.2)),
+          visualRisk: "high" as const,
+        }
+        : card;
+    })
     .sort((a, b) => b.densityScore - a.densityScore)
     .slice(0, 14);
   const selectedCardIds = cards
@@ -184,6 +225,7 @@ export function buildEditorialCardDeck(pageId: string, data: VisualAtlasPageData
 
 function chooseLayoutMode(primaryCards: EditorialCard[], complementCards: EditorialCard[], railCards: EditorialCard[], problems: string[]): VisualAtlasLayoutMode {
   const hasDominantDecision = primaryCards.some((card) => card.role === "decision" || card.role === "comparison" || card.role === "flow");
+  if (railCards.length >= 3 && !problems.some((problem) => problem.includes("baja densidad"))) return "Rail Dense";
   if (railCards.length >= 2 && problems.some((problem) => problem.includes("rail"))) return "Rail Compact";
   if (primaryCards.length >= 4 && complementCards.length >= 2) return "4P+2C";
   if (hasDominantDecision && complementCards.length >= 2) return "3P+1D+2C";
@@ -219,7 +261,11 @@ export function evaluateUsefulDensity(data: VisualAtlasPageData, deck: Editorial
   const score = roundOne(clamp(avgSelected - problems.length * 0.22 + complementCards.length * 0.18, 6.2, 9.6));
   const usefulDensityScore = roundOne(clamp(score - (railTextLoad < 470 ? 0.45 : 0), 6.0, 9.5));
   const mode = chooseLayoutMode(primaryCards, complementCards, railCards, problems);
-  const railStrategy = mode === "Rail Compact" || railTextLoad < 560 ? "compact" : "standard";
+  const railStrategy = mode === "Rail Dense" || railTextLoad > 780
+    ? "dense"
+    : mode === "Rail Compact" || railTextLoad < 560
+      ? "compact"
+      : "standard";
   const layoutRecipe: VisualAtlasLayoutRecipe = {
     mode,
     primaryCardIds: primaryCards.map((card) => card.id),
@@ -228,12 +274,14 @@ export function evaluateUsefulDensity(data: VisualAtlasPageData, deck: Editorial
     upperCardCount: primaryCards.length + complementCards.length,
     railStrategy,
     promptDirective: mode === "4P+2C"
-      ? "Use four dominant cards plus two compact complementary cards; complementary cards must add new exam value, not repeat guide/autocheck."
+      ? "Use four dominant cards plus two compact complementary cards inside the upper image; complementary cards must add new exam value, not repeat guide/autocheck."
       : mode === "3P+1D+2C"
-        ? "Use three primary cards, one dominant decision/map/comparison card and two compact complementary cards."
-        : mode === "Rail Compact"
-          ? "Keep traps/autocheck compact; solve useful density inside the upper visual and complementary cards."
-          : "Use four strong primary cards with large readable labels and no fake filler.",
+        ? "Use three primary cards, one dominant decision/map/comparison card and two compact complementary cards inside the upper image."
+        : mode === "Rail Dense"
+          ? "Use four strong primary cards and keep the rail dense only because it contains real exam material."
+          : mode === "Rail Compact"
+            ? "Keep traps/autocheck compact; solve useful density inside the upper visual and selected cards, not with HTML filler."
+            : "Use four strong primary cards with large readable labels and no fake filler.",
     reason: problems[0] ?? "deck con densidad suficiente para recomposicion controlada",
   };
 
@@ -250,9 +298,11 @@ export function evaluateUsefulDensity(data: VisualAtlasPageData, deck: Editorial
     recommendations: [
       railStrategy === "compact"
         ? "Mantener rail compacto; no usar traps/autocheck para absorber aire de pagina."
-        : "Rail estandar permitido solo si aporta lectura real.",
+        : railStrategy === "dense"
+          ? "Rail denso permitido solo porque hay lectura real de examen."
+          : "Rail estandar permitido solo si aporta lectura real.",
       complementCards.length >= 2
-        ? "Usar dos cartas complementarias como puente editorial entre upper y examen."
+        ? "Usar dos cartas complementarias dentro del upper visual, no como cajas HTML de relleno."
         : "Si persiste hueco, pedir grounding selectivo para crear cartas complementarias reales.",
       "Regenerar upper desde cartas seleccionadas; no escalar ni estirar composicion previa.",
     ],

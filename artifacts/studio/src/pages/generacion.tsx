@@ -14,6 +14,7 @@ import {
   getPageIdFromLocation,
   type StudioCatalog,
   type StudioCatalogPage,
+  type ImageGenerationFailure,
   type StudioKeyStatus,
 } from "@/lib/studio-api";
 
@@ -34,6 +35,9 @@ interface GenerationResult {
   imageModel: string | null;
   imageQuality: string;
   imageError: string | null;
+  imageAttempted: boolean;
+  promptHash: string;
+  imageFailure: ImageGenerationFailure | null;
   costGuardrail: string;
   qaStructural: {
     passed: boolean;
@@ -456,11 +460,16 @@ export default function Generacion() {
                     ))}
                   </div>
 
-                  {result.imageError && (
-                    <div className="mt-3 px-2 py-1.5 bg-amber-500/8 border border-amber-500/20 rounded-sm">
-                      <p className="text-[7.5px] text-amber-400/80 font-semibold">Imagen: placeholder activo</p>
-                      <p className="text-[7px] text-amber-400/50 mt-0.5 leading-snug">
-                        {result.imageError.slice(0, 120)}
+                  {!result.imageGenerated && (
+                    <div className="mt-3 px-2 py-2 bg-red-500/8 border border-red-500/20 rounded-sm">
+                      <p className="text-[7.5px] text-red-300 font-semibold">
+                        Imagen no generada: {result.imageFailure?.code ?? "unknown"}
+                      </p>
+                      <p className="text-[7px] text-red-200/65 mt-0.5 leading-snug">
+                        {result.imageFailure?.message ?? result.imageError ?? "El servidor devolvio placeholder sin detalle."}
+                      </p>
+                      <p className="text-[6.8px] text-white/35 mt-1 font-mono">
+                        intento={result.imageAttempted ? "si" : "no"} · prompt={result.promptHash ?? "-"} · retry={result.imageFailure?.retryable ? "si" : "no"}
                       </p>
                     </div>
                   )}

@@ -4,7 +4,7 @@ import { IMAGE_MODEL, IMAGE_QUALITY, TEMPLATE_VERSION, TEXT_MODEL } from "../../
 export const VISUAL_ATLAS_V24_CONTRACT = {
   id: "visual-atlas-v24",
   version: TEMPLATE_VERSION,
-  renderRevision: "visual-atlas-2026-06-02-d",
+  renderRevision: "visual-atlas-2026-06-02-e",
   name: "Visual Atlas v24",
   generation: {
     textModel: TEXT_MODEL,
@@ -73,7 +73,7 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
     slotHeight: 520,
     requiredCardCount: 4,
     requiredGrid: "2x2",
-    flexibleDeckModes: ["4P", "4P+2C", "3P+1D+2C", "Rail Compact"],
+    flexibleDeckModes: ["4P", "4P+2C", "3P+1D+2C", "Rail Compact", "Rail Dense"],
     role: "upper_visual_asset_only",
     safeMargin: "keep all important content inside a thin production-safe margin",
     style: [
@@ -98,7 +98,7 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
       "the internal content bounding box should occupy at least 85% of the image height and 88% of the image width",
       "use fewer larger labels instead of many tiny labels",
       "every card must include one explanatory mini-diagram plus one short readable takeaway",
-      "when a deck includes complementary cards, use them as small editorial bridges with new information, never as filler",
+      "when a deck includes complementary cards, integrate them inside the upper visual composition as small diagrammatic cues, never as separate HTML filler boxes",
     ],
     forbiddenComposition: [
       "full page infographic",
@@ -237,6 +237,7 @@ Canvas and composition:
 - If an Editorial Card Deck is provided, follow its layout recipe instead of inventing filler. Allowed recipe modes: ${contract.upperVisual.flexibleDeckModes.join(", ")}.
 - Current layout recipe: ${layoutRecipe ? `${layoutRecipe.mode}; ${layoutRecipe.promptDirective}` : "4P; four primary cards only"}.
 - Primary cards must dominate. Complementary cards, when present, must be smaller, clearly useful and visually subordinate.
+- Complementary cards must be integrated inside the image composition itself. Do not assume HTML will add boxes below the image.
 - Rail cards belong to the HTML exam rail, not to the upper visual, unless they provide a compact exam-signal chip that does not duplicate traps/autocheck.
 - Each internal card may have a small number badge (${data.visualModules.map((m) => m.num).join(", ")}) and a short card title.
 - No global header above the cards. No book/page title. No footer.
