@@ -23,11 +23,15 @@ function estimateAutocheckRailHeight(data: VisualAtlasPageData): number {
   return Math.round(clampNumber(104 + optionLoad + discardLoad + autocheckChars * 0.065, 168, 278));
 }
 
-function estimateExamRailHeight(data: VisualAtlasPageData): number {
+function estimateExamRailHeight(data: VisualAtlasPageData, bodyTotalHeight: number): number {
+  const contract = VISUAL_ATLAS_V24_CONTRACT;
   const trapDemand = estimateTrapRailHeight(data);
   const checkDemand = estimateAutocheckRailHeight(data);
   const dominantDemand = Math.max(trapDemand, checkDemand);
-  return Math.round(clampNumber(dominantDemand + 10, 168, 278));
+  const preferredUpperHeight = contract.upperVisual.slotHeight + 18;
+  const railFromFixedUpper = bodyTotalHeight - preferredUpperHeight;
+  const demandHeight = clampNumber(dominantDemand + 10, 168, 334);
+  return Math.round(clampNumber(Math.max(railFromFixedUpper, demandHeight), 220, 342));
 }
 
 function firstSentence(value: string): string {
@@ -144,7 +148,7 @@ export function renderVisualAtlasPage(data: VisualAtlasPageData): string {
   const trapItems = data.traps.slice(0, 3);
   const discardNotes = data.autocheck.discardNotes.slice(0, 2);
   const bodyTotalHeight = 872;
-  const examRailHeight = estimateExamRailHeight(data);
+  const examRailHeight = estimateExamRailHeight(data, bodyTotalHeight);
   const upperVisualHeight = bodyTotalHeight - examRailHeight;
   const trapDemand = estimateTrapRailHeight(data);
   const checkDemand = estimateAutocheckRailHeight(data);

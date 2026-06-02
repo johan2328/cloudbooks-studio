@@ -151,6 +151,17 @@ export function evaluateVisualAtlasLayoutEngine(
   }
 
   if (context.visualMeasurement?.available) {
+    const upperImageContent = context.visualMeasurement.upperImageContent;
+    if (upperImageContent?.available && ((upperImageContent.contentHeightPct ?? 100) < 78 || (upperImageContent.bottomWhitespacePct ?? 0) > 14)) {
+      actions.push(action(
+        "boost_technical_core",
+        "Recomponer upper con densidad real",
+        "technical_core",
+        97,
+        `El PNG superior usa ${upperImageContent.contentHeightPct ?? "n/a"}% del alto util y deja ${upperImageContent.bottomWhitespacePct ?? "n/a"}% de blanco inferior interno.`,
+        "Regenera el upper con composicion mas distribuida; no es un problema del rail HTML.",
+      ));
+    }
     if (context.visualMeasurement.blockers.length > 0) {
       const blockerText = context.visualMeasurement.blockers.join(" ").toLowerCase();
       const railOrFooterBlocker =

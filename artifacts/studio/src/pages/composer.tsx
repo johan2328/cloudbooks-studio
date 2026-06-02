@@ -665,6 +665,9 @@ function derivePostRenderRemediation(
         ? [
           `Visual real: ${visual.score.toFixed(1)}/10, overflow ${visual.overflow.count}, microtexto ${visual.typography.smallTextCount}.`,
           `Rail real: ${visual.zoneUsage.exam_rail?.freeBottomPx ?? "-"}px libres; upper ${visual.zoneUsage.upper_visual?.occupancyPct ?? "-"}% ocupado.`,
+          visual.upperImageContent?.available
+            ? `PNG upper: ${visual.upperImageContent.contentHeightPct ?? "-"}% alto util; blanco inferior ${visual.upperImageContent.bottomWhitespacePct ?? "-"}%.`
+            : "PNG upper: contenido interno no medido.",
         ]
       : visual
         ? [`Visual real: no disponible (${visual.note}).`]
@@ -715,6 +718,9 @@ function derivePostRenderRemediation(
     const visualItems = [
       `Visual real: ${visual.score.toFixed(1)}/10; canvas ${visual.page.width}x${visual.page.height}.`,
       `Overflow: ${visual.overflow.count}; microtexto: ${visual.typography.smallTextCount}; rail libre: ${visual.zoneUsage.exam_rail?.freeBottomPx ?? "-"}px.`,
+      visual.upperImageContent?.available
+        ? `PNG upper: ${visual.upperImageContent.contentHeightPct ?? "-"}% alto util; blanco inferior ${visual.upperImageContent.bottomWhitespacePct ?? "-"}%.`
+        : "PNG upper: contenido interno no medido.",
     ];
     if (visual.blockers.length > 0) {
       return {
@@ -1357,6 +1363,8 @@ export default function ComposerPage() {
 
   const spacePlan = useMemo(() => (editableDraft ? computeSpacePlan(editableDraft.blocks) : null), [editableDraft]);
   const lockedTotal = lockedQa?.scores?.total == null ? null : normalizeQaScoreToTen(lockedQa.scores.total);
+  const officialDisplayTotal = lockedTotal ?? qaDelta?.after ?? null;
+  const officialDisplayPending = lockedTotal == null && qaDelta?.after != null;
   const lockedGap = lockedTotal != null ? Math.max(0, 9.5 - lockedTotal) : null;
   const projectedQaScores = useMemo(
     () => {
@@ -1529,7 +1537,7 @@ export default function ComposerPage() {
     if (qaAlignmentState !== "aligned" && (projectedGap ?? 9.5) > 0.6) {
       return COMPOSER_OBJECTIVES.find((objective) => objective.id === "qa_lock") ?? null;
     }
-    if (spacePlan.examShare >= 31 || spacePlan.railMode === "compactar") {
+    if (spacePlan.examShare >= 36) {
       return COMPOSER_OBJECTIVES.find((objective) => objective.id === "compact_exam_rail") ?? null;
     }
     if (spacePlan.technicalShare < 41 || spacePlan.introShare > 33) {
@@ -2185,9 +2193,8 @@ export default function ComposerPage() {
         || visualBlockers.includes("footer")
         || visualBlockers.includes("rail")
         || visualBlockers.includes("autocheck")
-        || ((visual.zoneUsage.exam_rail?.freeBottomPx ?? 0) > 58)
       ))
-      || (evidence && (evidence.examRail.sharePct > 32 || evidence.examRail.densityBand === "thin")),
+      || (evidence && evidence.blockers.some((item) => /footer|rail|autocheck|overflow/i.test(item))),
     );
   }
 
@@ -2778,9 +2785,12 @@ export default function ComposerPage() {
                   <div className="grid grid-cols-3 gap-2 min-w-[360px]">
                     <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] px-3 py-2">
                       <p className="text-[8px] text-white/30 uppercase tracking-widest">QA oficial</p>
-                      <p className={cn("text-sm font-black mt-1", lockedTotal != null && lockedTotal >= 9.5 ? "text-emerald-300" : "text-amber-300")}>
-                        {lockedTotal != null ? `${lockedTotal.toFixed(1)}/10` : "sin QA"}
+                      <p className={cn("text-sm font-black mt-1", officialDisplayTotal != null && officialDisplayTotal >= 9.5 ? "text-emerald-300" : "text-amber-300")}>
+                        {officialDisplayTotal != null ? `${officialDisplayTotal.toFixed(1)}/10` : "pendiente"}
                       </p>
+                      {officialDisplayPending ? (
+                        <p className="text-[8px] text-cyan-200/70 mt-0.5">actualizando QA</p>
+                      ) : null}
                     </div>
                     <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] px-3 py-2">
                       <p className="text-[8px] text-white/30 uppercase tracking-widest">Draft</p>
@@ -2925,42 +2935,6 @@ export default function ComposerPage() {
                       </div>
                     ) : null}
                   </section>
-
-                  {editableDraft?.visualDensityPlan ? (
-                    <section className="rounded-sm border border-cyan-400/15 bg-cyan-500/8 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-[8px] font-bold text-cyan-200/60 uppercase tracking-widest">Plan de densidad visual</p>
-                          <p className="text-sm font-black text-white mt-2">
-                            {editableDraft.visualDensityPlan.affectedZone === "exam_rail"
-                              ? "Primero corregir rail"
-                              : "Recomponer sin deformar"}
-                          </p>
-                        </div>
-                        <span className="rounded-sm border border-cyan-300/20 bg-cyan-300/10 px-2 py-1 text-[8px] font-bold text-cyan-100 uppercase">
-                          {editableDraft.visualDensityPlan.affectedZone.replace("_", " ")}
-                        </span>
-                      </div>
-                      <div className="mt-3 space-y-2 text-[10px] leading-relaxed">
-                        <p className="text-white/62">
-                          <span className="font-bold text-white/82">Problema: </span>
-                          {editableDraft.visualDensityPlan.problem}
-                        </p>
-                        <p className="text-cyan-100/78">
-                          <span className="font-bold text-cyan-100">Accion: </span>
-                          {editableDraft.visualDensityPlan.proposedAction}
-                        </p>
-                        <p className="text-white/56">
-                          <span className="font-bold text-white/78">Impacto: </span>
-                          {editableDraft.visualDensityPlan.expectedImpact}
-                        </p>
-                        <p className="text-amber-100/70">
-                          <span className="font-bold text-amber-100">Riesgo: </span>
-                          {editableDraft.visualDensityPlan.risk}
-                        </p>
-                      </div>
-                    </section>
-                  ) : null}
 
                   <section className="rounded-sm border border-white/[0.08] bg-[#0d1629] p-4">
                     <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Acciones de maquetacion</p>

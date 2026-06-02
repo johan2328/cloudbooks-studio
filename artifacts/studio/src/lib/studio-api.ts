@@ -78,6 +78,14 @@ export interface StudioVisualMeasurementReport {
       verticalOverflowPx: number;
     }>;
   };
+  upperImageContent: {
+    available: boolean;
+    contentWidthPct: number | null;
+    contentHeightPct: number | null;
+    contentAreaPct: number | null;
+    bottomWhitespacePct: number | null;
+    rightWhitespacePct: number | null;
+  };
   warnings: string[];
   blockers: string[];
   score: number;

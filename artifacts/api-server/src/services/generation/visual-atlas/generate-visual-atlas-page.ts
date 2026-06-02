@@ -103,6 +103,9 @@ function applyVisualMeasurementToQaDimensions(
   const pageOverflowPenalty = visual.page.verticalOverflowPx > 6
     ? Math.min(1.2, visual.page.verticalOverflowPx * 0.04)
     : 0;
+  const internalImageBlankPenalty = visual.upperImageContent.available
+    ? Math.min(1.1, Math.max(0, 78 - (visual.upperImageContent.contentHeightPct ?? 78)) * 0.05)
+    : 0;
 
   const visualPenalty =
     visualWarningPenalty
@@ -111,11 +114,12 @@ function applyVisualMeasurementToQaDimensions(
     + examFreeBottomPenalty
     + microTypographyPenalty
     + overflowPenalty
-    + pageOverflowPenalty;
+    + pageOverflowPenalty
+    + internalImageBlankPenalty;
 
   const artDirection = roundOne(clamp(base.artDirection - visualPenalty, 0, 10));
   const readability = roundOne(clamp(base.readability - (examFreeBottomPenalty * 0.65 + microTypographyPenalty * 0.35 + pageOverflowPenalty * 0.7), 0, 10));
-  const density = roundOne(clamp(base.density - (examFreeBottomPenalty * 0.9 + upperOccupancyPenalty * 0.4 + pageOverflowPenalty * 0.85), 0, 10));
+  const density = roundOne(clamp(base.density - (examFreeBottomPenalty * 0.9 + upperOccupancyPenalty * 0.4 + pageOverflowPenalty * 0.85 + internalImageBlankPenalty), 0, 10));
   const editorialConsistency = roundOne(
     clamp(base.editorialConsistency - (visualWarningPenalty + visualBlockerPenalty + overflowPenalty * 0.4 + pageOverflowPenalty * 0.5), 0, 10),
   );
@@ -295,6 +299,7 @@ ${qa.layoutEvidence.warnings.length > 0 ? `\n### Alertas post-render\n${qa.layou
 - Overflow: **${visualMeasurement.overflow.count}** elemento(s) · horizontal **${visualMeasurement.page.horizontalOverflowPx}px** · vertical **${visualMeasurement.page.verticalOverflowPx}px**
 - Tipografia minima: **${visualMeasurement.typography.minFontPx ?? "n/a"}px** · textos pequenos **${visualMeasurement.typography.smallTextCount}**
 - Upper visual ocupado: **${visualMeasurement.zoneUsage.upper_visual?.occupancyPct ?? "n/a"}%** · aire inferior real **${visualMeasurement.zoneUsage.upper_visual?.freeBottomPx ?? "n/a"}px**
+- Upper PNG interno: **${visualMeasurement.upperImageContent.available ? `${visualMeasurement.upperImageContent.contentHeightPct}% alto util · ${visualMeasurement.upperImageContent.bottomWhitespacePct}% blanco inferior` : "no medido"}**
 - Rail inferior ocupado: **${visualMeasurement.zoneUsage.exam_rail?.occupancyPct ?? "n/a"}%** · aire inferior real **${visualMeasurement.zoneUsage.exam_rail?.freeBottomPx ?? "n/a"}px**
 ${visualMeasurement.blockers.length > 0 ? `\n### Bloqueos visuales reales\n${visualMeasurement.blockers.map((item) => `- ${item}`).join("\n")}\n` : ""}
 ${visualMeasurement.warnings.length > 0 ? `\n### Alertas visuales reales\n${visualMeasurement.warnings.map((item) => `- ${item}`).join("\n")}\n` : ""}

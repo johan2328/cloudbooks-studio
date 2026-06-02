@@ -4,7 +4,7 @@ import { IMAGE_MODEL, IMAGE_QUALITY, TEMPLATE_VERSION, TEXT_MODEL } from "../../
 export const VISUAL_ATLAS_V24_CONTRACT = {
   id: "visual-atlas-v24",
   version: TEMPLATE_VERSION,
-  renderRevision: "visual-atlas-2026-06-02-b",
+  renderRevision: "visual-atlas-2026-06-02-c",
   name: "Visual Atlas v24",
   generation: {
     textModel: TEXT_MODEL,
@@ -94,6 +94,7 @@ export const VISUAL_ATLAS_V24_CONTRACT = {
       "no glossy app icons",
       "no random mixed illustration styles",
       "fill space by recomposing diagrams, hierarchy and relationships, never by stretching existing elements",
+      "the internal content bounding box should occupy at least 85% of the image height and 88% of the image width",
       "use fewer larger labels instead of many tiny labels",
       "every card must include one explanatory mini-diagram plus one short readable takeaway",
     ],
@@ -210,6 +211,7 @@ Canvas and composition:
 - Reserve only a very thin internal safety edge on all four sides of the image; no important shape, label, arrow or icon may touch the crop edge.
 - The four concept cards should visually occupy most of the canvas. Avoid a timid composition floating in too much white space.
 - Push the 2x2 card composition close to the available frame. Do not add a generous white moat around the grid.
+- The actual diagram/card content must occupy at least 85% of the image height; never leave a blank lower band inside the PNG.
 - Fill unused space by changing the internal composition: add clearer flows, larger icons, relationship arrows, decision paths or callout chips.
 - Never fill unused space by stretching diagrams, scaling text non-proportionally, squeezing labels, or simply enlarging a sparse card.
 - Preserve natural aspect ratios for icons, arrows, people, service symbols, maps and text blocks.

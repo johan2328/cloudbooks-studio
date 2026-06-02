@@ -22,6 +22,15 @@ export interface VisualMeasurementOverflowExample {
   verticalOverflowPx: number;
 }
 
+export interface VisualMeasurementUpperImageContent {
+  available: boolean;
+  contentWidthPct: number | null;
+  contentHeightPct: number | null;
+  contentAreaPct: number | null;
+  bottomWhitespacePct: number | null;
+  rightWhitespacePct: number | null;
+}
+
 export interface VisualAtlasPageVisualMeasurement {
   version: "visual-measurement-v1";
   available: boolean;
@@ -45,6 +54,7 @@ export interface VisualAtlasPageVisualMeasurement {
     count: number;
     examples: VisualMeasurementOverflowExample[];
   };
+  upperImageContent: VisualMeasurementUpperImageContent;
   warnings: string[];
   blockers: string[];
   score: number;
@@ -87,6 +97,7 @@ interface BrowserMeasurementRaw {
   zoneUsage: Record<string, VisualMeasurementZoneUsage | null>;
   typography: VisualAtlasPageVisualMeasurement["typography"];
   overflow: VisualAtlasPageVisualMeasurement["overflow"];
+  upperImageContent: VisualMeasurementUpperImageContent;
 }
 
 const MEASURE_SCRIPT = `(() => {
@@ -160,6 +171,78 @@ const MEASURE_SCRIPT = `(() => {
     minFontPx = minFontPx == null ? fontSize : Math.min(minFontPx, fontSize);
     if (fontSize < 7.5) smallTextCount += 1;
   }
+  const measureUpperImageContent = () => {
+    const img = document.querySelector('[data-zone="upper_visual"] img');
+    if (!img || !img.complete || !img.naturalWidth || !img.naturalHeight) {
+      return {
+        available: false,
+        contentWidthPct: null,
+        contentHeightPct: null,
+        contentAreaPct: null,
+        bottomWhitespacePct: null,
+        rightWhitespacePct: null
+      };
+    }
+    const canvas = document.createElement("canvas");
+    const maxW = 384;
+    const scale = maxW / img.naturalWidth;
+    canvas.width = maxW;
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      return {
+        available: false,
+        contentWidthPct: null,
+        contentHeightPct: null,
+        contentAreaPct: null,
+        bottomWhitespacePct: null,
+        rightWhitespacePct: null
+      };
+    }
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let minX = canvas.width;
+    let minY = canvas.height;
+    let maxX = -1;
+    let maxY = -1;
+    let marked = 0;
+    for (let y = 0; y < canvas.height; y += 1) {
+      for (let x = 0; x < canvas.width; x += 1) {
+        const i = (y * canvas.width + x) * 4;
+        const r = pixels[i];
+        const g = pixels[i + 1];
+        const b = pixels[i + 2];
+        const a = pixels[i + 3];
+        const nonWhite = a > 20 && (r < 246 || g < 246 || b < 246) && (Math.max(r, g, b) - Math.min(r, g, b) > 8 || Math.min(r, g, b) < 238);
+        if (!nonWhite) continue;
+        marked += 1;
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+    if (marked === 0 || maxX < minX || maxY < minY) {
+      return {
+        available: true,
+        contentWidthPct: 0,
+        contentHeightPct: 0,
+        contentAreaPct: 0,
+        bottomWhitespacePct: 100,
+        rightWhitespacePct: 100
+      };
+    }
+    const contentWidth = maxX - minX + 1;
+    const contentHeight = maxY - minY + 1;
+    return {
+      available: true,
+      contentWidthPct: round((contentWidth / canvas.width) * 100),
+      contentHeightPct: round((contentHeight / canvas.height) * 100),
+      contentAreaPct: round((marked / (canvas.width * canvas.height)) * 100),
+      bottomWhitespacePct: round(((canvas.height - maxY - 1) / canvas.height) * 100),
+      rightWhitespacePct: round(((canvas.width - maxX - 1) / canvas.width) * 100)
+    };
+  };
   return {
     page: {
       width: round(pageRect.width),
@@ -178,7 +261,8 @@ const MEASURE_SCRIPT = `(() => {
     overflow: {
       count: overflowExamples.length,
       examples: overflowExamples
-    }
+    },
+    upperImageContent: measureUpperImageContent()
   };
 })()`;
 
@@ -205,6 +289,14 @@ function unavailableMeasurement(note: string): VisualAtlasPageVisualMeasurement 
     overflow: {
       count: 0,
       examples: [],
+    },
+    upperImageContent: {
+      available: false,
+      contentWidthPct: null,
+      contentHeightPct: null,
+      contentAreaPct: null,
+      bottomWhitespacePct: null,
+      rightWhitespacePct: null,
     },
     warnings: ["Medicion visual real no disponible en este runtime."],
     blockers: [],
@@ -238,8 +330,22 @@ function scoreMeasurement(raw: BrowserMeasurementRaw, expectedWidth: number, exp
   if ((raw.typography.smallTextCount > 0 || raw.overflow.count > 0) && upperUsage && upperUsage.occupancyPct >= 82) {
     warnings.push("Densidad falsa: el upper parece ocupado, pero contiene microtexto u overflow.");
   }
+  if (raw.upperImageContent.available) {
+    if ((raw.upperImageContent.contentHeightPct ?? 100) < 78) {
+      warnings.push(`Upper visual con aire interno: contenido ocupa ${raw.upperImageContent.contentHeightPct}% de la altura del PNG.`);
+    }
+    if ((raw.upperImageContent.bottomWhitespacePct ?? 0) > 14) {
+      warnings.push(`Upper visual deja ${raw.upperImageContent.bottomWhitespacePct}% de blanco inferior dentro del PNG.`);
+    }
+    if ((raw.upperImageContent.contentAreaPct ?? 100) < 16) {
+      warnings.push(`Upper visual con densidad grafica baja: area marcada ${raw.upperImageContent.contentAreaPct}%.`);
+    }
+  }
 
-  const penalty = blockers.length * 2.1 + warnings.length * 0.38 + Math.min(1.4, raw.typography.smallTextCount * 0.09);
+  const internalBlankPenalty = raw.upperImageContent.available
+    ? Math.min(1.1, Math.max(0, 78 - (raw.upperImageContent.contentHeightPct ?? 78)) * 0.05)
+    : 0;
+  const penalty = blockers.length * 2.1 + warnings.length * 0.38 + Math.min(1.4, raw.typography.smallTextCount * 0.09) + internalBlankPenalty;
   return {
     warnings,
     blockers,
