@@ -4,7 +4,7 @@ import { activityLogsTable, composerDraftsTable, db, generationRunsTable, pagesT
 
 import { getSeed, listSeeds } from "../data/page-seeds";
 import { buildComposerProposal } from "../domain/composer/proposals";
-import { getAuthUserFromHeader, insertEditorialEvent } from "../services/studio/editorial-events";
+import { ensurePageByNumber, getAuthUserFromHeader, insertEditorialEvent } from "../services/studio/editorial-events";
 
 const router = Router();
 const COMPOSER_ACTION_NOTE_PREFIX = "composer_action_v1:";
@@ -521,7 +521,7 @@ router.post("/studio/composer/batch/run", async (req, res): Promise<void> => {
       pageNumber: pageId,
       title: seed.data.title,
       domain: seed.data.domainLabel,
-      batch: `Batch ${seed.data.batch}`,
+      batch: seed.data.batchLabel,
       context: seed.data.context,
     });
     const [row] = await db.insert(generationRunsTable).values({

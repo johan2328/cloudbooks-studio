@@ -15,6 +15,7 @@ import {
   type StudioCatalog,
   type StudioCatalogPage,
   type ImageGenerationFailure,
+  type VisualAtlasGenerationStatus,
   type StudioKeyStatus,
 } from "@/lib/studio-api";
 
@@ -38,6 +39,7 @@ interface GenerationResult {
   imageAttempted: boolean;
   promptHash: string;
   imageFailure: ImageGenerationFailure | null;
+  generationStatus: VisualAtlasGenerationStatus;
   costGuardrail: string;
   qaStructural: {
     passed: boolean;
@@ -504,7 +506,8 @@ export default function Generacion() {
                     <p className="text-[7px] text-teal-400/60 font-mono leading-relaxed">
                       Layout: golden master v24<br />
                       Estructura: plantilla TypeScript<br />
-                      Imagen: {result.imageGenerated ? `${result.imageModel} ${result.imageQuality}` : "placeholder"}
+                      Imagen: {result.imageGenerated ? `${result.imageModel} ${result.imageQuality}` : "placeholder"}<br />
+                      Estado editorial: {result.generationStatus}
                     </p>
                   </div>
                 </div>

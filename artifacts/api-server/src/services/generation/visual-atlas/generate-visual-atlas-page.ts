@@ -1,7 +1,7 @@
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 
-import type { VisualAtlasPageData } from "../../../lib/visual-atlas-types";
+import type { VisualAtlasGenerationStatus, VisualAtlasPageData } from "../../../lib/visual-atlas-types";
 import { VISUAL_ATLAS_V24_CONTRACT } from "../../../domain/editorial-contracts/visual-atlas-v24";
 import { pageOutputDir, pagePublicPath } from "../../export/paths";
 import { renderVisualAtlasPage } from "../../renderers/visual-atlas/render-golden-page";
@@ -34,6 +34,7 @@ export interface GeneratePageResult {
   imageAttempted: boolean;
   promptHash:     string;
   imageFailure:   ImageGenerationFailure | null;
+  generationStatus: VisualAtlasGenerationStatus;
   costGuardrail:  string;
   qaStructural:   StructuralQaResult;
   textModel:      string;
@@ -170,6 +171,29 @@ function capQaDimensionsWithoutRealImage(base: QaDimensionScores): QaDimensionSc
   };
 }
 
+function capQaTotalForVisibleIssues(base: QaDimensionScores, visual: VisualAtlasPageVisualMeasurement): QaDimensionScores {
+  if (!visual.available) return base;
+
+  const examFreeBottom = visual.zoneUsage.exam_rail?.freeBottomPx ?? 0;
+  const upperHeightPct = visual.upperImageContent.contentHeightPct ?? 100;
+  const upperBottomWhitespacePct = visual.upperImageContent.bottomWhitespacePct ?? 0;
+  const hasVisibleIssue =
+    visual.blockers.length > 0
+    || visual.overflow.count > 0
+    || visual.typography.smallTextCount > 0
+    || examFreeBottom > 58
+    || upperHeightPct < 78
+    || upperBottomWhitespacePct > 14;
+
+  if (!hasVisibleIssue || base.avg <= 9.0) return base;
+  return {
+    ...base,
+    avg: 9.0,
+    verdict: "needs_revision",
+    verdictLabel: "Needs revision: visible layout issues keep QA capped at 9.0",
+  };
+}
+
 /**
  * Orquestador de generación Visual Atlas (página completa):
  *   1. generateUpperVisual → imagen gpt-image-2 medium o placeholder
@@ -237,8 +261,15 @@ export async function generateVisualAtlasPage(
     pageHeight: VISUAL_ATLAS_V24_CONTRACT.page.height,
     log,
   });
+  const generationStatus: VisualAtlasGenerationStatus = !imageGenerated
+    ? "image_failed"
+    : visualMeasurement.available
+      ? "image_generated"
+      : "post_render_failed";
   const measuredDim = applyVisualMeasurementToQaDimensions(provisionalDim, visualMeasurement);
-  const dim = imageGenerated ? measuredDim : capQaDimensionsWithoutRealImage(measuredDim);
+  const dim = imageGenerated
+    ? capQaTotalForVisibleIssues(measuredDim, visualMeasurement)
+    : capQaDimensionsWithoutRealImage(measuredDim);
   const layoutEngine = evaluateVisualAtlasLayoutEngine(qa.layoutEvidence, dim, {
     imageGenerated,
     generationSource,
@@ -279,6 +310,7 @@ export async function generateVisualAtlasPage(
     promptHash,
     costGuardrail:    GUARDRAIL_LABEL,
     generationMode:   imageGenerated ? "openai_image" : "placeholder_image",
+    generationStatus,
     imageError:       imageError || null,
     imageFailure,
     generationSource,
@@ -304,6 +336,7 @@ export async function generateVisualAtlasPage(
 **Template:** Golden Master Visual Atlas ${VISUAL_ATLAS_V24_CONTRACT.version}
 **Modelo imagen:** ${imageGenerated ? IMAGE_MODEL + " " + IMAGE_QUALITY : "placeholder"}
 **Upper visual:** ${imageGenerated ? "upper_visual_real" : "upper_visual_placeholder"}
+**Estado editorial:** ${generationStatus}
 **Intento imagen:** ${imageAttempted ? "si" : "no"}
 **Prompt hash:** ${promptHash}
 ${imageFailure ? `**Falla imagen:** ${imageFailure.code} - ${imageFailure.message}` : ""}
@@ -382,6 +415,7 @@ ${!imageGenerated ? "- Acción requerida: Generar upper visual premium con gpt-i
     imageAttempted,
     promptHash,
     imageFailure,
+    generationStatus,
     costGuardrail: GUARDRAIL_LABEL,
     qaStructural:  qa,
     textModel:     TEXT_MODEL,

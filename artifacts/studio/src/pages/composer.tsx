@@ -46,6 +46,7 @@ import {
   type EditorialCardDeck,
   type EditorialCardZone,
   type ImageGenerationFailure,
+  type VisualAtlasGenerationStatus,
   type VisualAtlasLayoutRecipe,
   type StudioCatalogPage,
   type StudioCatalog,
@@ -62,6 +63,7 @@ interface ComposerGenerationResponse {
   imageAttempted?: boolean;
   imageError?: string | null;
   imageFailure?: ImageGenerationFailure | null;
+  generationStatus?: VisualAtlasGenerationStatus;
   promptHash?: string;
   outputs?: {
     html: string;
@@ -80,6 +82,28 @@ interface ComposerGenerationResponse {
 
 interface ComposerActionLog extends ComposerActionLogRecord {
   pendingSync?: boolean;
+}
+
+function isGenerationBlocked(data: ComposerGenerationResponse | null): boolean {
+  if (!data) return true;
+  return data.imageGenerated === false || data.generationStatus === "image_failed" || data.generationStatus === "post_render_failed" || data.generationStatus === "composer_draft_missing";
+}
+
+function describeGenerationResult(data: ComposerGenerationResponse | null): string {
+  if (!data) return "Generacion sin respuesta del servidor.";
+  if (data.generationStatus === "composer_draft_missing") {
+    return "Draft Composer faltante: guarda la mesa editorial antes de generar.";
+  }
+  if (data.imageGenerated === false || data.generationStatus === "image_failed") {
+    const failure = data.imageFailure;
+    return failure
+      ? `Imagen bloqueada: ${failure.code}. ${failure.message}${failure.promptHash ? ` Prompt ${failure.promptHash}.` : ""}`
+      : `Imagen bloqueada: ${data.imageError ?? "placeholder sin diagnostico estructurado."}`;
+  }
+  if (data.generationStatus === "post_render_failed") {
+    return "Post-render bloqueado: hubo imagen real, pero no se pudo medir page.html/preview. No es salida evaluable.";
+  }
+  return "Generacion completada con imagen real y QA post-render recargado.";
 }
 
 type ShortcutAction = "compact_rail" | "expand_context" | "boost_technical" | "enforce_four_cards";
@@ -1664,6 +1688,74 @@ export default function ComposerPage() {
       blockers,
     };
   }, [qaAlignmentState, stepGenerated, stepQaReviewed, lockedTotal, lockedQa]);
+  const lockedWeakDims = useMemo(() => {
+    if (!lockedQa?.scores) return [];
+    return LOCKED_DIM_LABELS
+      .map((dim) => ({ ...dim, value: normalizeQaScoreToTen(Number(lockedQa.scores[dim.key] ?? 0)) }))
+      .filter((dim) => Number.isFinite(dim.value))
+      .sort((a, b) => a.value - b.value)
+      .slice(0, 3);
+  }, [lockedQa]);
+  const operationalRead = useMemo(() => {
+    const visual = lockedQa?.visualMeasurement;
+    const layout = lockedQa?.layoutEvidence;
+    if (!lockedStatus?.hasOutput) {
+      return {
+        status: "Sin output real",
+        severity: "warning" as const,
+        problem: "La pagina todavia no tiene una generacion consolidada.",
+        nextAction: "Generar draft desde Composer o desde Generacion.",
+      };
+    }
+    if (lockedStatus.generationStatus === "image_failed" || lockedStatus.generationMode === "placeholder_image") {
+      const failure = lockedStatus.imageFailure;
+      return {
+        status: "Imagen bloqueada",
+        severity: "critical" as const,
+        problem: failure ? `${failure.code}: ${failure.message}` : "El output actual usa placeholder, no upper visual real.",
+        nextAction: "Corregir OpenAI/clave o reintentar Image 2 medium antes de evaluar diseño.",
+      };
+    }
+    if (lockedStatus.generationStatus === "post_render_failed" || visual?.available === false) {
+      return {
+        status: "Post-render no medible",
+        severity: "critical" as const,
+        problem: "No hay medicion confiable de page.html/preview.",
+        nextAction: "Regenerar y validar preview antes de QA oficial.",
+      };
+    }
+    if (visual?.blockers.length) {
+      return {
+        status: "Bloqueo visual",
+        severity: "critical" as const,
+        problem: visual.blockers[0],
+        nextAction: "Aplicar la accion primaria del motor de layout y regenerar.",
+      };
+    }
+    if (layout?.blockers.length) {
+      return {
+        status: "Bloqueo estructural",
+        severity: "critical" as const,
+        problem: layout.blockers[0],
+        nextAction: "Corregir estructura antes de recomponer el upper.",
+      };
+    }
+    if (lockedTotal != null && lockedTotal < 9.5) {
+      const weak = lockedWeakDims[0];
+      return {
+        status: "Requiere mejora",
+        severity: "warning" as const,
+        problem: weak ? `${weak.label} es la dimension mas debil (${weak.value.toFixed(1)}/10).` : `QA oficial ${lockedTotal.toFixed(1)}/10.`,
+        nextAction: "Aplicar la remediacion recomendada y regenerar.",
+      };
+    }
+    return {
+      status: "Candidato editorial",
+      severity: "success" as const,
+      problem: "QA oficial no muestra bloqueos visibles.",
+      nextAction: "Enviar a revision humana final; no regenerar sin motivo editorial.",
+    };
+  }, [lockedStatus, lockedQa, lockedTotal, lockedWeakDims]);
   const projectedGap = projectedQaScores ? Math.max(0, 9.5 - projectedQaScores.total) : null;
   const sortedBlocks = useMemo(
     () => (editableDraft?.blocks ?? []).slice().sort((a, b) => a.priority - b.priority),
@@ -1688,14 +1780,6 @@ export default function ComposerPage() {
     () => sortedBlocks.find((block) => block.id === selectedBlockId) ?? sortedBlocks[0] ?? null,
     [sortedBlocks, selectedBlockId],
   );
-  const lockedWeakDims = useMemo(() => {
-    if (!lockedQa?.scores) return [];
-    return LOCKED_DIM_LABELS
-      .map((dim) => ({ ...dim, value: normalizeQaScoreToTen(Number(lockedQa.scores[dim.key] ?? 0)) }))
-      .filter((dim) => Number.isFinite(dim.value))
-      .sort((a, b) => a.value - b.value)
-      .slice(0, 3);
-  }, [lockedQa]);
   const composerReadiness = useMemo(() => {
     const projectedTotal = projectedQaScores?.total ?? null;
     const lockedTotalScore = lockedQa?.scores?.total == null
@@ -2143,19 +2227,32 @@ export default function ComposerPage() {
       pushActionLog({
         kind: "autofix",
         action: "Autofix + QA",
-        status: "ok",
+        status: "info",
         beforeTotal,
         afterTotal,
         delta: beforeTotal != null && afterTotal != null ? Number((afterTotal - beforeTotal).toFixed(1)) : null,
         changedBlocks,
         note: actionsApplied.length > 0
-          ? `Autofix aplicado: ${actionsApplied.join(" | ")}`
-          : "Sin cambios de autofix, se mantiene draft actual.",
+          ? `Autofix aplicado: ${actionsApplied.join(" | ")}; esperando generacion real.`
+          : "Sin cambios de autofix; esperando generacion real.",
       });
 
-      await generateFromDraft(nextDraft, "Pipeline autofix premium + QA");
-      setGenerationFeedback("Autofix aplicado y QA abierto para validacion final.");
-      setLocation(`/qa/${parseInt(pageIdFromRoute, 10)}`);
+      const data = await generateFromDraft(nextDraft, "Pipeline autofix premium + QA");
+      const blocked = isGenerationBlocked(data);
+      setGenerationFeedback(blocked ? describeGenerationResult(data) : "Autofix aplicado y QA abierto para validacion final.");
+      pushActionLog({
+        kind: "autofix",
+        action: "Resultado Autofix + QA",
+        status: blocked ? "error" : "ok",
+        beforeTotal,
+        afterTotal: blocked ? null : (data?.qaDelta?.after ?? afterTotal),
+        delta: blocked ? null : (data?.qaDelta?.delta ?? (beforeTotal != null && afterTotal != null ? Number((afterTotal - beforeTotal).toFixed(1)) : null)),
+        changedBlocks,
+        note: blocked ? describeGenerationResult(data) : "Generacion real consolidada; QA puede revisar la pagina.",
+      });
+      if (!blocked) {
+        setLocation(`/qa/${parseInt(pageIdFromRoute, 10)}`);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "No se pudo ejecutar autofix + QA.";
       setGenerationFeedback(message);
@@ -2248,21 +2345,22 @@ export default function ComposerPage() {
     setGenerationFeedback(null);
     setQaDelta(null);
     try {
-      await generateFromDraft(
+      const data = await generateFromDraft(
         editableDraft,
         `Remediacion post-render: ${postRenderRemediation.label}`,
         postRenderRemediation.scope ?? "full",
       );
-      setGenerationFeedback(`Remediacion post-render aplicada: ${postRenderRemediation.label}.`);
+      const blocked = isGenerationBlocked(data);
+      setGenerationFeedback(blocked ? describeGenerationResult(data) : `Remediacion post-render aplicada: ${postRenderRemediation.label}.`);
       pushActionLog({
         kind: "shortcut",
         action: postRenderRemediation.actionLabel,
-        status: "ok",
+        status: blocked ? "error" : "ok",
         beforeTotal: activeQaTotal,
-        afterTotal: null,
-        delta: null,
+        afterTotal: blocked ? null : (data?.qaDelta?.after ?? null),
+        delta: blocked ? null : (data?.qaDelta?.delta ?? null),
         changedBlocks: 0,
-        note: postRenderRemediation.reason,
+        note: blocked ? describeGenerationResult(data) : postRenderRemediation.reason,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "No se pudo aplicar la remediacion post-render.";
@@ -2401,16 +2499,15 @@ export default function ComposerPage() {
     if (data.qaDelta) {
       setQaDelta(data.qaDelta);
     }
-    if (data.imageGenerated === false) {
-      const failure = data.imageFailure;
-      setGenerationFeedback(
-        failure
-          ? `Imagen no generada: ${failure.code}. ${failure.message}${failure.promptHash ? ` Prompt ${failure.promptHash}.` : ""}`
-          : `Imagen no generada: ${data.imageError ?? "fallback placeholder sin detalle."}`,
-      );
+    const blocked = isGenerationBlocked(data);
+    if (blocked) {
+      setGenerationFeedback(describeGenerationResult(data));
     }
     await refreshLockedArtifacts(proposal.pageId);
     setCanvasMode("real");
+    if (blocked) {
+      throw new Error(describeGenerationResult(data));
+    }
     return data;
   }
 
@@ -2477,21 +2574,24 @@ export default function ComposerPage() {
       const afterTotal = afterScores.total;
       setEditableDraft(nextDraft);
       setGeneratingFromComposer(true);
-      await generateFromDraft(
+      const data = await generateFromDraft(
         nextDraft,
         `Atajo operativo aplicado: ${effectiveLabel}`,
         effectiveAction === "compact_rail" ? "exam_rail" : "technical_core",
       );
-      setQuickActionFeedback(`Atajo "${effectiveLabel}" aplicado + regeneracion completada.`);
+      const blocked = isGenerationBlocked(data);
+      setQuickActionFeedback(blocked
+        ? `Atajo "${effectiveLabel}" aplicado, pero la regeneracion quedo bloqueada.`
+        : `Atajo "${effectiveLabel}" aplicado + regeneracion completada.`);
       pushActionLog({
         kind: "shortcut",
         action: effectiveLabel,
-        status: "ok",
+        status: blocked ? "error" : "ok",
         beforeTotal,
-        afterTotal,
-        delta: beforeTotal != null ? Number((afterTotal - beforeTotal).toFixed(1)) : null,
+        afterTotal: blocked ? null : afterTotal,
+        delta: !blocked && beforeTotal != null ? Number((afterTotal - beforeTotal).toFixed(1)) : null,
         changedBlocks,
-        note: "Aplicado y regenerado.",
+        note: blocked ? describeGenerationResult(data) : "Aplicado y regenerado.",
       });
     } catch (err) {
       setQuickActionFeedback(err instanceof Error ? err.message : `Fallo al ejecutar atajo "${effectiveLabel}".`);
@@ -2512,7 +2612,7 @@ export default function ComposerPage() {
   }
 
   function updateDeck(mutator: (deck: EditorialCardDeck) => EditorialCardDeck, actionLabel: string) {
-    if (!editableDraft || !proposal) return;
+    if (!editableDraft || !proposal || !pageSummary) return;
     const baseDeck = editableDraft.editorialDeck
       ?? (pageSummary ? buildClientEditorialDeck(pageSummary, editableDraft.family) : null);
     if (!baseDeck) return;
@@ -2538,7 +2638,6 @@ export default function ComposerPage() {
       delta: beforeTotal != null ? Number((afterScores.total - beforeTotal).toFixed(1)) : null,
       changedBlocks: 0,
       note: "Operacion sobre deck editorial; guardar y generar para consolidar en QA servidor.",
-      pendingSync: true,
     });
   }
 
@@ -2573,34 +2672,36 @@ export default function ComposerPage() {
   }
 
   function addSelectiveGroundingCard() {
-    if (!editableDraft || !pageSummary) return;
-    updateDeck((deck) => {
-      const existing = new Set(deck.cards.map((card) => card.id));
-      const id = `grounding-${Date.now().toString(36)}`;
-      const sourceText = pageSummary.traps[0]?.correction || pageSummary.context;
-      const card = makeEditorialCard({
-        pageId: pageSummary.pageId,
-        id: existing.has(id) ? `${id}-2` : id,
-        role: "micro_case",
-        targetZone: "complement",
-        status: "selected",
-        title: "Insight puntual",
-        claim: compactComposerSentence(sourceText, 112),
-        explanation: "Carta creada para pedir grounding puntual del tema antes de producir en lote.",
-        diagramIntent: "micro-caso tecnico con condicion, decision y consecuencia visual",
-        examSignal: pageSummary.guideQuestion,
-        formatAffinity: ["visual_atlas", "master_book", "question_bank", "rapid_review"],
-      });
-      const cards = [...deck.cards, { ...card, sourceRefs: ["grounding-selectivo-pendiente"] }];
-      return {
-        ...deck,
-        source: "composer",
-        generatedAt: new Date().toISOString(),
-        cards,
-        selectedCardIds: cards.filter((item) => item.status === "selected").map((item) => item.id),
-        rejectedCardIds: cards.filter((item) => item.status === "rejected").map((item) => item.id),
-      };
-    }, "Buscar grounding puntual");
+    if (!editableDraft || !proposal) return;
+    const nextPlan: DensityPlan = {
+      ...(editableDraft.densityPlan ?? evaluateClientDensityPlan(editableDraft.editorialDeck ?? buildClientEditorialDeck(pageSummary!, editableDraft.family), editableDraft.blocks)),
+      groundingNeeded: true,
+      groundingRationale: "Grounding real pendiente: se requiere scraping/actualizacion para aportar insight tecnico, ejemplo de examen y relacion causal no repetida.",
+      problems: Array.from(new Set([
+        ...(editableDraft.densityPlan?.problems ?? []),
+        "contenido insuficiente para recomponer sin filler; grounding selectivo requerido",
+      ])),
+      recommendations: Array.from(new Set([
+        ...(editableDraft.densityPlan?.recommendations ?? []),
+        "No regenerar como mejora premium hasta incorporar grounding real al deck.",
+      ])),
+    };
+    setEditableDraft({
+      ...editableDraft,
+      densityPlan: nextPlan,
+      layoutRecipe: nextPlan.layoutRecipe,
+    });
+    setGenerationFeedback("Grounding puntual marcado como pendiente real. No se agrego carta de relleno ni se modifico el upper visual.");
+    pushActionLog({
+      kind: "shortcut",
+      action: "Grounding puntual requerido",
+      status: "info",
+      beforeTotal: projectedQaScores?.total ?? null,
+      afterTotal: projectedQaScores?.total ?? null,
+      delta: 0,
+      changedBlocks: 0,
+      note: "Pendiente de grounding real: no se simulo contenido con el seed actual.",
+    });
   }
 
   function diagnoseImageGeneration() {
@@ -2660,22 +2761,33 @@ export default function ComposerPage() {
       pushActionLog({
         kind: "generate",
         action: `Objetivo editorial: ${effectiveLabel}`,
-        status: "ok",
+        status: "info",
         beforeTotal,
         afterTotal,
         delta: beforeTotal != null && afterTotal != null ? Number((afterTotal - beforeTotal).toFixed(1)) : null,
         changedBlocks,
-        note: `Playbook aplicado (${effectiveActions.join(" -> ")}) + regeneracion ${effectiveScope}.`,
+        note: `Draft ajustado (${effectiveActions.join(" -> ")}); esperando resultado real de generacion ${effectiveScope}.`,
       });
 
-      await generateFromDraft(
+      const data = await generateFromDraft(
         nextDraft,
         `Objetivo editorial: ${effectiveLabel}`,
         effectiveScope,
       );
 
-      setGenerationFeedback(`Objetivo ejecutado: ${effectiveLabel}.`);
-      if (objective.openQa) {
+      const blocked = isGenerationBlocked(data);
+      setGenerationFeedback(blocked ? describeGenerationResult(data) : `Objetivo ejecutado: ${effectiveLabel}.`);
+      pushActionLog({
+        kind: "generate",
+        action: `Resultado objetivo: ${effectiveLabel}`,
+        status: blocked ? "error" : "ok",
+        beforeTotal,
+        afterTotal: blocked ? null : afterTotal,
+        delta: !blocked && beforeTotal != null && afterTotal != null ? Number((afterTotal - beforeTotal).toFixed(1)) : null,
+        changedBlocks,
+        note: blocked ? describeGenerationResult(data) : "Generacion real consolidada y QA recargado.",
+      });
+      if (!blocked && objective.openQa) {
         setLocation(`/qa/${parseInt(pageIdFromRoute, 10)}`);
       }
     } catch (err) {
@@ -2747,18 +2859,17 @@ export default function ComposerPage() {
     setQaDelta(null);
     try {
       const data = await generateFromDraft(editableDraft, "Draft aplicado para generacion desde Composer");
-      if (data?.imageGenerated !== false) {
-        setGenerationFeedback("Generacion completada desde Composer y QA recargado.");
-      }
+      const blocked = isGenerationBlocked(data);
+      setGenerationFeedback(describeGenerationResult(data));
       pushActionLog({
         kind: "generate",
         action: "Generar con draft",
         status: "ok",
         beforeTotal: projectedQaScores?.total ?? null,
-        afterTotal: projectedQaScores?.total ?? null,
-        delta: qaDelta?.delta ?? null,
+        afterTotal: blocked ? null : (data?.qaDelta?.after ?? null),
+        delta: blocked ? null : (data?.qaDelta?.delta ?? null),
         changedBlocks: editableDraft.blocks.length,
-        note: "Generación ejecutada.",
+        note: blocked ? describeGenerationResult(data) : "Generacion real ejecutada y QA recargado.",
       });
     } catch (err) {
       setGenerationFeedback(err instanceof Error ? err.message : "No se pudo generar desde Composer");
@@ -2784,21 +2895,22 @@ export default function ComposerPage() {
     setGenerationFeedback(null);
     setQaDelta(null);
     try {
-      await generateFromDraft(
+      const data = await generateFromDraft(
         editableDraft,
         `Regeneracion dirigida desde Composer: ${label}`,
         scope,
       );
-      setGenerationFeedback(`Regeneracion dirigida completada (${label}).`);
+      const blocked = isGenerationBlocked(data);
+      setGenerationFeedback(blocked ? describeGenerationResult(data) : `Regeneracion dirigida completada (${label}).`);
       pushActionLog({
         kind: "generate",
         action: `Regenerar: ${label}`,
-        status: "ok",
+        status: blocked ? "error" : "ok",
         beforeTotal: projectedQaScores?.total ?? null,
-        afterTotal: projectedQaScores?.total ?? null,
-        delta: qaDelta?.delta ?? null,
+        afterTotal: blocked ? null : (data?.qaDelta?.after ?? null),
+        delta: blocked ? null : (data?.qaDelta?.delta ?? null),
         changedBlocks: editableDraft.blocks.length,
-        note: `Scope ${scope} aplicado al pipeline de generacion.`,
+        note: blocked ? describeGenerationResult(data) : `Scope ${scope} aplicado al pipeline de generacion.`,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : `No se pudo regenerar ${label}.`;
@@ -2830,21 +2942,22 @@ export default function ComposerPage() {
     setGenerationFeedback(null);
     setQaDelta(null);
     try {
-      await generateFromDraft(
+      const data = await generateFromDraft(
         editableDraft,
         `Regeneracion contextual por bloque seleccionado: ${labelBlockType(blockType)} (${selectedBlock.id})`,
         scope,
       );
-      setGenerationFeedback(`Regeneracion contextual completada (${label}) desde bloque ${labelBlockType(blockType)}.`);
+      const blocked = isGenerationBlocked(data);
+      setGenerationFeedback(blocked ? describeGenerationResult(data) : `Regeneracion contextual completada (${label}) desde bloque ${labelBlockType(blockType)}.`);
       pushActionLog({
         kind: "generate",
         action: `Bloque: ${labelBlockType(blockType)}`,
-        status: "ok",
+        status: blocked ? "error" : "ok",
         beforeTotal: projectedQaScores?.total ?? null,
-        afterTotal: projectedQaScores?.total ?? null,
-        delta: qaDelta?.delta ?? null,
+        afterTotal: blocked ? null : (data?.qaDelta?.after ?? null),
+        delta: blocked ? null : (data?.qaDelta?.delta ?? null),
         changedBlocks: editableDraft.blocks.length,
-        note: `Regeneracion contextual en scope ${scope}.`,
+        note: blocked ? describeGenerationResult(data) : `Regeneracion contextual en scope ${scope}.`,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "No se pudo regenerar desde el bloque seleccionado.";
@@ -3119,10 +3232,37 @@ export default function ComposerPage() {
                   <div>
                     <p className="text-[8px] font-black uppercase tracking-widest text-cyan-300/75">Composer Reset</p>
                     <h2 className="text-lg font-black text-white mt-1">Mesa editorial de pagina</h2>
-                    <p className="text-[11px] text-white/52 mt-1 max-w-3xl">
-                      Una sola lectura: preview grande, problema dominante y tres acciones que deben cambiar la salida final.
-                    </p>
+                  <p className="text-[11px] text-white/52 mt-1 max-w-3xl">
+                    Una sola lectura: preview grande, problema dominante y tres acciones que deben cambiar la salida final.
+                  </p>
+                  <div className={cn(
+                    "mt-3 max-w-4xl rounded-sm border px-3 py-2",
+                    operationalRead.severity === "critical"
+                      ? "border-red-500/25 bg-red-500/8"
+                      : operationalRead.severity === "warning"
+                        ? "border-amber-500/25 bg-amber-500/8"
+                        : "border-emerald-500/25 bg-emerald-500/8",
+                  )}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[8px] font-black uppercase tracking-widest text-white/35">Lectura operativa</p>
+                        <p className="text-[11px] font-bold text-white mt-1">{operationalRead.status}</p>
+                      </div>
+                      <span className={cn(
+                        "shrink-0 rounded-sm border px-2 py-1 text-[8px] font-bold",
+                        operationalRead.severity === "critical"
+                          ? "border-red-400/25 text-red-200"
+                          : operationalRead.severity === "warning"
+                            ? "border-amber-400/25 text-amber-200"
+                            : "border-emerald-400/25 text-emerald-200",
+                      )}>
+                        QA real primero
+                      </span>
+                    </div>
+                    <p className="mt-2 text-[10px] leading-relaxed text-white/70">{operationalRead.problem}</p>
+                    <p className="mt-1 text-[10px] leading-relaxed text-cyan-100/80">Siguiente accion: {operationalRead.nextAction}</p>
                   </div>
+                </div>
                   <div className="grid grid-cols-3 gap-2 min-w-[360px]">
                     <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] px-3 py-2">
                       <p className="text-[8px] text-white/30 uppercase tracking-widest">QA oficial</p>

@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { composerDraftsTable, db } from "@workspace/db";
 
 import { getSeed } from "../data/page-seeds";
+import { VISUAL_ATLAS_V24_CONTRACT } from "../domain/editorial-contracts/visual-atlas-v24";
 import { generateVisualAtlasPage } from "../services/generation/visual-atlas/generate-visual-atlas-page";
 import { computeQaDimensionScores } from "../services/qa/visual-atlas/validate-page-html";
 import type { VisualAtlasPageData } from "../lib/visual-atlas-types";
@@ -417,6 +418,18 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
   if (!process.env.OPENAI_API_KEY) {
     res.status(503).json({
       error: "OPENAI_API_KEY no configurada en Secrets. Agregala para ejecutar generacion real.",
+      generationStatus: "image_failed",
+      imageGenerated: false,
+      imageAttempted: false,
+      imageFailure: {
+        code: "missing_api_key",
+        message: "OPENAI_API_KEY no esta configurada en Secrets. La pagina queda bloqueada para evaluacion editorial.",
+        providerError: null,
+        retryable: false,
+        model: VISUAL_ATLAS_V24_CONTRACT.generation.imageModel,
+        quality: VISUAL_ATLAS_V24_CONTRACT.generation.imageQuality,
+        promptHash: "preflight-not-run",
+      },
       demo: true,
     });
     return;
@@ -427,7 +440,7 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
     pageNumber: pageId,
     title: seedResult.data.title,
     domain: seedResult.data.domainLabel,
-    batch: `Batch ${seedResult.data.batch}`,
+    batch: seedResult.data.batchLabel,
     context: seedResult.data.context,
   });
   const eventPageNumber = pageRecord?.pageNumber ?? pageId;
@@ -456,6 +469,7 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
       res.status(409).json({
         error: "No hay draft composer guardado para esta pagina. Guarda el draft antes de generar desde Composer.",
         code: "composer_draft_missing",
+        generationStatus: "composer_draft_missing",
       });
       return;
     }
@@ -501,6 +515,7 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
         userId: authUser.id,
         userName: authUser.displayName,
         imageGenerated: result.imageGenerated,
+        generationStatus: result.generationStatus,
         generationSource: useComposerDraft ? "composer_draft" : "locked_seed",
         textModel: result.textModel,
         imageModel: result.imageModel,
@@ -549,8 +564,10 @@ router.post("/studio/generate-visual-atlas-page", async (req, res): Promise<void
         userId: authUser.id,
         userName: authUser.displayName,
         result: result.imageGenerated
-          ? `Generacion completada (${useComposerDraft ? "fuente: Composer draft" : "fuente: Locked seed"}) con imagen real y QA servidor ${(qaDims.avg * 10).toFixed(0)}/100`
-          : `Generacion completada (${useComposerDraft ? "fuente: Composer draft" : "fuente: Locked seed"}) con placeholder por falla de imagen; QA servidor ${(qaDims.avg * 10).toFixed(0)}/100`,
+          ? result.generationStatus === "post_render_failed"
+            ? `Generacion bloqueada (${useComposerDraft ? "fuente: Composer draft" : "fuente: Locked seed"}): post-render no medible`
+            : `Generacion completada (${useComposerDraft ? "fuente: Composer draft" : "fuente: Locked seed"}) con imagen real y QA servidor ${(qaDims.avg * 10).toFixed(0)}/100`
+          : `Generacion bloqueada (${useComposerDraft ? "fuente: Composer draft" : "fuente: Locked seed"}): falla de imagen; QA servidor ${(qaDims.avg * 10).toFixed(0)}/100`,
         note: [
           result.imageError ? `error=${result.imageError}` : null,
           "qa_source=server",

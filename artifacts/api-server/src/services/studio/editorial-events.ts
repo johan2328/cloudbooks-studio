@@ -1,5 +1,6 @@
 import { db, activityLogsTable, generationRunsTable, pagesTable, qaRecordsTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import type { VisualAtlasGenerationStatus } from "../../lib/visual-atlas-types";
 
 interface AuthUser {
   id: number | null;
@@ -85,6 +86,7 @@ export async function persistGenerationResult(args: {
   userId: number | null;
   userName: string;
   imageGenerated: boolean;
+  generationStatus?: VisualAtlasGenerationStatus;
   generationSource: "locked_seed" | "composer_draft";
   textModel: string;
   imageModel: string | null;
@@ -105,7 +107,11 @@ export async function persistGenerationResult(args: {
   await db.insert(generationRunsTable).values({
     pageId: args.pageDbId,
     batch: args.batch,
-    status: args.imageGenerated ? "completed_real_visual" : "completed_placeholder",
+    status: args.imageGenerated
+      ? args.generationStatus === "post_render_failed"
+        ? "blocked_post_render"
+        : "completed_real_visual"
+      : "blocked_image",
     model: [args.textModel, args.imageModel].filter(Boolean).join(" + "),
     promptTokens: args.promptTokens ?? null,
     completionTokens: args.completionTokens ?? null,
@@ -149,8 +155,10 @@ export async function persistGenerationResult(args: {
     userId: args.userId,
     userName: args.userName,
     result: args.imageGenerated
-      ? `Generacion completada (${args.generationSource === "composer_draft" ? "fuente: Composer draft" : "fuente: Locked seed"}) con imagen real y QA servidor ${(args.qa.total * 10).toFixed(0)}/100`
-      : `Generacion completada (${args.generationSource === "composer_draft" ? "fuente: Composer draft" : "fuente: Locked seed"}) con placeholder por falla de imagen; QA servidor ${(args.qa.total * 10).toFixed(0)}/100`,
+      ? args.generationStatus === "post_render_failed"
+        ? `Generacion bloqueada (${args.generationSource === "composer_draft" ? "fuente: Composer draft" : "fuente: Locked seed"}): imagen real sin medicion post-render valida`
+        : `Generacion completada (${args.generationSource === "composer_draft" ? "fuente: Composer draft" : "fuente: Locked seed"}) con imagen real y QA servidor ${(args.qa.total * 10).toFixed(0)}/100`
+      : `Generacion bloqueada (${args.generationSource === "composer_draft" ? "fuente: Composer draft" : "fuente: Locked seed"}): falla de imagen; QA maximo ${(args.qa.total * 10).toFixed(0)}/100`,
     note: [
       args.error ? `error=${args.error}` : null,
       `qa_source=server`,

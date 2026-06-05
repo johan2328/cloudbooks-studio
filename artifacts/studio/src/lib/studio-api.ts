@@ -4,6 +4,8 @@ export interface StudioOutputStatus {
   pageId: string;
   hasOutput: boolean;
   generationMode: GenerationMode;
+  generationStatus: VisualAtlasGenerationStatus | null;
+  imageFailure: ImageGenerationFailure | null;
   templateApproach: string | null;
   layoutRevision: string | null;
   currentLayoutRevision: string;
@@ -368,6 +370,12 @@ export interface ImageGenerationFailure {
   quality: string;
   promptHash: string;
 }
+
+export type VisualAtlasGenerationStatus =
+  | "image_generated"
+  | "image_failed"
+  | "composer_draft_missing"
+  | "post_render_failed";
 
 export interface DensityPlan {
   version: "useful-density-agent-v1";

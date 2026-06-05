@@ -22,6 +22,12 @@ export interface ImageGenerationFailure {
   promptHash: string;
 }
 
+export type VisualAtlasGenerationStatus =
+  | "image_generated"
+  | "image_failed"
+  | "composer_draft_missing"
+  | "post_render_failed";
+
 export interface TrapItem {
   wrong: string;
   correction: string;

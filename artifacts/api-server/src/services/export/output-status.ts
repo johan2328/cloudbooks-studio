@@ -3,6 +3,7 @@ import { existsSync } from "fs";
 import { join } from "path";
 
 import { VISUAL_ATLAS_V24_CONTRACT } from "../../domain/editorial-contracts/visual-atlas-v24";
+import type { ImageGenerationFailure, VisualAtlasGenerationStatus } from "../../lib/visual-atlas-types";
 import { pageOutputDir, pagePublicPath } from "./paths";
 
 export type GenerationMode = "openai_image" | "placeholder_image" | "fallback_html" | "none";
@@ -20,6 +21,8 @@ export interface OutputStatus {
     approved: boolean;
   };
   generationMode: GenerationMode;
+  generationStatus: VisualAtlasGenerationStatus | null;
+  imageFailure: ImageGenerationFailure | null;
   templateApproach: string | null;
   layoutRevision: string | null;
   currentLayoutRevision: string;
@@ -49,6 +52,8 @@ export async function readOutputStatus(pageId: string): Promise<OutputStatus> {
 
   const hasAny = Object.values(files).some(Boolean);
   let generationMode: GenerationMode = "none";
+  let generationStatus: VisualAtlasGenerationStatus | null = null;
+  let imageFailure: ImageGenerationFailure | null = null;
   let generatedAt: string | null = null;
   let templateApproach: string | null = null;
   let layoutRevision: string | null = null;
@@ -62,6 +67,8 @@ export async function readOutputStatus(pageId: string): Promise<OutputStatus> {
         generatedAt?: string;
         templateApproach?: string;
         layoutRevision?: string;
+        generationStatus?: VisualAtlasGenerationStatus;
+        imageFailure?: ImageGenerationFailure | null;
       };
       const mode = metadata.generationMode;
       if (mode === "openai_image" || mode === "placeholder_image" || mode === "fallback_html") {
@@ -70,6 +77,8 @@ export async function readOutputStatus(pageId: string): Promise<OutputStatus> {
       generatedAt = metadata.generatedAt ?? null;
       templateApproach = metadata.templateApproach ?? null;
       layoutRevision = metadata.layoutRevision ?? null;
+      generationStatus = metadata.generationStatus ?? null;
+      imageFailure = metadata.imageFailure ?? null;
     } catch {
       // metadata corrupto: se mantiene el estado por defecto
     }
@@ -98,6 +107,8 @@ export async function readOutputStatus(pageId: string): Promise<OutputStatus> {
     hasOutput: hasAny,
     files,
     generationMode,
+    generationStatus,
+    imageFailure,
     templateApproach,
     layoutRevision,
     currentLayoutRevision: VISUAL_ATLAS_V24_CONTRACT.renderRevision,

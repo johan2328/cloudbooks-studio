@@ -50,7 +50,7 @@ router.post("/studio/approve-page/:pageId", async (req, res): Promise<void> => {
       pageNumber: pageId,
       title: seedResult.data.title,
       domain: seedResult.data.domainLabel,
-      batch: `Batch ${seedResult.data.batch}`,
+      batch: seedResult.data.batchLabel,
       context: seedResult.data.context,
     });
   }
