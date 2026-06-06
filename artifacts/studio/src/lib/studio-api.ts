@@ -314,6 +314,7 @@ export type EditorialCardZone = "primary" | "complement" | "rail" | "reserve";
 export interface EditorialCard {
   id: string;
   pageId: string;
+  sourceSnapshotId?: number;
   role: EditorialCardRole;
   status: "candidate" | "selected" | "rejected";
   targetZone: EditorialCardZone;
@@ -331,8 +332,10 @@ export interface EditorialCard {
 export interface EditorialCardDeck {
   version: "editorial-card-deck-v1";
   pageId: string;
-  source: "seed" | "composer" | "grounding";
+  source: "seed" | "composer" | "grounding" | "grounding_locked" | "grounding_candidate";
   generatedAt: string;
+  contentCutId?: string;
+  snapshotIds?: number[];
   cards: EditorialCard[];
   selectedCardIds: string[];
   rejectedCardIds: string[];
@@ -632,11 +635,18 @@ export async function logComposerAutofix(pageId: string, payload: {
 export async function runComposerSelectiveGrounding(pageId: string): Promise<{
   success: boolean;
   pageId: string;
-  status: "grounding_ready";
-  ttlDays: number;
-  expiresAt: string;
+  status: "grounding_ready" | "grounding_candidate" | "grounding_locked";
+  checkPolicy: string;
+  contentCutId: string | null;
+  snapshotStatus: "locked" | "candidate" | "mixed";
+  sourceChanged: boolean;
+  candidateCreated: boolean;
+  checkedAt: string;
+  expiresAt: string | null;
   sourceRefs: string[];
+  snapshotIds: number[];
   cards: EditorialCard[];
+  deck: EditorialCardDeck | null;
   message: string;
 }> {
   const res = await fetch(`/api/studio/composer/grounding/${pageId}`, {
@@ -650,11 +660,18 @@ export async function runComposerSelectiveGrounding(pageId: string): Promise<{
   return res.json() as Promise<{
     success: boolean;
     pageId: string;
-    status: "grounding_ready";
-    ttlDays: number;
-    expiresAt: string;
+    status: "grounding_ready" | "grounding_candidate" | "grounding_locked";
+    checkPolicy: string;
+    contentCutId: string | null;
+    snapshotStatus: "locked" | "candidate" | "mixed";
+    sourceChanged: boolean;
+    candidateCreated: boolean;
+    checkedAt: string;
+    expiresAt: string | null;
     sourceRefs: string[];
+    snapshotIds: number[];
     cards: EditorialCard[];
+    deck: EditorialCardDeck | null;
     message: string;
   }>;
 }

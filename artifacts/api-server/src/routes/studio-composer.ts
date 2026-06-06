@@ -4,7 +4,11 @@ import { activityLogsTable, composerDraftsTable, db, generationRunsTable, pagesT
 
 import { getSeed, listSeeds } from "../data/page-seeds";
 import { buildComposerProposal } from "../domain/composer/proposals";
-import type { EditorialCard } from "../domain/editorial-cards/types";
+import {
+  acceptLatestCandidateSnapshot,
+  runSelectiveGroundingWithSnapshots,
+  sourceUrlsForPage,
+} from "../services/grounding/source-grounding";
 import { ensurePageByNumber, getAuthUserFromHeader, insertEditorialEvent } from "../services/studio/editorial-events";
 
 const router = Router();
@@ -126,62 +130,6 @@ function buildStudioBaseUrl(req: { protocol: string; get(name: string): string |
   const forwardedProto = typeof req.headers["x-forwarded-proto"] === "string" ? req.headers["x-forwarded-proto"] : "";
   const proto = forwardedProto || req.protocol || "http";
   return `${proto}://${host}`;
-}
-
-function compact(value: string, maxChars: number): string {
-  const normalized = value.replace(/\s+/g, " ").trim();
-  if (normalized.length <= maxChars) return normalized;
-  return normalized.slice(0, maxChars).replace(/\s+\S*$/, "").trim();
-}
-
-function buildSelectiveGroundingCards(pageId: string): { cards: EditorialCard[]; expiresAt: string; sourceRefs: string[] } {
-  const seed = getSeed(pageId);
-  if (!seed.found) return { cards: [], expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), sourceRefs: [] };
-  const data = seed.data;
-  const firstModule = data.visualModules[0];
-  const secondModule = data.visualModules[1] ?? firstModule;
-  const answer = data.autocheck.options[data.autocheck.correctOption] ?? "respuesta correcta";
-  const sourceRefs = [
-    "mslearn:azure-container-registry",
-    `cloudbooks:ai-200:${pageId}:selective-grounding-v1`,
-  ];
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  const base = {
-    pageId,
-    status: "selected" as const,
-    targetZone: "complement" as const,
-    sourceRefs,
-    formatAffinity: ["visual_atlas", "exam_traps", "question_bank", "rapid_review"] as EditorialCard["formatAffinity"],
-    densityScore: 9.0,
-    visualRisk: "low" as const,
-  };
-
-  return {
-    expiresAt,
-    sourceRefs,
-    cards: [
-      {
-        ...base,
-        id: `grounding-exam-signal-${pageId}`,
-        role: "exam_signal",
-        title: "Senal de examen",
-        claim: compact(data.traps[0]?.correction ?? firstModule.description, 104),
-        explanation: compact(`Relaciona ${firstModule.title} con la decision evaluable: ${data.guideQuestion}`, 170),
-        diagramIntent: "chip visual de decision con condicion, senal y resultado esperado",
-        examSignal: compact(data.traps[0]?.wrong ?? data.guideQuestion, 110),
-      },
-      {
-        ...base,
-        id: `grounding-micro-case-${pageId}`,
-        role: "micro_case",
-        title: "Caso minimo",
-        claim: compact(`Situacion: ${secondModule.title}. Decision correcta: ${answer}.`, 104),
-        explanation: compact(data.autocheck.explanation, 170),
-        diagramIntent: "micro-caso con actor, restriccion, decision y consecuencia en una sola lectura",
-        examSignal: compact(data.autocheck.question, 110),
-      },
-    ],
-  };
 }
 
 async function processBatchRun(args: {
@@ -514,7 +462,19 @@ router.post("/studio/composer/grounding/:pageId", async (req, res): Promise<void
   }
 
   const authUser = await getAuthUserFromHeader(req.headers.authorization);
-  const grounding = buildSelectiveGroundingCards(pageId);
+  let grounding: Awaited<ReturnType<typeof runSelectiveGroundingWithSnapshots>>;
+  try {
+    grounding = await runSelectiveGroundingWithSnapshots(pageId, authUser);
+  } catch (err) {
+    res.status(502).json({
+      error: "grounding_source_check_failed",
+      pageId,
+      detail: err instanceof Error ? err.message : String(err),
+      checkPolicy: "check_source_change_only",
+      message: "No se pudo verificar Microsoft Learn. No se crea filler ni se reemplaza el corte editorial locked.",
+    });
+    return;
+  }
 
   await insertEditorialEvent({
     actionType: "composer_grounding_requested",
@@ -522,20 +482,69 @@ router.post("/studio/composer/grounding/:pageId", async (req, res): Promise<void
     pageTitle: seed.data.title,
     userId: authUser.id,
     userName: authUser.displayName,
-    result: `Grounding selectivo preparado (${grounding.cards.length} carta(s))`,
-    note: `ttl=7d | refs=${grounding.sourceRefs.join(",")}`,
+    result: `Grounding selectivo verificado (${grounding.cards.length} carta(s))`,
+    note: [
+      `policy=${grounding.checkPolicy}`,
+      `source_changed=${grounding.sourceChanged}`,
+      `candidate_created=${grounding.candidateCreated}`,
+      grounding.contentCutId ? `content_cut=${grounding.contentCutId}` : null,
+      `refs=${grounding.sourceRefs.join(",")}`,
+    ].filter(Boolean).join(" | "),
   });
 
   res.status(200).json({
     success: true,
     pageId,
-    status: "grounding_ready",
-    ttlDays: 7,
+    status: grounding.status,
+    checkPolicy: grounding.checkPolicy,
+    contentCutId: grounding.contentCutId,
+    snapshotStatus: grounding.snapshotStatus,
+    sourceChanged: grounding.sourceChanged,
+    candidateCreated: grounding.candidateCreated,
+    checkedAt: grounding.checkedAt,
     expiresAt: grounding.expiresAt,
     sourceRefs: grounding.sourceRefs,
+    snapshotIds: grounding.snapshotIds,
     cards: grounding.cards,
-    message: "Grounding selectivo listo como insumo editorial; no se muestra como texto bruto en la pagina.",
+    deck: grounding.deck,
+    message: grounding.message,
   });
+});
+
+router.post("/studio/composer/grounding/:pageId/accept-candidate", async (req, res): Promise<void> => {
+  const pageId = normalizePageId(req.params.pageId);
+  if (!pageId) {
+    res.status(400).json({ error: "composer_page_invalid", detail: "pageId invalido." });
+    return;
+  }
+  const seed = getSeed(pageId);
+  if (!seed.found) {
+    res.status(404).json({
+      error: "composer_seed_missing",
+      pageId,
+      availableSeeds: seed.availableSeeds,
+    });
+    return;
+  }
+  const sourceUrl = typeof req.body?.sourceUrl === "string" && req.body.sourceUrl.trim()
+    ? req.body.sourceUrl.trim()
+    : sourceUrlsForPage(pageId)[0];
+  const authUser = await getAuthUserFromHeader(req.headers.authorization);
+  const accepted = await acceptLatestCandidateSnapshot(pageId, sourceUrl);
+  if (!accepted) {
+    res.status(404).json({ error: "grounding_candidate_missing", pageId, sourceUrl });
+    return;
+  }
+  await insertEditorialEvent({
+    actionType: "grounding_snapshot_accepted",
+    pageNumber: pageId,
+    pageTitle: seed.data.title,
+    userId: authUser.id,
+    userName: authUser.displayName,
+    result: `Snapshot candidato aceptado como locked #${accepted.id}`,
+    note: `source=${accepted.sourceUrl} | version=${accepted.snapshotVersion} | hash=${accepted.contentHash}`,
+  });
+  res.status(200).json({ success: true, pageId, sourceUrl, snapshot: accepted });
 });
 
 router.post("/studio/composer/autofix/:pageId", async (req, res): Promise<void> => {

@@ -194,6 +194,7 @@ export function buildUpperVisualPrompt(data: VisualAtlasPageData): string {
       `   claim: ${card.claim}`,
       `   diagram: ${card.diagramIntent}`,
       `   exam signal: ${card.examSignal}`,
+      `   source snapshot: ${card.sourceSnapshotId ?? "seed"}`,
       `   microcopy limit: one short readable takeaway; do not repeat guide/autocheck`,
     ].join("\n")).join("\n")
     : "";
@@ -236,6 +237,9 @@ Canvas and composition:
 - Use exactly ${contract.upperVisual.requiredCardCount} internal concept cards in a balanced ${contract.upperVisual.requiredGrid} grid.
 - If an Editorial Card Deck is provided, follow its layout recipe instead of inventing filler. Allowed recipe modes: ${contract.upperVisual.flexibleDeckModes.join(", ")}.
 - Current layout recipe: ${layoutRecipe ? `${layoutRecipe.mode}; ${layoutRecipe.promptDirective}` : "4P; four primary cards only"}.
+- Editorial content cut: ${data.editorialDeck?.contentCutId ?? data.contentCut?.contentCutId ?? "seed locked without external snapshot"}.
+- Snapshot ids allowed for grounded facts: ${(data.editorialDeck?.snapshotIds ?? data.contentCut?.snapshotIds ?? []).join(", ") || "none"}.
+- Use only the seed and locked snapshot-backed cards. Do not introduce new factual claims from memory or live knowledge.
 - Useful-density status: ${data.densityPlan ? `${data.densityPlan.status}; next action ${data.densityPlan.nextAction}; ${data.densityPlan.groundingRationale}` : "ready; seed deck only"}.
 - If the useful-density status is grounding_required, do not invent additional technical facts. Improve hierarchy, flow and visual grouping using only selected reliable cards.
 - If the useful-density status is rail_first, do not compensate by enlarging or distorting the upper visual. Keep upper composition natural and leave rail compaction to HTML.

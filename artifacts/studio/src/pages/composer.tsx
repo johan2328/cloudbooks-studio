@@ -2710,22 +2710,47 @@ export default function ComposerPage() {
           sourceRefs: card.sourceRefs.length > 0 ? card.sourceRefs : grounding.sourceRefs,
         })),
       ];
-      const nextDeck: EditorialCardDeck = {
-        ...baseDeck,
-        source: "grounding",
-        generatedAt: new Date().toISOString(),
-        cards: nextCards,
-        selectedCardIds: nextCards.filter((card) => card.status === "selected").map((card) => card.id).slice(0, 8),
-        rejectedCardIds: nextCards.filter((card) => card.status === "rejected").map((card) => card.id),
-      };
+      const nextDeck: EditorialCardDeck = grounding.deck
+        ? {
+            ...grounding.deck,
+            cards: [
+              ...baseDeck.cards
+                .filter((card) => !incomingIds.has(card.id))
+                .map((card) => card.targetZone === "complement" && card.sourceRefs.every((ref) => ref === "seed-editorial" || ref === "composer-draft")
+                  ? { ...card, status: "rejected" as const, targetZone: "reserve" as const, visualRisk: "high" as const }
+                  : card),
+              ...grounding.deck.cards.map((card) => ({
+                ...card,
+                status: "selected" as const,
+                targetZone: card.targetZone === "reserve" ? "complement" as const : card.targetZone,
+                sourceRefs: card.sourceRefs.length > 0 ? card.sourceRefs : grounding.sourceRefs,
+              })),
+            ],
+          }
+        : {
+            ...baseDeck,
+            source: grounding.status === "grounding_candidate" ? "grounding_candidate" : "grounding_locked",
+            generatedAt: new Date().toISOString(),
+            contentCutId: grounding.contentCutId ?? undefined,
+            snapshotIds: grounding.snapshotIds,
+            cards: nextCards,
+            selectedCardIds: nextCards.filter((card) => card.status === "selected").map((card) => card.id).slice(0, 8),
+            rejectedCardIds: nextCards.filter((card) => card.status === "rejected").map((card) => card.id),
+          };
+      nextDeck.selectedCardIds = nextDeck.cards.filter((card) => card.status === "selected").map((card) => card.id).slice(0, 8);
+      nextDeck.rejectedCardIds = nextDeck.cards.filter((card) => card.status === "rejected").map((card) => card.id);
       const nextPlan: DensityPlan = {
         ...evaluateClientDensityPlan(nextDeck, editableDraft.blocks),
         status: "ready",
         groundingNeeded: false,
-        groundingRationale: `Grounding selectivo incorporado hasta ${grounding.expiresAt.slice(0, 10)}.`,
+        groundingRationale: grounding.sourceChanged
+          ? "Se detecto cambio en fuente: se creo snapshot candidato, pero el draft sigue usando el corte locked hasta aprobacion editorial."
+          : "Fuentes verificadas sin cambio: se conserva el corte editorial locked y reproducible.",
         nextAction: "regenerate_with_deck",
         recommendations: Array.from(new Set([
-          "Regenerar con deck enriquecido y medir pagina completa.",
+          grounding.sourceChanged
+            ? "Revisar snapshot candidato antes de reemplazar el corte productivo."
+            : "Regenerar con deck locked y medir pagina completa.",
           ...evaluateClientDensityPlan(nextDeck, editableDraft.blocks).recommendations,
         ])),
       };
@@ -2744,7 +2769,7 @@ export default function ComposerPage() {
         afterTotal: nextPlan.usefulDensityScore,
         delta: projectedQaScores?.total != null ? roundToOne(nextPlan.usefulDensityScore - projectedQaScores.total) : null,
         changedBlocks: grounding.cards.length,
-        note: `TTL 7 dias; refs=${grounding.sourceRefs.join(", ")}`,
+        note: `policy=${grounding.checkPolicy}; cut=${grounding.contentCutId ?? "-"}; changed=${grounding.sourceChanged}; snapshots=${grounding.snapshotIds.join(",")}; refs=${grounding.sourceRefs.join(", ")}`,
       });
     } catch (err) {
       setGenerationFeedback(`Grounding puntual fallo: ${err instanceof Error ? err.message : String(err)}`);

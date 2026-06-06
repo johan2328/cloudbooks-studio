@@ -67,6 +67,12 @@ export interface VisualAtlasPageData {
   contractVersion: string;
   visualModules:  VisualModule[];
   editorialDeck?: EditorialCardDeck;
+  contentCut?: {
+    contentCutId: string;
+    snapshotIds: number[];
+    sourceStatus: "locked" | "candidate" | "mixed";
+    deckHash: string;
+  };
   densityPlan?: DensityPlan;
   layoutRecipe?: VisualAtlasLayoutRecipe;
   imageFailure?: ImageGenerationFailure | null;

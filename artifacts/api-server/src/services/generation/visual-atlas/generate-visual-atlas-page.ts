@@ -1,5 +1,7 @@
+import { createHash } from "crypto";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
+import { db, layoutCheckRunsTable } from "@workspace/db";
 
 import type { VisualAtlasGenerationStatus, VisualAtlasPageData } from "../../../lib/visual-atlas-types";
 import { VISUAL_ATLAS_V24_CONTRACT } from "../../../domain/editorial-contracts/visual-atlas-v24";
@@ -49,6 +51,9 @@ export interface GeneratePageResult {
   qaDimensions: QaDimensionScores;
   layoutEngine: VisualAtlasLayoutEngineReport;
   visualMeasurement: VisualAtlasPageVisualMeasurement;
+  contentCutId: string | null;
+  snapshotIds: number[];
+  deckHash: string | null;
 }
 
 interface Logger {
@@ -82,6 +87,39 @@ function clamp(value: number, min: number, max: number): number {
 
 function roundOne(value: number): number {
   return Math.round(value * 10) / 10;
+}
+
+function hashJson(value: unknown): string {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
+function resolveLayoutCheckStatus(args: {
+  generationStatus: VisualAtlasGenerationStatus;
+  visualMeasurement: VisualAtlasPageVisualMeasurement;
+  layoutEngine: VisualAtlasLayoutEngineReport;
+}): { status: string; primaryAction: string; humanReviewRequired: number; attempt: number; maxAttempts: number } {
+  const attempt = 0;
+  const maxAttempts = 2;
+  if (args.generationStatus === "image_failed") {
+    return { status: "blocked_image", primaryAction: "fix_image_generation", humanReviewRequired: 0, attempt, maxAttempts };
+  }
+  if (args.generationStatus === "post_render_failed") {
+    return { status: "blocked_post_render", primaryAction: "human_review_required", humanReviewRequired: 1, attempt, maxAttempts };
+  }
+  if (args.layoutEngine.batchGate.canBatch && args.visualMeasurement.blockers.length === 0) {
+    return { status: "passed", primaryAction: args.layoutEngine.primaryAction.id, humanReviewRequired: 0, attempt, maxAttempts };
+  }
+  const ambiguous =
+    args.layoutEngine.primaryAction.id === "human_visual_review"
+    || args.visualMeasurement.blockers.length > 1
+    || args.visualMeasurement.score < 7.4;
+  return {
+    status: ambiguous ? "human_review_required" : "measured_needs_fix",
+    primaryAction: ambiguous ? "human_review_required" : args.layoutEngine.primaryAction.id,
+    humanReviewRequired: ambiguous ? 1 : 0,
+    attempt,
+    maxAttempts,
+  };
 }
 
 function applyVisualMeasurementToQaDimensions(
@@ -308,6 +346,34 @@ export async function generateVisualAtlasPage(
     ...visualMeasurement,
     screenshotFile: visualMeasurement.available ? pagePublicPath(pageId, "preview.png") : null,
   };
+  const snapshotIds = pageData.contentCut?.snapshotIds ?? pageData.editorialDeck?.snapshotIds ?? [];
+  const contentCutId = pageData.contentCut?.contentCutId ?? pageData.editorialDeck?.contentCutId ?? null;
+  const deckHash = pageData.contentCut?.deckHash ?? (pageData.editorialDeck ? hashJson({
+    cards: pageData.editorialDeck.cards.map((card) => ({
+      id: card.id,
+      sourceSnapshotId: card.sourceSnapshotId ?? null,
+      claim: card.claim,
+      explanation: card.explanation,
+    })),
+    selectedCardIds: pageData.editorialDeck.selectedCardIds,
+  }) : null);
+  const layoutCheck = resolveLayoutCheckStatus({ generationStatus, visualMeasurement, layoutEngine });
+
+  await db.insert(layoutCheckRunsTable).values({
+    certificationId: "ai-200",
+    pageId,
+    generationRunId: null,
+    contentCutId,
+    attempt: layoutCheck.attempt,
+    maxAttempts: layoutCheck.maxAttempts,
+    status: layoutCheck.status,
+    score: layoutEngine.score,
+    primaryAction: layoutCheck.primaryAction,
+    humanReviewRequired: layoutCheck.humanReviewRequired,
+    evidenceFingerprint: layoutEngine.evidenceFingerprint,
+    measurement: persistedVisualMeasurement,
+    layoutEngine,
+  });
 
   const metadata = {
     pageId,
@@ -328,6 +394,10 @@ export async function generateVisualAtlasPage(
     costGuardrail:    GUARDRAIL_LABEL,
     generationMode:   imageGenerated ? "openai_image" : "placeholder_image",
     generationStatus,
+    contentCut: pageData.contentCut ?? null,
+    contentCutId,
+    snapshotIds,
+    deckHash,
     imageError:       imageError || null,
     imageFailure,
     generationSource,
@@ -442,5 +512,8 @@ ${!imageGenerated ? "- Acción requerida: Generar upper visual premium con gpt-i
     qaDimensions: dim,
     layoutEngine,
     visualMeasurement: persistedVisualMeasurement,
+    contentCutId,
+    snapshotIds,
+    deckHash,
   };
 }

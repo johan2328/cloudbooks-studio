@@ -26,6 +26,7 @@ export type RailStrategy = "compact" | "standard" | "dense";
 export interface EditorialCard {
   id: string;
   pageId: string;
+  sourceSnapshotId?: number;
   role: EditorialCardRole;
   status: EditorialCardStatus;
   targetZone: EditorialCardZone;
@@ -43,8 +44,10 @@ export interface EditorialCard {
 export interface EditorialCardDeck {
   version: "editorial-card-deck-v1";
   pageId: string;
-  source: "seed" | "composer" | "grounding";
+  source: "seed" | "composer" | "grounding" | "grounding_locked" | "grounding_candidate";
   generatedAt: string;
+  contentCutId?: string;
+  snapshotIds?: number[];
   cards: EditorialCard[];
   selectedCardIds: string[];
   rejectedCardIds: string[];

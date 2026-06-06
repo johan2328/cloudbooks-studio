@@ -67,6 +67,7 @@ function normalizeEditorialCard(raw: unknown, pageId: string): EditorialCard | n
   return {
     id,
     pageId,
+    sourceSnapshotId: asFiniteNumber(item.sourceSnapshotId) ?? undefined,
     role: (["concept", "flow", "comparison", "decision", "trap", "autocheck", "exam_signal", "example", "micro_case", "checklist"].includes(roleRaw) ? roleRaw : "concept") as EditorialCard["role"],
     status: (["candidate", "selected", "rejected"].includes(statusRaw) ? statusRaw : "candidate") as EditorialCard["status"],
     targetZone: (["primary", "complement", "rail", "reserve"].includes(targetZoneRaw) ? targetZoneRaw : "reserve") as EditorialCard["targetZone"],
@@ -96,8 +97,14 @@ function normalizeEditorialDeck(draftPayload: unknown, pageId: string): Editoria
   return {
     version: "editorial-card-deck-v1",
     pageId,
-    source: "composer",
+    source: (["seed", "composer", "grounding", "grounding_locked", "grounding_candidate"].includes(asString(rawDeck?.source) ?? "")
+      ? asString(rawDeck?.source)
+      : "composer") as EditorialCardDeck["source"],
     generatedAt: asString(rawDeck?.generatedAt) ?? new Date().toISOString(),
+    contentCutId: asString(rawDeck?.contentCutId) ?? undefined,
+    snapshotIds: Array.isArray(rawDeck?.snapshotIds)
+      ? rawDeck.snapshotIds.map((item) => asFiniteNumber(item)).filter((item): item is number => item != null)
+      : undefined,
     cards,
     selectedCardIds: selectedCardIds.length > 0 ? selectedCardIds : cards.filter((card) => card.status === "selected").map((card) => card.id),
     rejectedCardIds: rejectedCardIds.length > 0 ? rejectedCardIds : cards.filter((card) => card.status === "rejected").map((card) => card.id),

@@ -5,3 +5,7 @@ export * from "./generation_runs";
 export * from "./activity_logs";
 export * from "./visual_contracts";
 export * from "./composer_drafts";
+export * from "./source_snapshots";
+export * from "./editorial_content_cuts";
+export * from "./grounding_cards";
+export * from "./layout_check_runs";
