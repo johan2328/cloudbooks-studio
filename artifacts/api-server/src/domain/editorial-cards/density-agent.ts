@@ -226,10 +226,11 @@ export function buildEditorialCardDeck(pageId: string, data: VisualAtlasPageData
 
 function chooseLayoutMode(primaryCards: EditorialCard[], complementCards: EditorialCard[], railCards: EditorialCard[], problems: string[]): VisualAtlasLayoutMode {
   const hasDominantDecision = primaryCards.some((card) => card.role === "decision" || card.role === "comparison" || card.role === "flow");
-  if (railCards.length >= 3 && !problems.some((problem) => problem.includes("baja densidad"))) return "Rail Dense";
-  if (railCards.length >= 2 && problems.some((problem) => problem.includes("rail"))) return "Rail Compact";
-  if (primaryCards.length >= 4 && complementCards.length >= 2) return "4P+2C";
+  const railIsWeak = problems.some((problem) => problem.includes("rail inferior con baja densidad"));
+  if (railIsWeak) return "Rail Compact";
+  if (railCards.length >= 3) return "Rail Dense";
   if (hasDominantDecision && complementCards.length >= 2) return "3P+1D+2C";
+  if (primaryCards.length >= 4 && complementCards.length >= 2) return "4P+2C";
   return "4P";
 }
 
@@ -274,7 +275,7 @@ export function evaluateUsefulDensity(data: VisualAtlasPageData, deck: Editorial
   const score = roundOne(clamp(avgSelected - problems.length * 0.26 + complementCards.length * 0.12, 6.2, scoreCap));
   const usefulDensityScore = roundOne(clamp(score - (railTextLoad < 470 ? 0.55 : 0), 6.0, Math.min(9.5, scoreCap)));
   const mode = chooseLayoutMode(primaryCards, complementCards, railCards, problems);
-  const railStrategy = mode === "Rail Dense" || railTextLoad > 780
+  const railStrategy = mode === "Rail Dense" || (railCards.length >= 3 && railTextLoad > 700)
     ? "dense"
     : mode === "Rail Compact" || railTextLoad < 560
       ? "compact"
@@ -287,14 +288,14 @@ export function evaluateUsefulDensity(data: VisualAtlasPageData, deck: Editorial
     upperCardCount: primaryCards.length + complementCards.length,
     railStrategy,
     promptDirective: mode === "4P+2C"
-      ? "Use four dominant cards plus two compact complementary cards inside the upper image; complementary cards must add new exam value, not repeat guide/autocheck."
+      ? "Compose four dominant cards plus two small integrated complements inside the upper image. Complements must be mini-diagram/case chips, not extra HTML boxes and not repeated answers."
       : mode === "3P+1D+2C"
-        ? "Use three primary cards, one dominant decision/map/comparison card and two compact complementary cards inside the upper image."
+        ? "Compose three standard cards plus one dominant decision/map/comparison card that occupies more visual weight, with two tiny supporting chips integrated in the same image."
         : mode === "Rail Dense"
-          ? "Use four strong primary cards and keep the rail dense only because it contains real exam material."
+          ? "Compose four strong primary cards. The HTML rail is dense because it has real exam cards; do not duplicate rail content in the image."
           : mode === "Rail Compact"
-            ? "Keep traps/autocheck compact; solve useful density inside the upper visual and selected cards, not with HTML filler."
-            : "Use four strong primary cards with large readable labels and no fake filler.",
+            ? "Compose four strong primary cards with enough internal visual substance. The HTML rail stays compact and must not be used to absorb page air."
+            : "Compose four strong primary cards with large readable labels, meaningful mini-diagrams and no fake filler.",
     reason: problems[0] ?? "deck con densidad suficiente para recomposicion controlada",
   };
 

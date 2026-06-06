@@ -30,15 +30,29 @@ function estimateExamRailHeight(data: VisualAtlasPageData, bodyTotalHeight: numb
   const dominantDemand = Math.max(trapDemand, checkDemand);
   const railStrategy = data.layoutRecipe?.railStrategy ?? "standard";
   if (railStrategy === "compact") {
-    return Math.round(clampNumber(dominantDemand + 12, 188, 236));
+    return Math.round(clampNumber(dominantDemand + 42, 286, 318));
   }
   if (railStrategy === "dense") {
-    return Math.round(clampNumber(dominantDemand + 24, 252, 318));
+    return Math.round(clampNumber(dominantDemand + 54, 312, 346));
   }
   const preferredUpperHeight = contract.upperVisual.slotHeight + 18;
   const railFromFixedUpper = bodyTotalHeight - preferredUpperHeight;
   const demandHeight = clampNumber(dominantDemand + 10, 198, 296);
   return Math.round(clampNumber(Math.max(railFromFixedUpper, demandHeight), 210, 306));
+}
+
+function selectedRailCards(data: VisualAtlasPageData) {
+  const railIds = new Set(data.layoutRecipe?.railCardIds ?? []);
+  return (data.editorialDeck?.cards ?? [])
+    .filter((card) =>
+      card.status === "selected"
+      && card.targetZone === "rail"
+      && (railIds.size === 0 || railIds.has(card.id))
+      && card.claim.trim().length > 0
+      && card.explanation.trim().length > 0
+    )
+    .sort((a, b) => b.densityScore - a.densityScore)
+    .slice(0, 2);
 }
 
 function firstSentence(value: string): string {
@@ -162,10 +176,13 @@ export function renderVisualAtlasPage(data: VisualAtlasPageData): string {
   const checkDemand = estimateAutocheckRailHeight(data);
   const railStrategy = data.layoutRecipe?.railStrategy ?? "standard";
   const railDense = railStrategy === "dense";
-  const trapFillEnabled = railDense && examRailHeight - trapDemand >= 44;
-  const checkFillEnabled = railDense && examRailHeight - checkDemand >= 44;
-  const trapFillerNotes = trapFillEnabled ? buildTrapFillerNotes(data) : [];
-  const checkFillerNotes = checkFillEnabled ? buildAutocheckFillerNotes(data) : [];
+  const railCards = selectedRailCards(data);
+  const trapSupportCards = railDense ? railCards.filter((card) => card.role === "trap" || card.role === "exam_signal").slice(0, 1) : [];
+  const checkSupportCards = railDense ? railCards.filter((card) => card.role === "autocheck" || card.role === "decision" || card.role === "micro_case").slice(0, 1) : [];
+  const trapFillEnabled = railDense && trapSupportCards.length > 0 && examRailHeight - trapDemand >= 34;
+  const checkFillEnabled = railDense && checkSupportCards.length > 0 && examRailHeight - checkDemand >= 34;
+  const trapFillerNotes = trapFillEnabled ? trapSupportCards.map((card) => `${card.title}: ${firstSentence(card.explanation)}`) : [];
+  const checkFillerNotes = checkFillEnabled ? checkSupportCards.map((card) => `${card.title}: ${firstSentence(card.explanation)}`) : [];
 
   /* ── Icono de título ─────────────────────────────────────────────────── */
   const titleIconSvg = renderHeroIcon(data);

@@ -511,6 +511,8 @@ function evaluateClientDensityPlan(deck: EditorialCardDeck, blocks: ComposerBloc
   const selected = deck.cards.filter((card) => card.status === "selected");
   const avg = selected.reduce((sum, card) => sum + card.densityScore / Math.max(1, selected.length), 0);
   const groundingNeeded = complement.length < 2 || weakComplement > 0;
+  const railIsWeak = problems.some((problem) => problem.includes("rail inferior"));
+  const hasDominantDecision = primary.some((card) => card.role === "decision" || card.role === "comparison" || card.role === "flow");
   const status: DensityPlan["status"] = spacePlan.examShare >= 31
     ? "rail_first"
     : groundingNeeded
@@ -519,9 +521,17 @@ function evaluateClientDensityPlan(deck: EditorialCardDeck, blocks: ComposerBloc
   const scoreCap = status === "grounding_required" ? 8.7 : status === "rail_first" ? 8.8 : 9.5;
   const usefulDensityScore = roundToOne(clamp(avg - problems.length * 0.28 + complement.length * 0.1, 6.0, scoreCap));
   const mode: VisualAtlasLayoutRecipe["mode"] =
-    rail.length >= 3 && spacePlan.examShare < 31 ? "Rail Dense" : spacePlan.examShare >= 31 ? "Rail Compact" : complement.length >= 2 ? "4P+2C" : "4P";
+    railIsWeak || spacePlan.examShare >= 31
+      ? "Rail Compact"
+      : rail.length >= 3
+        ? "Rail Dense"
+        : hasDominantDecision && complement.length >= 2
+          ? "3P+1D+2C"
+          : complement.length >= 2
+            ? "4P+2C"
+            : "4P";
   const railStrategy: VisualAtlasLayoutRecipe["railStrategy"] =
-    mode === "Rail Dense" ? "dense" : spacePlan.examShare >= 28 ? "compact" : "standard";
+    mode === "Rail Dense" ? "dense" : mode === "Rail Compact" || spacePlan.examShare >= 28 ? "compact" : "standard";
   const layoutRecipe: VisualAtlasLayoutRecipe = {
     mode,
     primaryCardIds: primary.map((card) => card.id),
@@ -530,12 +540,14 @@ function evaluateClientDensityPlan(deck: EditorialCardDeck, blocks: ComposerBloc
     upperCardCount: primary.length + complement.length,
     railStrategy,
     promptDirective: mode === "4P+2C"
-      ? "Use four dominant cards plus two compact complementary cards inside the image composition."
-      : mode === "Rail Dense"
-        ? "Use four strong primary cards and keep the rail dense only because it has real exam material."
-        : mode === "Rail Compact"
-          ? "Keep rail compact and solve density in the selected card deck."
-          : "Use four strong primary cards with readable mini-diagrams.",
+      ? "Componer cuatro cartas dominantes mas dos chips complementarios integrados, sin fila HTML adicional."
+      : mode === "3P+1D+2C"
+        ? "Componer tres cartas primarias, una carta dominante de decision/mapa/comparativa y dos chips de apoyo."
+        : mode === "Rail Dense"
+          ? "El rail es denso porque hay cartas reales de examen; no duplicarlo en el upper visual."
+          : mode === "Rail Compact"
+            ? "Mantener rail compacto y resolver densidad dentro del upper sin estirar ni inflar tarjetas."
+            : "Componer cuatro cartas fuertes con mini-diagramas legibles.",
     reason: problems[0] ?? "deck listo para recomposicion controlada",
   };
   return {

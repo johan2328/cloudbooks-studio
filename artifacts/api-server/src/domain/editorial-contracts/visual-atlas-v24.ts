@@ -4,7 +4,7 @@ import { IMAGE_MODEL, IMAGE_QUALITY, TEMPLATE_VERSION, TEXT_MODEL } from "../../
 export const VISUAL_ATLAS_V24_CONTRACT = {
   id: "visual-atlas-v24",
   version: TEMPLATE_VERSION,
-  renderRevision: "visual-atlas-2026-06-02-e",
+  renderRevision: "visual-atlas-2026-06-06-layout-recipes",
   name: "Visual Atlas v24",
   generation: {
     textModel: TEXT_MODEL,
@@ -179,6 +179,41 @@ function list(values: readonly string[]): string {
   return values.map((value) => `- ${value}`).join("\n");
 }
 
+function recipeDirective(mode: string | undefined): string {
+  switch (mode) {
+    case "4P+2C":
+      return [
+        "- Recipe 4P+2C: keep the four main cards as the dominant structure.",
+        "- Add exactly two small integrated complement chips inside the upper visual, preferably as case/decision cues attached to the most relevant cards.",
+        "- Complements must not become a second HTML-like row, and must not repeat guide, traps or autocheck.",
+      ].join("\n");
+    case "3P+1D+2C":
+      return [
+        "- Recipe 3P+1D+2C: use three standard cards plus one dominant decision/map/comparison panel.",
+        "- The dominant panel should carry the strongest visual explanation: decision tree, route map, comparison matrix or causal flow.",
+        "- Add two tiny supporting chips only if they clarify the dominant panel.",
+      ].join("\n");
+    case "Rail Compact":
+      return [
+        "- Recipe Rail Compact: the HTML rail will stay compact, so the upper visual must carry the learning density.",
+        "- Do not compensate by stretching diagrams or shrinking text.",
+        "- Make the four cards feel complete through stronger internal diagrams, not extra decorative boxes.",
+      ].join("\n");
+    case "Rail Dense":
+      return [
+        "- Recipe Rail Dense: the HTML rail contains real exam material, so the upper visual must not duplicate traps/autocheck.",
+        "- Keep the image focused on technical understanding, with clean relationships and readable labels.",
+        "- Any exam signal inside the image must be a small cue, not a repeated question or answer.",
+      ].join("\n");
+    default:
+      return [
+        "- Recipe 4P: use four strong primary cards only.",
+        "- Every card needs one meaningful mini-diagram and one readable takeaway.",
+        "- Do not create fake density with borders, repeated badges or empty rule boxes.",
+      ].join("\n");
+  }
+}
+
 export function buildUpperVisualPrompt(data: VisualAtlasPageData): string {
   const contract = VISUAL_ATLAS_V24_CONTRACT;
   const layoutRecipe = data.layoutRecipe ?? data.densityPlan?.layoutRecipe;
@@ -237,6 +272,7 @@ Canvas and composition:
 - Use exactly ${contract.upperVisual.requiredCardCount} internal concept cards in a balanced ${contract.upperVisual.requiredGrid} grid.
 - If an Editorial Card Deck is provided, follow its layout recipe instead of inventing filler. Allowed recipe modes: ${contract.upperVisual.flexibleDeckModes.join(", ")}.
 - Current layout recipe: ${layoutRecipe ? `${layoutRecipe.mode}; ${layoutRecipe.promptDirective}` : "4P; four primary cards only"}.
+${recipeDirective(layoutRecipe?.mode)}
 - Editorial content cut: ${data.editorialDeck?.contentCutId ?? data.contentCut?.contentCutId ?? "seed locked without external snapshot"}.
 - Snapshot ids allowed for grounded facts: ${(data.editorialDeck?.snapshotIds ?? data.contentCut?.snapshotIds ?? []).join(", ") || "none"}.
 - Use only the seed and locked snapshot-backed cards. Do not introduce new factual claims from memory or live knowledge.
