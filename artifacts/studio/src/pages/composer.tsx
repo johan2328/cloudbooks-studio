@@ -112,6 +112,7 @@ type ComposerRegenerationScope = "full" | "technical_core" | "exam_rail";
 type ComposerPresetId = "premium_balanced" | "comparison_dominant" | "rail_compact";
 type ComposerObjectiveId = "fill_density" | "compact_exam_rail" | "qa_lock";
 type PostRenderRemediationSeverity = "success" | "warning" | "critical";
+type DecisionDeskActionKind = "shortcut" | "objective" | "grounding" | "generate" | "save" | "qa" | "human_review";
 
 interface PostRenderRemediation {
   available: boolean;
@@ -124,6 +125,21 @@ interface PostRenderRemediation {
   objectiveId?: ComposerObjectiveId;
   syncOnly?: boolean;
   evidenceItems: string[];
+}
+
+interface DecisionDeskDecision {
+  title: string;
+  status: string;
+  severity: PostRenderRemediationSeverity;
+  problem: string;
+  actionLabel: string;
+  actionKind: DecisionDeskActionKind;
+  shortcutAction?: ShortcutAction;
+  objectiveId?: ComposerObjectiveId;
+  risk: string;
+  expectedOutcome: string;
+  evidenceItems: string[];
+  blocked: boolean;
 }
 
 const COMPOSER_PRESETS: Array<{
@@ -1904,6 +1920,189 @@ export default function ComposerPage() {
       ],
     };
   }, [technicalBlockCount, projectedGap, composerReadiness.serverAligned, composerReadiness.hasRealOutput]);
+  const decisionDesk = useMemo<DecisionDeskDecision>(() => {
+    const visual = lockedQa?.visualMeasurement;
+    const layout = lockedQa?.layoutEvidence;
+    const weak = lockedWeakDims[0];
+    const evidenceItems = Array.from(new Set([
+      ...(postRenderRemediation.evidenceItems ?? []),
+      ...(visual?.blockers ?? []),
+      ...(layout?.blockers ?? []),
+      weak ? `${weak.label}: ${weak.value.toFixed(1)}/10` : null,
+      activeDensityPlan?.groundingNeeded ? "Deck solicita grounding real antes de recomponer." : null,
+      `Cartas seleccionadas: upper ${cardsByZone.upper.length}, rail ${cardsByZone.rail.length}.`,
+      spacePlan ? `Distribucion: intro ${spacePlan.introShare}%, visual ${spacePlan.technicalShare}%, rail ${spacePlan.examShare}%.` : null,
+    ].filter(Boolean) as string[])).slice(0, 4);
+
+    if (!proposal || !editableDraft) {
+      return {
+        title: "Preparar mesa",
+        status: "Sin draft operativo",
+        severity: "warning",
+        problem: "El Composer todavia no tiene una propuesta editable para esta pagina.",
+        actionLabel: "Esperar carga de propuesta",
+        actionKind: "human_review",
+        risk: "No conviene ejecutar acciones sin draft; se perderia trazabilidad.",
+        expectedOutcome: "Cuando cargue el draft, la mesa podra elegir una accion real.",
+        evidenceItems,
+        blocked: true,
+      };
+    }
+
+    if (lockedStatus?.generationStatus === "image_failed" || lockedStatus?.generationMode === "placeholder_image") {
+      const failure = lockedStatus.imageFailure;
+      const hasConfigFailure = /key|auth|401|quota|billing/i.test(`${failure?.code ?? ""} ${failure?.message ?? ""}`);
+      return {
+        title: hasConfigFailure ? "Resolver imagen antes de componer" : "Regenerar imagen real",
+        status: "Imagen no evaluable",
+        severity: "critical",
+        problem: failure ? `${failure.code}: ${failure.message}` : "La pagina usa placeholder; cualquier score editorial seria falso.",
+        actionLabel: hasConfigFailure ? "Escalar configuracion OpenAI" : "Regenerar con deck",
+        actionKind: hasConfigFailure ? "human_review" : "generate",
+        risk: "Seguir ajustando layout con placeholder crea decisiones cosmeticas y no mejora el libro real.",
+        expectedOutcome: "Obtener upper visual real o bloquear la pagina con causa explicita.",
+        evidenceItems: evidenceItems.length ? evidenceItems : ["generationStatus=image_failed o placeholder_image"],
+        blocked: hasConfigFailure,
+      };
+    }
+
+    if (!lockedStatus?.hasOutput) {
+      return {
+        title: "Crear primer output real",
+        status: "Sin salida consolidada",
+        severity: "warning",
+        problem: "La pagina no tiene HTML generado desde el draft actual.",
+        actionLabel: "Generar con deck",
+        actionKind: "generate",
+        risk: "Sin output no se puede medir hueco, rail, footer ni coherencia real.",
+        expectedOutcome: "Crear page.html medible por QA oficial y Playwright.",
+        evidenceItems,
+        blocked: false,
+      };
+    }
+
+    if (activeDensityPlan?.groundingNeeded || cardsByZone.upper.length < 4) {
+      return {
+        title: "Alimentar deck antes de regenerar",
+        status: "Materia visual insuficiente",
+        severity: "warning",
+        problem: activeDensityPlan?.groundingRationale ?? "El deck no trae suficientes cartas primarias para recomponer sin filler.",
+        actionLabel: "Buscar grounding puntual",
+        actionKind: "grounding",
+        risk: "Regenerar sin cartas utiles tiende a estirar diagramas o repetir guia/autocheck.",
+        expectedOutcome: "Incorporar cartas con insight, caso, trampa y relacion causal antes del siguiente render.",
+        evidenceItems,
+        blocked: false,
+      };
+    }
+
+    if (qaAlignmentState !== "aligned" || !stepGenerated) {
+      return {
+        title: "Consolidar QA real",
+        status: "Composer y QA no alineados",
+        severity: "warning",
+        problem: "El score de Composer sigue siendo una estimacion; falta generar o refrescar QA oficial.",
+        actionLabel: stepDraftSaved ? "Generar con deck" : "Guardar mesa",
+        actionKind: stepDraftSaved ? "generate" : "save",
+        risk: "Tomar decisiones con score proyectado puede ocultar huecos visibles o rail roto.",
+        expectedOutcome: "Forzar lectura post-render unica para que QA oficial mande.",
+        evidenceItems,
+        blocked: false,
+      };
+    }
+
+    if (postRenderRemediation.severity === "critical" && recommendedObjective) {
+      return {
+        title: recommendedObjective.label,
+        status: "Bloqueo post-render",
+        severity: "critical",
+        problem: postRenderRemediation.reason,
+        actionLabel: recommendedObjective.label,
+        actionKind: "objective",
+        objectiveId: recommendedObjective.id,
+        risk: "Si se recompone el upper antes de corregir este bloqueo, se puede empeorar footer, rail o overflow.",
+        expectedOutcome: recommendedObjective.hint,
+        evidenceItems,
+        blocked: false,
+      };
+    }
+
+    if (recommendedObjective) {
+      return {
+        title: recommendedObjective.label,
+        status: "Accion editorial prioritaria",
+        severity: postRenderRemediation.severity === "success" ? "warning" : postRenderRemediation.severity,
+        problem: spacePlan?.guidance ?? postRenderRemediation.reason,
+        actionLabel: recommendedObjective.label,
+        actionKind: "objective",
+        objectiveId: recommendedObjective.id,
+        risk: "La accion debe mejorar la pagina completa; si no mejora, queda registrada como sin efecto.",
+        expectedOutcome: recommendedObjective.hint,
+        evidenceItems,
+        blocked: false,
+      };
+    }
+
+    if (recommendedShortcut) {
+      return {
+        title: recommendedShortcut.label,
+        status: "Ajuste localizado",
+        severity: "warning",
+        problem: recommendedShortcut.reason,
+        actionLabel: recommendedShortcut.label,
+        actionKind: "shortcut",
+        shortcutAction: recommendedShortcut.action,
+        risk: "Es un cambio de deck/layout menor; si no mueve QA oficial, no debe repetirse a ciegas.",
+        expectedOutcome: "Aplicar el ajuste, regenerar y comparar delta post-render.",
+        evidenceItems,
+        blocked: false,
+      };
+    }
+
+    if (lockedTotal != null && lockedTotal < 9.5) {
+      return {
+        title: "Escalar a revision humana",
+        status: `QA oficial ${lockedTotal.toFixed(1)}/10`,
+        severity: "warning",
+        problem: weak ? `${weak.label} sigue por debajo del umbral editorial.` : "No hay remediacion automatica confiable.",
+        actionLabel: "Abrir QA oficial",
+        actionKind: "qa",
+        risk: "Otra regeneracion automatica puede entrar en loop sin un criterio editorial nuevo.",
+        expectedOutcome: "Revisar hallazgos y decidir si se necesita nueva fuente, nuevo deck o intervencion humana.",
+        evidenceItems,
+        blocked: false,
+      };
+    }
+
+    return {
+      title: "Cerrar revision",
+      status: "Candidato editorial",
+      severity: "success",
+      problem: "No hay bloqueo automatico visible en la pagina actual.",
+      actionLabel: "Abrir QA oficial",
+      actionKind: "qa",
+      risk: "No regenerar sin un motivo editorial concreto; se puede perder una salida buena.",
+      expectedOutcome: "Revision humana final contra el objetivo 9.5 antes de batch.",
+      evidenceItems: evidenceItems.length ? evidenceItems : ["QA oficial sin remediacion automatica pendiente."],
+      blocked: false,
+    };
+  }, [
+    lockedQa,
+    lockedWeakDims,
+    postRenderRemediation,
+    activeDensityPlan,
+    cardsByZone,
+    spacePlan,
+    proposal,
+    editableDraft,
+    lockedStatus,
+    qaAlignmentState,
+    stepGenerated,
+    stepDraftSaved,
+    recommendedObjective,
+    recommendedShortcut,
+    lockedTotal,
+  ]);
   const shortcutImpact = useMemo(() => {
     if (!lastShortcutSnapshot || !editableDraft) return null;
     const beforeIds = lastShortcutSnapshot.blocks.map((block) => block.id);
@@ -2972,6 +3171,38 @@ export default function ComposerPage() {
     }
   }
 
+  async function runDecisionDeskAction() {
+    if (decisionDesk.blocked) {
+      setGenerationFeedback(`${decisionDesk.status}: ${decisionDesk.problem}`);
+      return;
+    }
+    if (decisionDesk.actionKind === "objective" && decisionDesk.objectiveId) {
+      await handleRunObjective(decisionDesk.objectiveId);
+      return;
+    }
+    if (decisionDesk.actionKind === "shortcut" && decisionDesk.shortcutAction) {
+      await runShortcutAction(decisionDesk.shortcutAction, decisionDesk.actionLabel);
+      return;
+    }
+    if (decisionDesk.actionKind === "grounding") {
+      await addSelectiveGroundingCard();
+      return;
+    }
+    if (decisionDesk.actionKind === "generate") {
+      await handleGenerateWithDraft();
+      return;
+    }
+    if (decisionDesk.actionKind === "save") {
+      await handleSaveDraft();
+      return;
+    }
+    if (decisionDesk.actionKind === "qa") {
+      setLocation(`/qa/${parseInt(pageIdFromRoute, 10)}`);
+      return;
+    }
+    setGenerationFeedback(`${decisionDesk.status}: ${decisionDesk.expectedOutcome}`);
+  }
+
   async function handleScopedRegeneration(scope: ComposerRegenerationScope, label: string) {
     if (!proposal || !editableDraft || generatingFromComposer || quickActionBusy) return;
     setGeneratingFromComposer(true);
@@ -3314,37 +3545,88 @@ export default function ComposerPage() {
               <section className="rounded-sm border border-white/[0.08] bg-[#0d1629] px-4 py-3">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div>
-                    <p className="text-[8px] font-black uppercase tracking-widest text-cyan-300/75">Composer Reset</p>
-                    <h2 className="text-lg font-black text-white mt-1">Mesa editorial de pagina</h2>
+                    <p className="text-[8px] font-black uppercase tracking-widest text-cyan-300/75">Decision Desk</p>
+                    <h2 className="text-lg font-black text-white mt-1">Mesa de decision editorial</h2>
                   <p className="text-[11px] text-white/52 mt-1 max-w-3xl">
-                    Una sola lectura: preview grande, problema dominante y tres acciones que deben cambiar la salida final.
+                    Una decision activa por vez: accion, riesgo, evidencia y resultado esperado sobre la pagina completa.
                   </p>
                   <div className={cn(
                     "mt-3 max-w-4xl rounded-sm border px-3 py-2",
-                    operationalRead.severity === "critical"
+                    decisionDesk.severity === "critical"
                       ? "border-red-500/25 bg-red-500/8"
-                      : operationalRead.severity === "warning"
+                      : decisionDesk.severity === "warning"
                         ? "border-amber-500/25 bg-amber-500/8"
                         : "border-emerald-500/25 bg-emerald-500/8",
                   )}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-[8px] font-black uppercase tracking-widest text-white/35">Lectura operativa</p>
-                        <p className="text-[11px] font-bold text-white mt-1">{operationalRead.status}</p>
+                        <p className="text-[8px] font-black uppercase tracking-widest text-white/35">Decision activa</p>
+                        <p className="text-[12px] font-black text-white mt-1">{decisionDesk.title}</p>
+                        <p className="text-[9px] text-white/45 mt-0.5">{decisionDesk.status}</p>
                       </div>
                       <span className={cn(
                         "shrink-0 rounded-sm border px-2 py-1 text-[8px] font-bold",
-                        operationalRead.severity === "critical"
+                        decisionDesk.severity === "critical"
                           ? "border-red-400/25 text-red-200"
-                          : operationalRead.severity === "warning"
+                          : decisionDesk.severity === "warning"
                             ? "border-amber-400/25 text-amber-200"
                             : "border-emerald-400/25 text-emerald-200",
                       )}>
                         QA real primero
                       </span>
                     </div>
-                    <p className="mt-2 text-[10px] leading-relaxed text-white/70">{operationalRead.problem}</p>
-                    <p className="mt-1 text-[10px] leading-relaxed text-cyan-100/80">Siguiente accion: {operationalRead.nextAction}</p>
+                    <div className="mt-3 grid md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] gap-3">
+                      <div className="rounded-sm border border-white/[0.08] bg-white/[0.025] p-2.5">
+                        <p className="text-[8px] font-bold uppercase tracking-widest text-white/35">Problema</p>
+                        <p className="mt-1 text-[10px] leading-relaxed text-white/72">{decisionDesk.problem}</p>
+                        <p className="mt-2 text-[8px] font-bold uppercase tracking-widest text-white/35">Riesgo</p>
+                        <p className="mt-1 text-[9px] leading-relaxed text-white/55">{decisionDesk.risk}</p>
+                      </div>
+                      <div className="rounded-sm border border-cyan-400/15 bg-cyan-500/6 p-2.5">
+                        <p className="text-[8px] font-bold uppercase tracking-widest text-cyan-100/50">Resultado esperado</p>
+                        <p className="mt-1 text-[10px] leading-relaxed text-cyan-50/75">{decisionDesk.expectedOutcome}</p>
+                        <button
+                          type="button"
+                          onClick={() => void runDecisionDeskAction()}
+                          disabled={
+                            decisionDesk.blocked
+                            || generatingFromComposer
+                            || pipelineBusy
+                            || savingDraft
+                            || Boolean(quickActionBusy)
+                          }
+                          className={cn(
+                            "mt-3 h-9 w-full rounded-sm border text-[10px] font-black transition-all flex items-center justify-center gap-2",
+                            decisionDesk.blocked
+                              ? "border-white/[0.08] bg-white/[0.02] text-white/35 cursor-not-allowed"
+                              : decisionDesk.severity === "critical"
+                                ? "border-red-300/30 bg-red-500/18 text-red-50 hover:bg-red-500/26"
+                                : decisionDesk.severity === "warning"
+                                  ? "border-amber-300/30 bg-amber-500/18 text-amber-50 hover:bg-amber-500/26"
+                                  : "border-emerald-300/30 bg-emerald-500/18 text-emerald-50 hover:bg-emerald-500/26",
+                          )}
+                        >
+                          {(generatingFromComposer || pipelineBusy || savingDraft || Boolean(quickActionBusy)) ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Sparkles className="w-3.5 h-3.5" />
+                          )}
+                          {decisionDesk.actionLabel}
+                        </button>
+                      </div>
+                    </div>
+                    {decisionDesk.evidenceItems.length > 0 && (
+                      <div className="mt-3 rounded-sm border border-white/[0.06] bg-white/[0.02] px-2.5 py-2">
+                        <p className="text-[8px] font-bold uppercase tracking-widest text-white/35">Evidencia que decide</p>
+                        <div className="mt-1 grid sm:grid-cols-2 gap-1.5">
+                          {decisionDesk.evidenceItems.map((item) => (
+                            <p key={item} className="text-[9px] leading-relaxed text-white/55">
+                              - {item}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     {activeDensityPlan?.status && (
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-[8px]">
                         <span className="rounded-sm border border-white/[0.10] bg-white/[0.04] px-2 py-1 font-bold uppercase tracking-widest text-white/45">
@@ -3491,12 +3773,12 @@ export default function ComposerPage() {
 
                 <aside className="space-y-3">
                   <section className="rounded-sm border border-white/[0.08] bg-[#0d1629] p-4">
-                    <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Problema dominante</p>
+                    <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Lectura editorial</p>
                     <p className="text-sm font-black text-white mt-2">
-                      {recommendedObjective?.label ?? recommendedShortcut?.label ?? postRenderRemediation.label}
+                      {decisionDesk.status}
                     </p>
                     <p className="text-[10px] text-white/58 mt-2 leading-relaxed">
-                      {spacePlan?.guidance ?? recommendedShortcut?.reason ?? postRenderRemediation.reason}
+                      {decisionDesk.problem}
                     </p>
                     {spacePlan ? (
                       <div className="grid grid-cols-3 gap-2 mt-3">
@@ -3517,35 +3799,35 @@ export default function ComposerPage() {
                   </section>
 
                   <section className="rounded-sm border border-white/[0.08] bg-[#0d1629] p-4">
-                    <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Acciones de maquetacion</p>
+                    <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Accion recomendada</p>
                     <div className="mt-3 space-y-2">
                       <button
                         type="button"
-                        onClick={() => void handleRunObjective("qa_lock")}
-                        disabled={!proposal || !editableDraft || generatingFromComposer || pipelineBusy}
-                        className="w-full h-10 rounded-sm border border-violet-400/30 bg-violet-500/16 text-[10px] font-bold text-violet-50 hover:bg-violet-500/24 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        onClick={() => void runDecisionDeskAction()}
+                        disabled={
+                          decisionDesk.blocked
+                          || !proposal
+                          || !editableDraft
+                          || generatingFromComposer
+                          || pipelineBusy
+                          || savingDraft
+                          || Boolean(quickActionBusy)
+                        }
+                        className={cn(
+                          "w-full h-10 rounded-sm border text-[10px] font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all",
+                          decisionDesk.severity === "critical"
+                            ? "border-red-400/30 bg-red-500/16 text-red-50 hover:bg-red-500/24"
+                            : decisionDesk.severity === "warning"
+                              ? "border-amber-400/30 bg-amber-500/16 text-amber-50 hover:bg-amber-500/24"
+                              : "border-emerald-400/30 bg-emerald-500/16 text-emerald-50 hover:bg-emerald-500/24",
+                        )}
                       >
-                        {(generatingFromComposer || pipelineBusy) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                        Rebalancear pagina
+                        {(generatingFromComposer || pipelineBusy || savingDraft || Boolean(quickActionBusy)) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                        {decisionDesk.actionLabel}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleRunObjective("fill_density")}
-                        disabled={!proposal || !editableDraft || generatingFromComposer || pipelineBusy}
-                        className="w-full h-10 rounded-sm border border-cyan-400/30 bg-cyan-500/14 text-[10px] font-bold text-cyan-50 hover:bg-cyan-500/22 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                      >
-                        <Layers3 className="w-3.5 h-3.5" />
-                        Recomponer nucleo visual
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleRunObjective("compact_exam_rail")}
-                        disabled={!proposal || !editableDraft || generatingFromComposer || pipelineBusy}
-                        className="w-full h-10 rounded-sm border border-amber-400/30 bg-amber-500/14 text-[10px] font-bold text-amber-50 hover:bg-amber-500/22 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                      >
-                        <Waypoints className="w-3.5 h-3.5" />
-                        Compactar rail inferior
-                      </button>
+                      <p className="text-[9px] leading-relaxed text-white/50">
+                        {decisionDesk.expectedOutcome}
+                      </p>
                     </div>
                     <div className="grid grid-cols-2 gap-2 mt-3">
                       <button
