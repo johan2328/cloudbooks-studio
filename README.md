@@ -46,6 +46,12 @@ Lo prioritario en curso:
 - regeneracion dirigida desde Composer por alcance (`full`, `technical_core`, `exam_rail`);
 - crecimiento modular del sistema a mas certificaciones cloud.
 
+Recalculo editorial actual:
+- Sprint 3 dejo la base de trazabilidad seria: snapshots versionados, corte editorial reproducible, grounding locked/candidate y layout check sin bucle infinito.
+- Desde ese punto faltan **7 sprints obligatorios** para declarar un Composer de startup viable para Visual Atlas.
+- Esos 7 sprints no son cosmeticos: deben convertir el Composer en motor editorial de decisiones, recetas de layout, QA predictivo, variantes comparables, UX operativa, identidad visual medible y batch seguro.
+- Si al cerrar esos 7 sprints el Composer no mejora paginas completas sin deformar, rellenar con filler o inflar rail, el modulo debe pivotar a preparador editorial de prompts + QA, no a maquetador.
+
 Sprint 1 (fuente unica + control operativo) en avance:
 - semaforo operativo en Dashboard (`oficial`, `pendiente consolidar`, `sin QA`);
 - KPI `tiempo a aprobable` desde bitacora persistente;
@@ -246,10 +252,17 @@ Meta editorial:
 
 ## Proximo paso del Studio
 
-1. Composer operativo para decisiones reales, no solo lectura.
-2. Ajustes por bloque con regeneracion dirigida.
-3. Grounding puntual por tema con TTL editorial (7 dias).
-4. Escalado de la misma arquitectura a mas certificaciones y formatos.
+Roadmap activo: 7 sprints para Composer de startup.
+
+1. Composer como mesa de decisiones reales: una accion compositiva principal, riesgo y resultado esperado.
+2. Recetas de layout efectivas: `4P`, `4P+2C`, `3P+1D+2C`, `Rail Compact`, `Rail Dense` con impacto real en prompt/HTML.
+3. QA predictivo antes de gastar imagen: detectar huecos, rail pobre, microtexto y riesgo de deformacion antes de regenerar.
+4. Variantes comparables: preparar 2-3 alternativas controladas y elegir por QA oficial + criterio editorial.
+5. UX operativa: preview grande, antes/despues, rollback, accion principal y menos paneles diagnosticos.
+6. Identidad visual medible: numeracion, iconografia, bordes, paleta, jerarquia, rail, footer y estilo de tarjetas como checks.
+7. Batch seguro 01-10: aplicar recetas en lote, detectar outliers, abortar si degrada y escalar solo casos dudosos a humano.
+
+El objetivo de estos 7 sprints es que Composer deje de diagnosticar y empiece a **componer con evidencia**, sin destruir la reproducibilidad editorial conseguida en Sprint 3.
 
 ---
 
