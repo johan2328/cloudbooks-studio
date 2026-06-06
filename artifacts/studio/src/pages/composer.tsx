@@ -112,8 +112,9 @@ type ComposerRegenerationScope = "full" | "technical_core" | "exam_rail";
 type ComposerPresetId = "premium_balanced" | "comparison_dominant" | "rail_compact";
 type ComposerObjectiveId = "fill_density" | "compact_exam_rail" | "qa_lock";
 type PostRenderRemediationSeverity = "success" | "warning" | "critical";
-type DecisionDeskActionKind = "shortcut" | "objective" | "grounding" | "generate" | "save" | "qa" | "human_review";
+type DecisionDeskActionKind = "shortcut" | "objective" | "variant" | "grounding" | "generate" | "save" | "qa" | "human_review";
 type PredictiveQaVerdict = "favorable" | "risky" | "blocked";
+type ComposerVariantId = "current" | "visual_core" | "compact_rail" | "decision_dominant";
 
 interface PostRenderRemediation {
   available: boolean;
@@ -135,6 +136,7 @@ interface DecisionDeskDecision {
   problem: string;
   actionLabel: string;
   actionKind: DecisionDeskActionKind;
+  variantId?: ComposerVariantId;
   shortcutAction?: ShortcutAction;
   objectiveId?: ComposerObjectiveId;
   risk: string;
@@ -155,6 +157,23 @@ interface PredictiveQaRead {
   blockers: string[];
   risks: string[];
   positives: string[];
+}
+
+interface ComposerVariantCandidate {
+  id: ComposerVariantId;
+  label: string;
+  intent: string;
+  draft: ComposerProposal["draft"];
+  scores: ReturnType<typeof buildProjectedQaScores>;
+  predictiveQa: PredictiveQaRead;
+  benchmarkScore: number;
+  spacePlan: ReturnType<typeof computeSpacePlan>;
+  layoutRecipe: VisualAtlasLayoutRecipe | null;
+  changedBlocks: number;
+  actionSummary: string;
+  risks: string[];
+  positives: string[];
+  rankScore: number;
 }
 
 const COMPOSER_PRESETS: Array<{
@@ -985,6 +1004,50 @@ function buildPredictiveQaRead(args: {
     risks,
     positives,
   };
+}
+
+function cardsByZoneFromDraft(draft: ComposerProposal["draft"] | null): { upper: EditorialCard[]; rail: EditorialCard[]; reserve: EditorialCard[] } {
+  const cards = draft?.editorialDeck?.cards ?? [];
+  return {
+    upper: cards.filter((card) => card.status === "selected" && (card.targetZone === "primary" || card.targetZone === "complement")),
+    rail: cards.filter((card) => card.status === "selected" && card.targetZone === "rail"),
+    reserve: cards.filter((card) => card.status !== "selected" || card.targetZone === "reserve"),
+  };
+}
+
+function blockFingerprint(block: ComposerBlock | undefined): string {
+  if (!block) return "missing";
+  return JSON.stringify({
+    id: block.id,
+    type: block.type,
+    variant: block.variant,
+    priority: block.priority,
+    content: block.content,
+  });
+}
+
+function countChangedBlocks(before: ComposerBlock[], after: ComposerBlock[]): number {
+  const max = Math.max(before.length, after.length);
+  let changed = 0;
+  for (let index = 0; index < max; index += 1) {
+    if (blockFingerprint(before[index]) !== blockFingerprint(after[index])) changed += 1;
+  }
+  return changed;
+}
+
+function variantRankScore(variant: {
+  predictiveQa: PredictiveQaRead;
+  benchmarkScore: number;
+  changedBlocks: number;
+  spacePlan: ReturnType<typeof computeSpacePlan>;
+}): number {
+  if (variant.predictiveQa.verdict === "blocked") return -100;
+  const predicted = variant.predictiveQa.predictedTotal ?? 0;
+  const confidenceFactor = variant.predictiveQa.confidence / 100;
+  const changePenalty = variant.changedBlocks === 0 ? 0.35 : Math.min(0.35, variant.changedBlocks * 0.03);
+  const railPenalty = variant.spacePlan.examShare >= 34 ? 0.35 : variant.spacePlan.examShare >= 31 ? 0.18 : 0;
+  const benchmarkBonus = (variant.benchmarkScore - 75) / 100;
+  return Number((predicted * confidenceFactor + benchmarkBonus - changePenalty - railPenalty).toFixed(3));
 }
 
 function blockAccent(type: ComposerBlock["type"]) {
@@ -2064,6 +2127,116 @@ export default function ComposerPage() {
       spacePlan,
     ],
   );
+  const comparableVariants = useMemo<ComposerVariantCandidate[]>(() => {
+    if (!editableDraft) return [];
+    const lockedTechnicalAccuracy = lockedQa?.scores?.technical_accuracy == null
+      ? null
+      : normalizeQaScoreToTen(lockedQa.scores.technical_accuracy);
+    const baselineBlocks = normalizePriorities([...editableDraft.blocks].sort((a, b) => a.priority - b.priority));
+    const variantSpecs: Array<{
+      id: ComposerVariantId;
+      label: string;
+      intent: string;
+      actionSummary: string;
+      blocks: ComposerBlock[];
+    }> = [
+      {
+        id: "current",
+        label: "Draft actual",
+        intent: "Mantiene la composicion vigente y sirve como baseline honesto.",
+        actionSummary: "Sin cambios",
+        blocks: baselineBlocks,
+      },
+      {
+        id: "visual_core",
+        label: "Nucleo visual dominante",
+        intent: "Aumenta protagonismo del cuerpo visual sin estirar la imagen ni inflar el rail.",
+        actionSummary: "boost_technical + enforce_four_cards",
+        blocks: applyShortcutChain(baselineBlocks, ["boost_technical", "enforce_four_cards"]),
+      },
+      {
+        id: "compact_rail",
+        label: "Rail compacto",
+        intent: "Devuelve altura al upper y evita que trampas/autocheck absorban huecos con baja densidad.",
+        actionSummary: "compact_rail + expand_context",
+        blocks: applyShortcutChain(baselineBlocks, ["compact_rail", "expand_context"]),
+      },
+      {
+        id: "decision_dominant",
+        label: "Decision dominante",
+        intent: "Prioriza comparacion, decision y mapa cuando la pregunta exige discriminar opciones de examen.",
+        actionSummary: "comparison_dominant + compact_rail",
+        blocks: applyShortcutChain(applyPresetToBlocks("comparison_dominant", baselineBlocks), ["compact_rail"]),
+      },
+    ];
+
+    return variantSpecs.map((spec) => {
+      const draft = recalculateDraft({
+        ...cloneDraftRecord(editableDraft),
+        blocks: normalizePriorities(spec.blocks),
+      });
+      const scores = buildProjectedQaScores(draft, lockedTechnicalAccuracy);
+      const variantSpacePlan = computeSpacePlan(draft.blocks);
+      const variantBenchmark = evaluateComposerBenchmark(draft.blocks);
+      const variantCardsByZone = cardsByZoneFromDraft(draft);
+      const predictive = buildPredictiveQaRead({
+        projectedTotal: scores.total,
+        lockedTotal,
+        lockedStatus,
+        lockedQa,
+        densityPlan: draft.densityPlan ?? null,
+        benchmarkScore: variantBenchmark.score,
+        recommendedObjective: null,
+        recommendedShortcut: null,
+        cardsByZone: variantCardsByZone,
+        spacePlan: variantSpacePlan,
+      });
+      const changedBlocks = countChangedBlocks(baselineBlocks, draft.blocks);
+      const candidate = {
+        id: spec.id,
+        label: spec.label,
+        intent: spec.intent,
+        draft,
+        scores,
+        predictiveQa: predictive,
+        benchmarkScore: variantBenchmark.score,
+        spacePlan: variantSpacePlan,
+        layoutRecipe: draft.densityPlan?.layoutRecipe ?? draft.layoutRecipe ?? null,
+        changedBlocks,
+        actionSummary: spec.actionSummary,
+        risks: [
+          ...predictive.blockers,
+          ...predictive.risks,
+          ...draft.structuralValidation.warnings,
+        ].slice(0, 4),
+        positives: [
+          ...predictive.positives,
+          variantBenchmark.checks.filter((check) => check.passed).length >= 4 ? "Benchmark editorial estable." : null,
+          changedBlocks > 0 ? `${changedBlocks} bloque(s) cambiarian antes de regenerar.` : null,
+        ].filter(Boolean) as string[],
+        rankScore: 0,
+      } satisfies ComposerVariantCandidate;
+      return {
+        ...candidate,
+        rankScore: variantRankScore(candidate),
+      };
+    });
+  }, [editableDraft, lockedQa, lockedStatus, lockedTotal]);
+  const recommendedVariant = useMemo(() => {
+    const current = comparableVariants.find((variant) => variant.id === "current");
+    if (!current) return null;
+    const candidates = comparableVariants
+      .filter((variant) => variant.id !== "current" && variant.predictiveQa.verdict !== "blocked")
+      .sort((a, b) => b.rankScore - a.rankScore);
+    const best = candidates[0];
+    if (!best) return null;
+    const currentPredicted = current.predictiveQa.predictedTotal ?? current.scores.total;
+    const bestPredicted = best.predictiveQa.predictedTotal ?? best.scores.total;
+    const predictedGain = roundToOne(bestPredicted - currentPredicted);
+    const rankGain = best.rankScore - current.rankScore;
+    if (predictedGain < 0.2 && rankGain < 0.12) return null;
+    return { ...best, predictedGain, rankGain: Number(rankGain.toFixed(2)) };
+  }, [comparableVariants]);
   const decisionFlow = useMemo(() => {
     const step1Done = technicalBlockCount >= 4;
     const step2Done = (projectedGap ?? 9.5) <= 0.6;
@@ -2109,6 +2282,7 @@ export default function ComposerPage() {
       activeDensityPlan?.groundingNeeded ? "Deck solicita grounding real antes de recomponer." : null,
       `Cartas seleccionadas: upper ${cardsByZone.upper.length}, rail ${cardsByZone.rail.length}.`,
       spacePlan ? `Distribucion: intro ${spacePlan.introShare}%, visual ${spacePlan.technicalShare}%, rail ${spacePlan.examShare}%.` : null,
+      recommendedVariant ? `Variante sugerida: ${recommendedVariant.label} (+${recommendedVariant.predictedGain.toFixed(1)} estimado).` : null,
     ].filter(Boolean) as string[])).slice(0, 4);
 
     if (!proposal || !editableDraft) {
@@ -2185,6 +2359,22 @@ export default function ComposerPage() {
         expectedOutcome: predictiveQa.actionKind === "grounding"
           ? "Agregar materia editorial real antes de recomponer."
           : "Revisar evidencia oficial y decidir intervencion humana.",
+        evidenceItems,
+        blocked: false,
+      };
+    }
+
+    if (recommendedVariant) {
+      return {
+        title: `Aplicar variante: ${recommendedVariant.label}`,
+        status: "Comparacion favorable",
+        severity: recommendedVariant.predictiveQa.verdict === "favorable" ? "success" : "warning",
+        problem: recommendedVariant.intent,
+        actionLabel: "Aplicar variante",
+        actionKind: "variant",
+        variantId: recommendedVariant.id,
+        risk: recommendedVariant.risks[0] ?? "La variante todavia es predictiva: debe guardarse, generarse y pasar por QA oficial.",
+        expectedOutcome: `Cambiar ${recommendedVariant.changedBlocks} bloque(s), receta ${recommendedVariant.layoutRecipe?.mode ?? "sin receta"} y score predictivo ${recommendedVariant.predictiveQa.predictedTotal?.toFixed(1) ?? "-"} / confianza ${recommendedVariant.predictiveQa.confidence}%.`,
         evidenceItems,
         blocked: false,
       };
@@ -2295,6 +2485,7 @@ export default function ComposerPage() {
     stepDraftSaved,
     recommendedObjective,
     recommendedShortcut,
+    recommendedVariant,
     lockedTotal,
     predictiveQa,
   ]);
@@ -3366,9 +3557,40 @@ export default function ComposerPage() {
     }
   }
 
+  function applyComparableVariant(variantId: ComposerVariantId) {
+    if (!editableDraft) return;
+    const variant = comparableVariants.find((item) => item.id === variantId);
+    if (!variant || variant.id === "current") {
+      setQuickActionFeedback("La variante actual es el baseline; no hay cambios que aplicar.");
+      return;
+    }
+    const beforeTotal = projectedQaScores?.total ?? null;
+    setLastShortcutSnapshot(cloneDraftRecord(editableDraft));
+    setLastShortcutLabel(`Variante: ${variant.label}`);
+    setEditableDraft(variant.draft);
+    setCanvasMode("draft");
+    setQuickActionFeedback(
+      `Variante aplicada: ${variant.label}. Guarda y genera para validar contra QA oficial; no se gasto Image 2 todavia.`,
+    );
+    pushActionLog({
+      kind: "shortcut",
+      action: `Aplicar variante: ${variant.label}`,
+      status: "ok",
+      beforeTotal,
+      afterTotal: variant.scores.total,
+      delta: beforeTotal != null ? Number((variant.scores.total - beforeTotal).toFixed(1)) : null,
+      changedBlocks: variant.changedBlocks,
+      note: `${variant.intent} | ${variant.actionSummary} | predictivo ${variant.predictiveQa.predictedTotal?.toFixed(1) ?? "-"} (${variant.predictiveQa.confidence}% confianza).`,
+    });
+  }
+
   async function runDecisionDeskAction() {
     if (decisionDesk.blocked) {
       setGenerationFeedback(`${decisionDesk.status}: ${decisionDesk.problem}`);
+      return;
+    }
+    if (decisionDesk.actionKind === "variant" && decisionDesk.variantId) {
+      applyComparableVariant(decisionDesk.variantId);
       return;
     }
     if (decisionDesk.actionKind === "objective" && decisionDesk.objectiveId) {
@@ -4057,6 +4279,92 @@ export default function ComposerPage() {
                       >
                         Abrir QA
                       </button>
+                    </div>
+                  </section>
+
+                  <section className="rounded-sm border border-white/[0.08] bg-[#0d1629] p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Variantes comparables</p>
+                        <p className="text-[10px] text-white/55 mt-1 leading-relaxed">
+                          Compara caminos editoriales antes de gastar una regeneracion real.
+                        </p>
+                      </div>
+                      <span className="rounded-sm border border-cyan-400/20 bg-cyan-500/8 px-2 py-1 text-[8px] font-bold text-cyan-100">
+                        {comparableVariants.length} rutas
+                      </span>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {comparableVariants.map((variant) => {
+                        const isCurrent = variant.id === "current";
+                        const isRecommended = recommendedVariant?.id === variant.id;
+                        const predicted = variant.predictiveQa.predictedTotal ?? variant.scores.total;
+                        return (
+                          <div
+                            key={variant.id}
+                            className={cn(
+                              "rounded-sm border p-2.5",
+                              isRecommended
+                                ? "border-emerald-400/25 bg-emerald-500/9"
+                                : isCurrent
+                                  ? "border-white/[0.10] bg-white/[0.025]"
+                                  : "border-white/[0.08] bg-white/[0.018]",
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-[10px] font-black text-white truncate">{variant.label}</p>
+                                <p className="text-[8px] text-white/42 mt-0.5">{variant.actionSummary}</p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className={cn(
+                                  "text-[12px] font-black",
+                                  variant.predictiveQa.verdict === "blocked"
+                                    ? "text-red-200"
+                                    : predicted >= 9.1
+                                      ? "text-emerald-300"
+                                      : "text-amber-300",
+                                )}>
+                                  {predicted.toFixed(1)}
+                                </p>
+                                <p className="text-[8px] text-white/38">{variant.predictiveQa.confidence}%</p>
+                              </div>
+                            </div>
+                            <p className="mt-2 text-[9px] leading-relaxed text-white/58">{variant.intent}</p>
+                            <div className="mt-2 grid grid-cols-3 gap-1.5">
+                              <span className="rounded-[3px] border border-white/[0.07] bg-white/[0.025] px-1.5 py-1 text-[8px] text-cyan-100/75">
+                                Visual {variant.spacePlan.technicalShare}%
+                              </span>
+                              <span className="rounded-[3px] border border-white/[0.07] bg-white/[0.025] px-1.5 py-1 text-[8px] text-amber-100/75">
+                                Rail {variant.spacePlan.examShare}%
+                              </span>
+                              <span className="rounded-[3px] border border-white/[0.07] bg-white/[0.025] px-1.5 py-1 text-[8px] text-white/60 truncate">
+                                {variant.layoutRecipe?.mode ?? "sin receta"}
+                              </span>
+                            </div>
+                            {variant.risks[0] ? (
+                              <p className="mt-2 text-[8px] leading-relaxed text-amber-100/70">{variant.risks[0]}</p>
+                            ) : variant.positives[0] ? (
+                              <p className="mt-2 text-[8px] leading-relaxed text-emerald-100/70">{variant.positives[0]}</p>
+                            ) : null}
+                            {!isCurrent && (
+                              <button
+                                type="button"
+                                onClick={() => applyComparableVariant(variant.id)}
+                                disabled={variant.predictiveQa.verdict === "blocked" || savingDraft || generatingFromComposer || pipelineBusy}
+                                className={cn(
+                                  "mt-2 h-8 w-full rounded-sm border text-[9px] font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed",
+                                  isRecommended
+                                    ? "border-emerald-300/30 bg-emerald-500/16 text-emerald-50 hover:bg-emerald-500/24"
+                                    : "border-white/[0.10] bg-white/[0.03] text-white/68 hover:bg-white/[0.06]",
+                                )}
+                              >
+                                {isRecommended ? "Aplicar recomendada" : "Aplicar variante"}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </section>
 
