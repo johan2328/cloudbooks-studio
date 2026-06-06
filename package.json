@@ -10,11 +10,13 @@
     "build": "npm run typecheck && npm run build --workspaces --if-present",
     "sync:replit": "bash ./scripts/sync-replit.sh",
     "bootstrap:replit": "bash ./scripts/replit-bootstrap.sh",
+    "verify:studio": "node ./scripts/verify-studio.mjs",
     "typecheck:libs": "tsc --build",
     "typecheck": "npm run typecheck:libs && npm run typecheck --workspaces --if-present"
   },
   "private": true,
   "devDependencies": {
+    "@playwright/test": "1.49.1",
     "prettier": "^3.8.3",
     "typescript": "~5.9.3"
   },
