@@ -113,6 +113,7 @@ type ComposerPresetId = "premium_balanced" | "comparison_dominant" | "rail_compa
 type ComposerObjectiveId = "fill_density" | "compact_exam_rail" | "qa_lock";
 type PostRenderRemediationSeverity = "success" | "warning" | "critical";
 type DecisionDeskActionKind = "shortcut" | "objective" | "grounding" | "generate" | "save" | "qa" | "human_review";
+type PredictiveQaVerdict = "favorable" | "risky" | "blocked";
 
 interface PostRenderRemediation {
   available: boolean;
@@ -140,6 +141,20 @@ interface DecisionDeskDecision {
   expectedOutcome: string;
   evidenceItems: string[];
   blocked: boolean;
+}
+
+interface PredictiveQaRead {
+  verdict: PredictiveQaVerdict;
+  confidence: number;
+  predictedTotal: number | null;
+  expectedDelta: number | null;
+  recommendation: string;
+  actionKind: DecisionDeskActionKind;
+  objectiveId?: ComposerObjectiveId;
+  shortcutAction?: ShortcutAction;
+  blockers: string[];
+  risks: string[];
+  positives: string[];
 }
 
 const COMPOSER_PRESETS: Array<{
@@ -848,6 +863,128 @@ function buildProjectedQaScores(draft: ComposerProposal["draft"], lockedTechnica
     ).toFixed(1),
   );
   return { ...scores, total };
+}
+
+function buildPredictiveQaRead(args: {
+  projectedTotal: number | null;
+  lockedTotal: number | null;
+  lockedStatus: StudioOutputStatus | null;
+  lockedQa: StudioQaReport | null;
+  densityPlan: DensityPlan | null;
+  benchmarkScore: number;
+  recommendedObjective: (typeof COMPOSER_OBJECTIVES)[number] | null;
+  recommendedShortcut: { action: ShortcutAction; label: string; reason: string } | null;
+  cardsByZone: { upper: EditorialCard[]; rail: EditorialCard[]; reserve: EditorialCard[] };
+  spacePlan: ReturnType<typeof computeSpacePlan> | null;
+}): PredictiveQaRead {
+  const blockers: string[] = [];
+  const risks: string[] = [];
+  const positives: string[] = [];
+  let confidence = 72;
+  let predictedTotal = args.projectedTotal;
+
+  if (!args.projectedTotal) {
+    blockers.push("No hay score proyectado desde draft.");
+    predictedTotal = null;
+    confidence -= 35;
+  }
+  if (!args.lockedStatus?.hasOutput) {
+    risks.push("No existe output real previo para contrastar la prediccion.");
+    confidence -= 12;
+  }
+  if (args.lockedStatus?.generationMode === "placeholder_image" || args.lockedStatus?.generationStatus === "image_failed") {
+    blockers.push("La imagen real no esta disponible; QA predictivo premium queda bloqueado.");
+    predictedTotal = predictedTotal == null ? null : Math.min(predictedTotal, 6.5);
+    confidence -= 42;
+  }
+  if (args.densityPlan?.groundingNeeded || args.densityPlan?.status === "grounding_required") {
+    blockers.push("El deck requiere grounding real antes de prometer mejora visual.");
+    predictedTotal = predictedTotal == null ? null : Math.min(predictedTotal, 8.6);
+    confidence -= 24;
+  }
+  if (args.densityPlan?.status === "rail_first") {
+    risks.push("El rail sigue siendo el primer problema; recomponer upper puede no resolver la pagina.");
+    predictedTotal = predictedTotal == null ? null : Math.min(predictedTotal, 8.8);
+    confidence -= 16;
+  }
+  if ((args.cardsByZone.upper.length ?? 0) < 4) {
+    blockers.push(`Upper con ${args.cardsByZone.upper.length}/4 cartas utiles.`);
+    confidence -= 22;
+  }
+  if (args.spacePlan && args.spacePlan.examShare >= 34) {
+    risks.push(`Rail estimado en ${args.spacePlan.examShare}% del cuerpo; riesgo de densidad falsa.`);
+    confidence -= 10;
+  }
+
+  const layout = args.lockedQa?.layoutEvidence;
+  const visual = args.lockedQa?.visualMeasurement;
+  const layoutIssueCount = (layout?.blockers.length ?? 0) + Math.min(3, layout?.warnings.length ?? 0);
+  const visualIssueCount = visual?.available ? (visual.blockers.length + Math.min(3, visual.warnings.length)) : 0;
+  if (layoutIssueCount > 0) {
+    risks.push(`QA layout trae ${layoutIssueCount} alerta(s) post-render.`);
+    predictedTotal = predictedTotal == null ? null : Math.min(predictedTotal, 9.0);
+    confidence -= layoutIssueCount * 6;
+  }
+  if (visualIssueCount > 0) {
+    risks.push(`Medicion visual trae ${visualIssueCount} alerta(s).`);
+    predictedTotal = predictedTotal == null ? null : Math.min(predictedTotal, 9.0);
+    confidence -= visualIssueCount * 7;
+  }
+  if (visual?.available && (visual.zoneUsage.exam_rail?.freeBottomPx ?? 0) > 58) {
+    risks.push(`Rail real con ${visual.zoneUsage.exam_rail?.freeBottomPx}px libres; posible hueco visible.`);
+    predictedTotal = predictedTotal == null ? null : Math.min(predictedTotal, 8.9);
+    confidence -= 10;
+  }
+  if (visual?.available && visual.typography.smallTextCount > 0) {
+    risks.push(`Hay ${visual.typography.smallTextCount} texto(s) bajo umbral legible.`);
+    predictedTotal = predictedTotal == null ? null : Math.min(predictedTotal, 8.9);
+    confidence -= 9;
+  }
+  if (args.benchmarkScore < 75) {
+    risks.push(`Benchmark Composer bajo (${args.benchmarkScore}/100).`);
+    confidence -= 12;
+  }
+
+  if ((args.cardsByZone.upper.length ?? 0) >= 4) positives.push("Deck superior tiene cuatro cartas utiles.");
+  if (args.densityPlan?.status === "ready") positives.push("Densidad editorial lista para regenerar.");
+  if (layout?.blockers.length === 0 && visual?.blockers.length === 0) positives.push("Sin bloqueos post-render criticos.");
+  if (args.lockedStatus?.generationMode === "openai_image") positives.push("Existe upper visual real como baseline.");
+
+  const normalizedConfidence = Math.round(clamp(confidence, 5, 96));
+  const expectedDelta = predictedTotal != null && args.lockedTotal != null
+    ? roundToOne(predictedTotal - args.lockedTotal)
+    : null;
+  const verdict: PredictiveQaVerdict = blockers.length > 0 || normalizedConfidence < 45
+    ? "blocked"
+    : predictedTotal != null && predictedTotal >= 9.1 && normalizedConfidence >= 68
+      ? "favorable"
+      : "risky";
+
+  const recommendation = verdict === "blocked"
+    ? blockers[0] ?? "Bloqueado: no gastar generacion hasta resolver evidencia base."
+    : verdict === "favorable"
+      ? "Conviene generar: la prediccion tiene evidencia suficiente y riesgo controlado."
+      : risks[0] ?? "Generar solo si aceptas revisar manualmente el resultado.";
+
+  return {
+    verdict,
+    confidence: normalizedConfidence,
+    predictedTotal: predictedTotal == null ? null : roundToOne(clamp(predictedTotal, 0, 10)),
+    expectedDelta,
+    recommendation,
+    actionKind: verdict === "blocked"
+      ? (args.densityPlan?.groundingNeeded ? "grounding" : "qa")
+      : args.recommendedObjective
+        ? "objective"
+        : args.recommendedShortcut
+          ? "shortcut"
+          : "generate",
+    objectiveId: args.recommendedObjective?.id,
+    shortcutAction: args.recommendedShortcut?.action,
+    blockers,
+    risks,
+    positives,
+  };
 }
 
 function blockAccent(type: ComposerBlock["type"]) {
@@ -1901,6 +2038,32 @@ export default function ComposerPage() {
     }
     return null;
   }, [spacePlan, qaAlignmentState, projectedGap, postRenderRemediation]);
+  const predictiveQa = useMemo(
+    () => buildPredictiveQaRead({
+      projectedTotal: projectedQaScores?.total ?? null,
+      lockedTotal,
+      lockedStatus,
+      lockedQa,
+      densityPlan: activeDensityPlan,
+      benchmarkScore: benchmark.score,
+      recommendedObjective,
+      recommendedShortcut,
+      cardsByZone,
+      spacePlan,
+    }),
+    [
+      projectedQaScores?.total,
+      lockedTotal,
+      lockedStatus,
+      lockedQa,
+      activeDensityPlan,
+      benchmark.score,
+      recommendedObjective,
+      recommendedShortcut,
+      cardsByZone,
+      spacePlan,
+    ],
+  );
   const decisionFlow = useMemo(() => {
     const step1Done = technicalBlockCount >= 4;
     const step2Done = (projectedGap ?? 9.5) <= 0.6;
@@ -1937,6 +2100,8 @@ export default function ComposerPage() {
     const layout = lockedQa?.layoutEvidence;
     const weak = lockedWeakDims[0];
     const evidenceItems = Array.from(new Set([
+      `QA predictivo: ${predictiveQa.verdict} (${predictiveQa.confidence}% confianza).`,
+      predictiveQa.predictedTotal != null ? `Prediccion post-render: ${predictiveQa.predictedTotal.toFixed(1)}/10.` : null,
       ...(postRenderRemediation.evidenceItems ?? []),
       ...(visual?.blockers ?? []),
       ...(layout?.blockers ?? []),
@@ -2008,6 +2173,23 @@ export default function ComposerPage() {
       };
     }
 
+    if (predictiveQa.verdict === "blocked") {
+      return {
+        title: "No gastar generacion todavia",
+        status: "QA predictivo bloqueado",
+        severity: "critical",
+        problem: predictiveQa.recommendation,
+        actionLabel: predictiveQa.actionKind === "grounding" ? "Buscar grounding puntual" : "Abrir QA oficial",
+        actionKind: predictiveQa.actionKind,
+        risk: "La probabilidad de mejorar con una corrida nueva es baja; se puede entrar en loop de costo sin aprendizaje.",
+        expectedOutcome: predictiveQa.actionKind === "grounding"
+          ? "Agregar materia editorial real antes de recomponer."
+          : "Revisar evidencia oficial y decidir intervencion humana.",
+        evidenceItems,
+        blocked: false,
+      };
+    }
+
     if (qaAlignmentState !== "aligned" || !stepGenerated) {
       return {
         title: "Consolidar QA real",
@@ -2042,14 +2224,14 @@ export default function ComposerPage() {
     if (recommendedObjective) {
       return {
         title: recommendedObjective.label,
-        status: "Accion editorial prioritaria",
+        status: predictiveQa.verdict === "favorable" ? "Prediccion favorable" : "Accion editorial con riesgo",
         severity: postRenderRemediation.severity === "success" ? "warning" : postRenderRemediation.severity,
-        problem: spacePlan?.guidance ?? postRenderRemediation.reason,
+        problem: predictiveQa.verdict === "risky" ? predictiveQa.recommendation : (spacePlan?.guidance ?? postRenderRemediation.reason),
         actionLabel: recommendedObjective.label,
         actionKind: "objective",
         objectiveId: recommendedObjective.id,
-        risk: "La accion debe mejorar la pagina completa; si no mejora, queda registrada como sin efecto.",
-        expectedOutcome: recommendedObjective.hint,
+        risk: predictiveQa.risks[0] ?? "La accion debe mejorar la pagina completa; si no mejora, queda registrada como sin efecto.",
+        expectedOutcome: `${recommendedObjective.hint} Prediccion: ${predictiveQa.predictedTotal?.toFixed(1) ?? "-"} / confianza ${predictiveQa.confidence}%.`,
         evidenceItems,
         blocked: false,
       };
@@ -2058,14 +2240,14 @@ export default function ComposerPage() {
     if (recommendedShortcut) {
       return {
         title: recommendedShortcut.label,
-        status: "Ajuste localizado",
+        status: predictiveQa.verdict === "favorable" ? "Prediccion favorable" : "Ajuste localizado riesgoso",
         severity: "warning",
-        problem: recommendedShortcut.reason,
+        problem: predictiveQa.verdict === "risky" ? predictiveQa.recommendation : recommendedShortcut.reason,
         actionLabel: recommendedShortcut.label,
         actionKind: "shortcut",
         shortcutAction: recommendedShortcut.action,
-        risk: "Es un cambio de deck/layout menor; si no mueve QA oficial, no debe repetirse a ciegas.",
-        expectedOutcome: "Aplicar el ajuste, regenerar y comparar delta post-render.",
+        risk: predictiveQa.risks[0] ?? "Es un cambio de deck/layout menor; si no mueve QA oficial, no debe repetirse a ciegas.",
+        expectedOutcome: `Aplicar el ajuste, regenerar y comparar delta post-render. Confianza ${predictiveQa.confidence}%.`,
         evidenceItems,
         blocked: false,
       };
@@ -2114,6 +2296,7 @@ export default function ComposerPage() {
     recommendedObjective,
     recommendedShortcut,
     lockedTotal,
+    predictiveQa,
   ]);
   const shortcutImpact = useMemo(() => {
     if (!lastShortcutSnapshot || !editableDraft) return null;
@@ -3656,7 +3839,7 @@ export default function ComposerPage() {
                     )}
                   </div>
                 </div>
-                  <div className="grid grid-cols-3 gap-2 min-w-[360px]">
+                  <div className="grid grid-cols-4 gap-2 min-w-[480px]">
                     <div className="rounded-sm border border-white/[0.08] bg-white/[0.02] px-3 py-2">
                       <p className="text-[8px] text-white/30 uppercase tracking-widest">QA oficial</p>
                       <p className={cn("text-sm font-black mt-1", officialDisplayTotal != null && officialDisplayTotal >= 9.5 ? "text-emerald-300" : "text-amber-300")}>
@@ -3677,6 +3860,23 @@ export default function ComposerPage() {
                       <p className={cn("text-sm font-black mt-1", (activeGapToTarget ?? projectedGap ?? 9.5) <= 0.5 ? "text-emerald-300" : "text-amber-300")}>
                         {(activeGapToTarget ?? projectedGap) != null ? (activeGapToTarget ?? projectedGap)?.toFixed(1) : "-"}
                       </p>
+                    </div>
+                    <div className={cn(
+                      "rounded-sm border px-3 py-2",
+                      predictiveQa.verdict === "blocked"
+                        ? "border-red-400/20 bg-red-500/8"
+                        : predictiveQa.verdict === "favorable"
+                          ? "border-emerald-400/20 bg-emerald-500/8"
+                          : "border-amber-400/20 bg-amber-500/8",
+                    )}>
+                      <p className="text-[8px] text-white/30 uppercase tracking-widest">Predictivo</p>
+                      <p className={cn(
+                        "text-sm font-black mt-1",
+                        predictiveQa.verdict === "blocked" ? "text-red-200" : predictiveQa.verdict === "favorable" ? "text-emerald-300" : "text-amber-300",
+                      )}>
+                        {predictiveQa.predictedTotal != null ? `${predictiveQa.predictedTotal.toFixed(1)}/10` : "bloqueado"}
+                      </p>
+                      <p className="text-[8px] text-white/45 mt-0.5">{predictiveQa.confidence}% confianza</p>
                     </div>
                   </div>
                 </div>
