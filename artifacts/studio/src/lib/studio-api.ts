@@ -382,8 +382,10 @@ export interface DensityPlan {
   targetScore: 9.5;
   score: number;
   usefulDensityScore: number;
+  status?: "ready" | "grounding_required" | "rail_first" | "blocked_placeholder";
   groundingNeeded: boolean;
   groundingRationale: string;
+  nextAction?: "regenerate_with_deck" | "run_selective_grounding" | "compact_rail" | "fix_image_generation";
   problems: string[];
   recommendations: string[];
   rejectedCards: Array<{ cardId: string; reason: string }>;
@@ -625,6 +627,36 @@ export async function logComposerAutofix(pageId: string, payload: {
     },
     body: JSON.stringify(payload),
   });
+}
+
+export async function runComposerSelectiveGrounding(pageId: string): Promise<{
+  success: boolean;
+  pageId: string;
+  status: "grounding_ready";
+  ttlDays: number;
+  expiresAt: string;
+  sourceRefs: string[];
+  cards: EditorialCard[];
+  message: string;
+}> {
+  const res = await fetch(`/api/studio/composer/grounding/${pageId}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+  });
+  if (!res.ok) throw new Error(`No se pudo ejecutar grounding puntual para ${pageId} (${res.status})`);
+  return res.json() as Promise<{
+    success: boolean;
+    pageId: string;
+    status: "grounding_ready";
+    ttlDays: number;
+    expiresAt: string;
+    sourceRefs: string[];
+    cards: EditorialCard[];
+    message: string;
+  }>;
 }
 
 export async function fetchComposerActionLogs(pageId: string, limit = 24): Promise<ComposerActionLogRecord[]> {

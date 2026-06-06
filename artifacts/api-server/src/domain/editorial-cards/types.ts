@@ -66,8 +66,10 @@ export interface DensityPlan {
   targetScore: 9.5;
   score: number;
   usefulDensityScore: number;
+  status: "ready" | "grounding_required" | "rail_first" | "blocked_placeholder";
   groundingNeeded: boolean;
   groundingRationale: string;
+  nextAction: "regenerate_with_deck" | "run_selective_grounding" | "compact_rail" | "fix_image_generation";
   problems: string[];
   recommendations: string[];
   rejectedCards: Array<{ cardId: string; reason: string }>;

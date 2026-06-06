@@ -123,16 +123,25 @@ function normalizeLayoutRecipe(raw: unknown): VisualAtlasLayoutRecipe | null {
 
 function normalizeDensityPlan(raw: unknown, data: VisualAtlasPageData, deck: EditorialCardDeck): DensityPlan {
   const plan = asRecord(raw);
-  const layoutRecipe = normalizeLayoutRecipe(plan?.layoutRecipe) ?? evaluateUsefulDensity(data, deck).layoutRecipe;
+  const evaluated = evaluateUsefulDensity(data, deck);
+  const layoutRecipe = normalizeLayoutRecipe(plan?.layoutRecipe) ?? evaluated.layoutRecipe;
+  const status = (["ready", "grounding_required", "rail_first", "blocked_placeholder"].includes(asString(plan?.status) ?? "")
+    ? asString(plan?.status)
+    : evaluated.status) as DensityPlan["status"];
+  const scoreCap = status === "grounding_required" ? 8.7 : status === "rail_first" ? 8.8 : status === "blocked_placeholder" ? 6.5 : 9.6;
   return {
     version: "useful-density-agent-v1",
     targetScore: 9.5,
-    score: asFiniteNumber(plan?.score) ?? evaluateUsefulDensity(data, deck).score,
-    usefulDensityScore: asFiniteNumber(plan?.usefulDensityScore) ?? evaluateUsefulDensity(data, deck).usefulDensityScore,
-    groundingNeeded: typeof plan?.groundingNeeded === "boolean" ? plan.groundingNeeded : false,
-    groundingRationale: asString(plan?.groundingRationale) ?? "Deck composer sin grounding adicional.",
-    problems: asStringArray(plan?.problems),
-    recommendations: asStringArray(plan?.recommendations),
+    score: Math.min(asFiniteNumber(plan?.score) ?? evaluated.score, scoreCap),
+    usefulDensityScore: Math.min(asFiniteNumber(plan?.usefulDensityScore) ?? evaluated.usefulDensityScore, scoreCap),
+    status,
+    groundingNeeded: typeof plan?.groundingNeeded === "boolean" ? plan.groundingNeeded : evaluated.groundingNeeded,
+    groundingRationale: asString(plan?.groundingRationale) ?? evaluated.groundingRationale,
+    nextAction: (["regenerate_with_deck", "run_selective_grounding", "compact_rail", "fix_image_generation"].includes(asString(plan?.nextAction) ?? "")
+      ? asString(plan?.nextAction)
+      : evaluated.nextAction) as DensityPlan["nextAction"],
+    problems: asStringArray(plan?.problems).length > 0 ? asStringArray(plan?.problems) : evaluated.problems,
+    recommendations: asStringArray(plan?.recommendations).length > 0 ? asStringArray(plan?.recommendations) : evaluated.recommendations,
     rejectedCards: Array.isArray(plan?.rejectedCards)
       ? plan.rejectedCards.map((item) => asRecord(item)).filter((item): item is Record<string, unknown> => Boolean(item)).map((item) => ({
         cardId: asString(item.cardId) ?? "",
@@ -364,6 +373,11 @@ function buildComposerQaOverride(
   const usefulDensity = asFiniteNumber(editorialValidation.usefulDensityScore);
   const examUtility = asFiniteNumber(editorialValidation.examUtilityScore);
   const consistency = asFiniteNumber(editorialValidation.consistencyScore);
+  const densityPlan = asRecord(draft?.densityPlan);
+  const densityStatus = asString(densityPlan?.status);
+  const groundingNeeded = densityPlan?.groundingNeeded === true || densityStatus === "grounding_required";
+  const railFirst = densityStatus === "rail_first";
+  const maxComposerOverride = groundingNeeded ? 8.6 : railFirst ? 8.8 : 9.2;
 
   if (
     coverage == null
@@ -376,12 +390,12 @@ function buildComposerQaOverride(
   }
 
   return {
-    artDirection: clamp(roundOne((coverage + consistency) / 2), 6.8, 9.8),
-    editorialConsistency: clamp(roundOne(consistency), 6.8, 9.8),
-    readability: clamp(roundOne(readability), 6.8, 9.8),
+    artDirection: clamp(roundOne((coverage + consistency) / 2), 6.8, maxComposerOverride),
+    editorialConsistency: clamp(roundOne(consistency), 6.8, maxComposerOverride),
+    readability: clamp(roundOne(readability), 6.8, maxComposerOverride),
     technicalAccuracy: clamp(roundOne(fallbackTechnicalAccuracy), 6.8, 10),
-    density: clamp(roundOne(usefulDensity), 6.8, 9.8),
-    commercialRisk: clamp(roundOne((coverage + examUtility) / 2), 6.8, 10),
+    density: clamp(roundOne(usefulDensity - (groundingNeeded ? 0.5 : railFirst ? 0.35 : 0)), 6.2, maxComposerOverride),
+    commercialRisk: clamp(roundOne((coverage + examUtility) / 2 - (groundingNeeded ? 0.4 : 0)), 6.8, 9.2),
   };
 }
 

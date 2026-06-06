@@ -52,16 +52,11 @@ export function resolveQaScoreSource(input: QaScoreResolutionInput): QaScoreReso
     ? composerUpdatedAtMs > generatedAtMs
     : Boolean(normalizedComposerScores);
 
-  const useComposerProjection = Boolean(normalizedComposerScores)
-    && (!normalizedServerScores || composerIsNewer);
-
-  const source: QaScoreSource = useComposerProjection
-    ? "composer"
-    : normalizedServerScores
-      ? "server"
-      : normalizedComposerScores
-        ? "composer"
-        : "none";
+  const source: QaScoreSource = normalizedServerScores
+    ? "server"
+    : normalizedComposerScores
+      ? "composer"
+      : "none";
 
   const activeScores = source === "composer"
     ? (normalizedComposerScores ?? null)
@@ -81,7 +76,9 @@ export function resolveQaScoreSource(input: QaScoreResolutionInput): QaScoreReso
     source,
     sourceLabel: source === "server" ? "QA SERVIDOR" : source === "composer" ? "DRAFT PENDIENTE" : "SIN SCORE",
     sourceHint: source === "server"
-      ? "Lectura consolidada desde el ultimo QA persistido en servidor."
+      ? (composerIsNewer && normalizedComposerScores
+        ? "QA oficial persistido en servidor. El Composer tiene un draft posterior, pero no reemplaza el score hasta regenerar y medir pagina completa."
+        : "Lectura consolidada desde el ultimo QA persistido en servidor.")
       : source === "composer"
         ? "El draft del Composer es mas nuevo que la ultima generacion. Regenera para consolidar este score."
         : "No hay score disponible todavia para esta pagina.",

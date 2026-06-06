@@ -175,22 +175,39 @@ function capQaTotalForVisibleIssues(base: QaDimensionScores, visual: VisualAtlas
   if (!visual.available) return base;
 
   const examFreeBottom = visual.zoneUsage.exam_rail?.freeBottomPx ?? 0;
+  const upperOccupancy = visual.zoneUsage.upper_visual?.occupancyPct ?? 100;
   const upperHeightPct = visual.upperImageContent.contentHeightPct ?? 100;
   const upperBottomWhitespacePct = visual.upperImageContent.bottomWhitespacePct ?? 0;
+  const upperAreaPct = visual.upperImageContent.contentAreaPct ?? 100;
   const hasVisibleIssue =
     visual.blockers.length > 0
     || visual.overflow.count > 0
     || visual.typography.smallTextCount > 0
     || examFreeBottom > 58
+    || upperOccupancy < 78
     || upperHeightPct < 78
-    || upperBottomWhitespacePct > 14;
+    || upperBottomWhitespacePct > 14
+    || upperAreaPct < 16;
 
-  if (!hasVisibleIssue || base.avg <= 9.0) return base;
+  const hasSevereDensityIssue =
+    visual.blockers.length > 0
+    || examFreeBottom > 110
+    || upperOccupancy < 70
+    || upperHeightPct < 70
+    || upperBottomWhitespacePct > 24
+    || upperAreaPct < 11;
+  const cap = hasSevereDensityIssue ? 8.5 : 9.0;
+  if (!hasVisibleIssue || base.avg <= cap) return base;
   return {
     ...base,
-    avg: 9.0,
+    artDirection: Math.min(base.artDirection, cap),
+    editorialConsistency: Math.min(base.editorialConsistency, cap),
+    readability: Math.min(base.readability, cap),
+    density: Math.min(base.density, cap),
+    commercialRisk: Math.min(base.commercialRisk, cap),
+    avg: cap,
     verdict: "needs_revision",
-    verdictLabel: "Needs revision: visible layout issues keep QA capped at 9.0",
+    verdictLabel: `Needs revision: visible full-page issues keep QA capped at ${cap.toFixed(1)}`,
   };
 }
 

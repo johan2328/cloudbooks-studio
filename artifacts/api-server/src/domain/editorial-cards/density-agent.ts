@@ -74,7 +74,8 @@ function scoreCard(card: Pick<EditorialCard, "role" | "claim" | "diagramIntent" 
   const roleBonus = ["decision", "comparison", "flow", "trap", "autocheck"].includes(card.role) ? 0.8 : 0.35;
   const reuseBonus = Math.min(0.8, card.formatAffinity.length * 0.16);
   const claimPenalty = card.claim.length < 38 ? 0.45 : 0;
-  return roundOne(clamp(7.1 + diagramBonus + examBonus + roleBonus + reuseBonus - claimPenalty, 5.8, 9.8));
+  const genericDiagramPenalty = card.diagramIntent.toLowerCase().includes("mini-diagrama editorial") ? 0.5 : 0;
+  return roundOne(clamp(7.1 + diagramBonus + examBonus + roleBonus + reuseBonus - claimPenalty - genericDiagramPenalty, 5.8, 9.8));
 }
 
 function makeCard(args: {
@@ -238,6 +239,11 @@ export function evaluateUsefulDensity(data: VisualAtlasPageData, deck: Editorial
   const complementCards = cards.filter((card) => card.status === "selected" && card.targetZone === "complement").slice(0, 2);
   const railCards = cards.filter((card) => card.status === "selected" && card.targetZone === "rail").slice(0, 3);
   const genericPrimary = primaryCards.filter((card) => card.claim.length < 48 || card.diagramIntent.length < 34).length;
+  const weakComplementCards = complementCards.filter((card) =>
+    card.sourceRefs.every((ref) => ref === "seed-editorial" || ref === "composer-draft")
+    || card.visualRisk !== "low"
+    || card.claim.length < 58
+  ).length;
   const repeatedGuide = cards.some((card) =>
     card.role !== "exam_signal"
     && card.claim.toLowerCase().replace(/[?¿]/g, "") === data.guideQuestion.toLowerCase().replace(/[?¿]/g, "")
@@ -251,15 +257,22 @@ export function evaluateUsefulDensity(data: VisualAtlasPageData, deck: Editorial
   const problems: string[] = [];
   if (primaryCards.length < 4) problems.push("faltan cuatro cartas primarias para sostener el upper visual");
   if (genericPrimary > 0) problems.push(`${genericPrimary} carta(s) primaria(s) tienen poco material diagramable`);
+  if (complementCards.length < 2 || weakComplementCards > 0) problems.push("faltan cartas complementarias con grounding real; no usar filler HTML");
   if (repeatedGuide) problems.push("hay repeticion entre pregunta guia y contenido de cartas");
   if (railTextLoad < 470) problems.push("rail inferior con baja densidad util; no debe crecer para cerrar la pagina");
 
-  const groundingNeeded = genericPrimary > 0 || cards.length < 8;
+  const groundingNeeded = genericPrimary > 0 || cards.length < 8 || complementCards.length < 2 || weakComplementCards > 0;
   const avgSelected = cards
     .filter((card) => card.status === "selected")
     .reduce((sum, card, _, arr) => sum + card.densityScore / Math.max(1, arr.length), 0);
-  const score = roundOne(clamp(avgSelected - problems.length * 0.22 + complementCards.length * 0.18, 6.2, 9.6));
-  const usefulDensityScore = roundOne(clamp(score - (railTextLoad < 470 ? 0.45 : 0), 6.0, 9.5));
+  const status = railTextLoad < 470
+    ? "rail_first"
+    : groundingNeeded
+      ? "grounding_required"
+      : "ready";
+  const scoreCap = groundingNeeded ? 8.7 : status === "rail_first" ? 8.8 : 9.6;
+  const score = roundOne(clamp(avgSelected - problems.length * 0.26 + complementCards.length * 0.12, 6.2, scoreCap));
+  const usefulDensityScore = roundOne(clamp(score - (railTextLoad < 470 ? 0.55 : 0), 6.0, Math.min(9.5, scoreCap)));
   const mode = chooseLayoutMode(primaryCards, complementCards, railCards, problems);
   const railStrategy = mode === "Rail Dense" || railTextLoad > 780
     ? "dense"
@@ -290,10 +303,16 @@ export function evaluateUsefulDensity(data: VisualAtlasPageData, deck: Editorial
     targetScore: 9.5,
     score,
     usefulDensityScore,
+    status,
     groundingNeeded,
     groundingRationale: groundingNeeded
       ? "Hay tarjetas genericas o poco diagramables; grounding puntual debe aportar insight, ejemplo, trampa y regla causal."
       : "El deck base alcanza para componer sin grounding adicional.",
+    nextAction: status === "rail_first"
+      ? "compact_rail"
+      : groundingNeeded
+        ? "run_selective_grounding"
+        : "regenerate_with_deck",
     problems,
     recommendations: [
       railStrategy === "compact"

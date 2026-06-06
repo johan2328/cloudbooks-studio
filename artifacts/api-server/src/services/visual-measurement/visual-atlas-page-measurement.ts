@@ -316,9 +316,11 @@ function scoreMeasurement(raw: BrowserMeasurementRaw, expectedWidth: number, exp
   if (raw.overflow.count > 0) warnings.push(`${raw.overflow.count} elemento(s) con overflow interno detectado.`);
   if (raw.typography.smallTextCount > 0) warnings.push(`${raw.typography.smallTextCount} texto(s) por debajo de 7.5px detectados.`);
   const upperUsage = raw.zoneUsage.upper_visual;
-  if (upperUsage && upperUsage.occupancyPct < 78) warnings.push(`Upper visual ocupa ${upperUsage.occupancyPct}% de su zona real.`);
+  if (upperUsage && upperUsage.occupancyPct < 70) blockers.push(`Upper visual subutilizado: ocupa ${upperUsage.occupancyPct}% de su zona real.`);
+  else if (upperUsage && upperUsage.occupancyPct < 78) warnings.push(`Upper visual ocupa ${upperUsage.occupancyPct}% de su zona real.`);
   const examUsage = raw.zoneUsage.exam_rail;
-  if (examUsage && examUsage.freeBottomPx > 58) warnings.push(`Rail inferior deja ${examUsage.freeBottomPx}px libres al fondo.`);
+  if (examUsage && examUsage.freeBottomPx > 110) blockers.push(`Rail inferior deja ${examUsage.freeBottomPx}px libres: densidad util insuficiente.`);
+  else if (examUsage && examUsage.freeBottomPx > 58) warnings.push(`Rail inferior deja ${examUsage.freeBottomPx}px libres al fondo.`);
   const examZone = raw.zones.exam_rail;
   const footerZone = raw.zones.footer;
   if (examZone && footerZone && examZone.bottom > footerZone.y + 1) {
@@ -331,13 +333,19 @@ function scoreMeasurement(raw: BrowserMeasurementRaw, expectedWidth: number, exp
     warnings.push("Densidad falsa: el upper parece ocupado, pero contiene microtexto u overflow.");
   }
   if (raw.upperImageContent.available) {
-    if ((raw.upperImageContent.contentHeightPct ?? 100) < 78) {
+    if ((raw.upperImageContent.contentHeightPct ?? 100) < 70) {
+      blockers.push(`Upper visual con blanco interno severo: contenido ocupa ${raw.upperImageContent.contentHeightPct}% de la altura del PNG.`);
+    } else if ((raw.upperImageContent.contentHeightPct ?? 100) < 78) {
       warnings.push(`Upper visual con aire interno: contenido ocupa ${raw.upperImageContent.contentHeightPct}% de la altura del PNG.`);
     }
-    if ((raw.upperImageContent.bottomWhitespacePct ?? 0) > 14) {
+    if ((raw.upperImageContent.bottomWhitespacePct ?? 0) > 24) {
+      blockers.push(`Upper visual deja ${raw.upperImageContent.bottomWhitespacePct}% de blanco inferior dentro del PNG.`);
+    } else if ((raw.upperImageContent.bottomWhitespacePct ?? 0) > 14) {
       warnings.push(`Upper visual deja ${raw.upperImageContent.bottomWhitespacePct}% de blanco inferior dentro del PNG.`);
     }
-    if ((raw.upperImageContent.contentAreaPct ?? 100) < 16) {
+    if ((raw.upperImageContent.contentAreaPct ?? 100) < 11) {
+      blockers.push(`Upper visual con densidad grafica muy baja: area marcada ${raw.upperImageContent.contentAreaPct}%.`);
+    } else if ((raw.upperImageContent.contentAreaPct ?? 100) < 16) {
       warnings.push(`Upper visual con densidad grafica baja: area marcada ${raw.upperImageContent.contentAreaPct}%.`);
     }
   }

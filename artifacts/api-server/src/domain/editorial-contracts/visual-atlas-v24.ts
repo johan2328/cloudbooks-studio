@@ -236,6 +236,9 @@ Canvas and composition:
 - Use exactly ${contract.upperVisual.requiredCardCount} internal concept cards in a balanced ${contract.upperVisual.requiredGrid} grid.
 - If an Editorial Card Deck is provided, follow its layout recipe instead of inventing filler. Allowed recipe modes: ${contract.upperVisual.flexibleDeckModes.join(", ")}.
 - Current layout recipe: ${layoutRecipe ? `${layoutRecipe.mode}; ${layoutRecipe.promptDirective}` : "4P; four primary cards only"}.
+- Useful-density status: ${data.densityPlan ? `${data.densityPlan.status}; next action ${data.densityPlan.nextAction}; ${data.densityPlan.groundingRationale}` : "ready; seed deck only"}.
+- If the useful-density status is grounding_required, do not invent additional technical facts. Improve hierarchy, flow and visual grouping using only selected reliable cards.
+- If the useful-density status is rail_first, do not compensate by enlarging or distorting the upper visual. Keep upper composition natural and leave rail compaction to HTML.
 - Primary cards must dominate. Complementary cards, when present, must be smaller, clearly useful and visually subordinate.
 - Complementary cards must be integrated inside the image composition itself. Do not assume HTML will add boxes below the image.
 - Rail cards belong to the HTML exam rail, not to the upper visual, unless they provide a compact exam-signal chip that does not duplicate traps/autocheck.

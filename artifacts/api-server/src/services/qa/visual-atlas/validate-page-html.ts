@@ -252,16 +252,20 @@ export function computeQaDimensionScores(imageGenerated: boolean, layoutEvidence
   const usefulDensityBonus = layoutEvidence?.examRail.densityBand === "balanced" ? 0.5 : -0.3;
   const falseDensityPenalty =
     layoutEvidence?.examRail.densityBand === "thin" && (layoutEvidence.examRail.rowHeight ?? 0) > 220
-      ? 0.75
+      ? 1.15
       : 0;
-  const upperUsePenalty = (layoutEvidence?.upper.freeVerticalPx ?? 0) > 92 ? 0.5 : 0;
+  const upperUsePenalty = (layoutEvidence?.upper.freeVerticalPx ?? 0) > 120
+    ? 0.95
+    : (layoutEvidence?.upper.freeVerticalPx ?? 0) > 92
+      ? 0.5
+      : 0;
   const artDirection = roundOne(clamp((imageGenerated ? 7 : 5) + (layoutEvidence?.score ?? 7) * 0.08 - layoutPenalty - upperUsePenalty, 0, 10));
   const editorialConsistency = roundOne(clamp((imageGenerated ? 7 : 5) + (layoutEvidence?.blockers.length ? -0.4 : 0.2) - warningPenalty, 0, 10));
   const readability = roundOne(clamp(8 - Math.max(0, (layoutEvidence?.examRail.sharePct ?? 0) - 26) * 0.03 - warningPenalty, 0, 10));
   const technicalAccuracy = 10;
   const density = roundOne(clamp((imageGenerated ? 7 : 4) + usefulDensityBonus - upperUsePenalty - warningPenalty - falseDensityPenalty, 0, 10));
   const commercialRisk = roundOne(clamp(10 - blockerPenalty - warningPenalty - (imageGenerated ? 0 : 1.5), 0, 10));
-  const avg = roundOne(
+  const rawAvg = roundOne(
     (artDirection + editorialConsistency + readability + technicalAccuracy + density + commercialRisk) / 6,
   );
   if (!imageGenerated) {
@@ -272,11 +276,18 @@ export function computeQaDimensionScores(imageGenerated: boolean, layoutEvidence
       technicalAccuracy: Math.min(technicalAccuracy, 6.5),
       density: Math.min(density, 6),
       commercialRisk: Math.min(commercialRisk, 6),
-      avg: Math.min(avg, 6.5),
+      avg: Math.min(rawAvg, 6.5),
       verdict: "needs_revision",
       verdictLabel: "Blocked: upper visual is not a real premium image; QA max 6.5",
     };
   }
+  const structuralCap =
+    layoutEvidence?.examRail.densityBand === "thin" && (layoutEvidence.examRail.rowHeight ?? 0) > 220
+      ? 8.8
+      : (layoutEvidence?.upper.freeVerticalPx ?? 0) > 120
+        ? 9.0
+        : 10;
+  const avg = roundOne(Math.min(rawAvg, structuralCap));
   const verdict = imageGenerated ? "needs_visual_review" as const : "needs_revision" as const;
   const verdictLabel = imageGenerated
     ? `Requires human visual review: target ${contract.qa.humanArtScoreToProduce}/10 before production`

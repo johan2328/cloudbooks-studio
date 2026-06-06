@@ -35,6 +35,7 @@ import {
   fetchStudioOutputStatus,
   fetchStudioQaReport,
   logComposerAutofix,
+  runComposerSelectiveGrounding,
   saveComposerDraft,
   type ComposerBlock,
   type ComposerActionLogRecord,
@@ -486,9 +487,21 @@ function evaluateClientDensityPlan(deck: EditorialCardDeck, blocks: ComposerBloc
   if (primary.length < 4) problems.push("faltan cuatro cartas primarias");
   if (spacePlan.examShare >= 31) problems.push("rail inferior absorbe demasiada altura");
   if (complement.length < 2) problems.push("faltan cartas complementarias para cerrar aire util");
+  const weakComplement = complement.filter((card) =>
+    card.sourceRefs.every((ref) => ref === "seed-editorial" || ref === "composer-draft")
+    || card.visualRisk !== "low"
+  ).length;
+  if (weakComplement > 0) problems.push("cartas complementarias sin grounding real");
   const selected = deck.cards.filter((card) => card.status === "selected");
   const avg = selected.reduce((sum, card) => sum + card.densityScore / Math.max(1, selected.length), 0);
-  const usefulDensityScore = roundToOne(clamp(avg - problems.length * 0.25 + complement.length * 0.15, 6.0, 9.5));
+  const groundingNeeded = complement.length < 2 || weakComplement > 0;
+  const status: DensityPlan["status"] = spacePlan.examShare >= 31
+    ? "rail_first"
+    : groundingNeeded
+      ? "grounding_required"
+      : "ready";
+  const scoreCap = status === "grounding_required" ? 8.7 : status === "rail_first" ? 8.8 : 9.5;
+  const usefulDensityScore = roundToOne(clamp(avg - problems.length * 0.28 + complement.length * 0.1, 6.0, scoreCap));
   const mode: VisualAtlasLayoutRecipe["mode"] =
     rail.length >= 3 && spacePlan.examShare < 31 ? "Rail Dense" : spacePlan.examShare >= 31 ? "Rail Compact" : complement.length >= 2 ? "4P+2C" : "4P";
   const railStrategy: VisualAtlasLayoutRecipe["railStrategy"] =
@@ -514,10 +527,16 @@ function evaluateClientDensityPlan(deck: EditorialCardDeck, blocks: ComposerBloc
     targetScore: 9.5,
     score: usefulDensityScore,
     usefulDensityScore,
-    groundingNeeded: problems.some((problem) => problem.includes("complementarias")),
-    groundingRationale: problems.some((problem) => problem.includes("complementarias"))
-      ? "Pedir grounding puntual si no hay cartas complementarias reales."
+    status,
+    groundingNeeded,
+    groundingRationale: groundingNeeded
+      ? "Pedir grounding puntual si no hay cartas complementarias reales. No simular filler con el seed actual."
       : "El deck actual puede regenerar sin grounding adicional.",
+    nextAction: status === "rail_first"
+      ? "compact_rail"
+      : groundingNeeded
+        ? "run_selective_grounding"
+        : "regenerate_with_deck",
     problems,
     recommendations: [
       layoutRecipe.railStrategy === "compact" ? "No usar rail para absorber huecos." : layoutRecipe.railStrategy === "dense" ? "Rail denso solo si aporta lectura real." : "Rail estandar solo si aporta lectura.",
@@ -2671,37 +2690,77 @@ export default function ComposerPage() {
     }, zone === "primary" ? "Promover carta a primaria" : zone === "rail" ? "Enviar carta a rail" : "Reservar carta");
   }
 
-  function addSelectiveGroundingCard() {
+  async function addSelectiveGroundingCard() {
     if (!editableDraft || !proposal) return;
-    const nextPlan: DensityPlan = {
-      ...(editableDraft.densityPlan ?? evaluateClientDensityPlan(editableDraft.editorialDeck ?? buildClientEditorialDeck(pageSummary!, editableDraft.family), editableDraft.blocks)),
-      groundingNeeded: true,
-      groundingRationale: "Grounding real pendiente: se requiere scraping/actualizacion para aportar insight tecnico, ejemplo de examen y relacion causal no repetida.",
-      problems: Array.from(new Set([
-        ...(editableDraft.densityPlan?.problems ?? []),
-        "contenido insuficiente para recomponer sin filler; grounding selectivo requerido",
-      ])),
-      recommendations: Array.from(new Set([
-        ...(editableDraft.densityPlan?.recommendations ?? []),
-        "No regenerar como mejora premium hasta incorporar grounding real al deck.",
-      ])),
-    };
-    setEditableDraft({
-      ...editableDraft,
-      densityPlan: nextPlan,
-      layoutRecipe: nextPlan.layoutRecipe,
-    });
-    setGenerationFeedback("Grounding puntual marcado como pendiente real. No se agrego carta de relleno ni se modifico el upper visual.");
-    pushActionLog({
-      kind: "shortcut",
-      action: "Grounding puntual requerido",
-      status: "info",
-      beforeTotal: projectedQaScores?.total ?? null,
-      afterTotal: projectedQaScores?.total ?? null,
-      delta: 0,
-      changedBlocks: 0,
-      note: "Pendiente de grounding real: no se simulo contenido con el seed actual.",
-    });
+    setQuickActionBusy("boost_technical");
+    try {
+      const grounding = await runComposerSelectiveGrounding(pageIdFromRoute);
+      const baseDeck = editableDraft.editorialDeck ?? buildClientEditorialDeck(pageSummary!, editableDraft.family);
+      const incomingIds = new Set(grounding.cards.map((card) => card.id));
+      const nextCards = [
+        ...baseDeck.cards
+          .filter((card) => !incomingIds.has(card.id))
+          .map((card) => card.targetZone === "complement" && card.sourceRefs.every((ref) => ref === "seed-editorial" || ref === "composer-draft")
+            ? { ...card, status: "rejected" as const, targetZone: "reserve" as const, visualRisk: "high" as const }
+            : card),
+        ...grounding.cards.map((card) => ({
+          ...card,
+          status: "selected" as const,
+          targetZone: "complement" as const,
+          sourceRefs: card.sourceRefs.length > 0 ? card.sourceRefs : grounding.sourceRefs,
+        })),
+      ];
+      const nextDeck: EditorialCardDeck = {
+        ...baseDeck,
+        source: "grounding",
+        generatedAt: new Date().toISOString(),
+        cards: nextCards,
+        selectedCardIds: nextCards.filter((card) => card.status === "selected").map((card) => card.id).slice(0, 8),
+        rejectedCardIds: nextCards.filter((card) => card.status === "rejected").map((card) => card.id),
+      };
+      const nextPlan: DensityPlan = {
+        ...evaluateClientDensityPlan(nextDeck, editableDraft.blocks),
+        status: "ready",
+        groundingNeeded: false,
+        groundingRationale: `Grounding selectivo incorporado hasta ${grounding.expiresAt.slice(0, 10)}.`,
+        nextAction: "regenerate_with_deck",
+        recommendations: Array.from(new Set([
+          "Regenerar con deck enriquecido y medir pagina completa.",
+          ...evaluateClientDensityPlan(nextDeck, editableDraft.blocks).recommendations,
+        ])),
+      };
+      setEditableDraft({
+        ...editableDraft,
+        editorialDeck: nextDeck,
+        densityPlan: nextPlan,
+        layoutRecipe: nextPlan.layoutRecipe,
+      });
+      setGenerationFeedback(`${grounding.message} Cartas incorporadas: ${grounding.cards.length}.`);
+      pushActionLog({
+        kind: "shortcut",
+        action: "Grounding puntual incorporado",
+        status: "ok",
+        beforeTotal: projectedQaScores?.total ?? null,
+        afterTotal: nextPlan.usefulDensityScore,
+        delta: projectedQaScores?.total != null ? roundToOne(nextPlan.usefulDensityScore - projectedQaScores.total) : null,
+        changedBlocks: grounding.cards.length,
+        note: `TTL 7 dias; refs=${grounding.sourceRefs.join(", ")}`,
+      });
+    } catch (err) {
+      setGenerationFeedback(`Grounding puntual fallo: ${err instanceof Error ? err.message : String(err)}`);
+      pushActionLog({
+        kind: "shortcut",
+        action: "Grounding puntual",
+        status: "error",
+        beforeTotal: projectedQaScores?.total ?? null,
+        afterTotal: projectedQaScores?.total ?? null,
+        delta: 0,
+        changedBlocks: 0,
+        note: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setQuickActionBusy(null);
+    }
   }
 
   function diagnoseImageGeneration() {
@@ -3261,6 +3320,21 @@ export default function ComposerPage() {
                     </div>
                     <p className="mt-2 text-[10px] leading-relaxed text-white/70">{operationalRead.problem}</p>
                     <p className="mt-1 text-[10px] leading-relaxed text-cyan-100/80">Siguiente accion: {operationalRead.nextAction}</p>
+                    {activeDensityPlan?.status && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[8px]">
+                        <span className="rounded-sm border border-white/[0.10] bg-white/[0.04] px-2 py-1 font-bold uppercase tracking-widest text-white/45">
+                          Deck: {activeDensityPlan.status}
+                        </span>
+                        <span className="rounded-sm border border-cyan-400/20 bg-cyan-500/8 px-2 py-1 font-semibold text-cyan-100/75">
+                          Accion deck: {activeDensityPlan.nextAction ?? "regenerate_with_deck"}
+                        </span>
+                        {activeDensityPlan.groundingNeeded && (
+                          <span className="rounded-sm border border-amber-400/25 bg-amber-500/10 px-2 py-1 font-semibold text-amber-100">
+                            requiere grounding real
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
                   <div className="grid grid-cols-3 gap-2 min-w-[360px]">
@@ -4067,9 +4141,10 @@ export default function ComposerPage() {
                         <button
                           type="button"
                           onClick={addSelectiveGroundingCard}
-                          className="w-full h-8 rounded-sm border border-cyan-400/25 bg-cyan-500/10 text-[9px] font-semibold text-cyan-100 hover:bg-cyan-500/16"
+                          disabled={Boolean(quickActionBusy) || generatingFromComposer}
+                          className="w-full h-8 rounded-sm border border-cyan-400/25 bg-cyan-500/10 text-[9px] font-semibold text-cyan-100 hover:bg-cyan-500/16 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Buscar grounding puntual
+                          {quickActionBusy === "boost_technical" ? "Buscando grounding..." : "Buscar grounding puntual"}
                         </button>
                         <button
                           type="button"
