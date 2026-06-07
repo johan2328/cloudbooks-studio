@@ -223,8 +223,99 @@ const catalog = {
         previewPath: null,
       },
     },
+    {
+      ...page02,
+      pageId: "04",
+      pageNumber: "04",
+      title: "Autenticacion en ACR: identidades, tokens y roles",
+      guideQuestion: "Que identidad conviene para que un recurso Azure haga pull desde ACR sin guardar secretos?",
+      outputStatus: {
+        pageId: "04",
+        hasOutput: true,
+        generationMode: "placeholder_image",
+        generationStatus: "image_failed",
+        imageFailure: {
+          code: "invalid_api_key",
+          message: "Fixture: OpenAI rechazo la clave, por eso no hay upper visual real.",
+          providerError: "401 Incorrect API key",
+          retryable: false,
+          model: "gpt-image-2",
+          quality: "medium",
+          promptHash: "placeholder-fixture",
+        },
+        templateApproach: "golden_master_fixed_template",
+        layoutRevision: "visual-atlas-2026-06-06-layout-recipes",
+        currentLayoutRevision: "visual-atlas-2026-06-06-layout-recipes",
+        generatedAt: now,
+        approvedAt: null,
+        files: { html: true, metadata: true, qaReport: true, upperVisual: false, previewPng: false, previewSvg: false, approved: false },
+        htmlPath: "/assets/cloudbooks/ai-200/visual-atlas/pages/04/page.html",
+        previewPath: null,
+      },
+    },
   ],
 };
+
+const page02Html = String.raw`<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Fixture Visual Atlas 02</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; width: 768px; height: 1152px; overflow: hidden; font-family: Arial, sans-serif; color: #06133f; background: #fff; }
+    .topbar, .footer { height: 44px; background: #061b49; color: white; display: flex; align-items: center; padding: 0 28px; font-weight: 800; }
+    .hero { height: 214px; padding: 28px; border-bottom: 1px solid #d7e4f4; }
+    .hero h1 { margin: 0 0 10px; font-size: 42px; line-height: .95; max-width: 620px; }
+    .hero p { margin: 0; font-size: 17px; line-height: 1.35; max-width: 660px; }
+    .guide { height: 54px; background: #eef6ff; border-bottom: 3px solid #0b75e5; display: flex; align-items: center; gap: 10px; padding: 0 28px; font-size: 13px; }
+    .guide strong { color: #0562cb; letter-spacing: .06em; }
+    [data-zone="upper_visual"] { height: 506px; padding: 26px 28px 22px; background: #f8fbff; border-bottom: 1px solid #d7e4f4; }
+    .upper-grid { height: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .card { border: 1px solid #b9d2f2; border-radius: 8px; padding: 14px; background: white; display: flex; flex-direction: column; justify-content: space-between; }
+    .card h2 { margin: 0; font-size: 22px; line-height: 1.05; }
+    .diagram { height: 118px; border: 2px dashed #7db4ef; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #0875d1; font-size: 13px; font-weight: 800; }
+    .takeaway { border: 1px solid #9fd0ff; border-radius: 6px; padding: 8px; background: #f0f8ff; font-size: 12px; line-height: 1.25; }
+    [data-zone="exam_rail"] { height: 286px; display: grid; grid-template-columns: 1fr 1fr; border-bottom: 0; }
+    .rail-panel { padding: 16px 20px; background: #fff7f7; border-right: 1px solid #cbd9ec; }
+    .rail-panel:nth-child(2) { background: #f6f9fd; border-right: 0; }
+    .rail-title { height: 24px; margin: -16px -20px 14px; padding: 5px 18px; color: white; font-size: 12px; font-weight: 900; letter-spacing: .05em; background: #d92d20; }
+    .rail-panel:nth-child(2) .rail-title { background: #061b49; }
+    .rail-panel p { font-size: 12px; line-height: 1.3; margin: 0 0 10px; }
+    .footer { height: 48px; justify-content: space-between; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">Dominio 1 - Soluciones contenerizadas en Azure</div>
+  <section class="hero" data-zone="hero">
+    <h1>Build y push hacia ACR</h1>
+    <p>Comparar build local, build cloud, permisos y automatizacion sin depender de Docker local.</p>
+  </section>
+  <section class="guide" data-zone="guide_question"><strong>PREGUNTA GUIA:</strong> Si no tienes Docker local, que mecanismo permite construir y publicar?</section>
+  <section data-zone="upper_visual">
+    <div class="upper-grid">
+      <article class="card"><h2>01 Build local</h2><div class="diagram">codigo -> docker build -> push</div><div class="takeaway">Requiere Docker instalado.</div></article>
+      <article class="card"><h2>02 Build en Azure</h2><div class="diagram">az acr build -> imagen en ACR</div><div class="takeaway">No requiere Docker local.</div></article>
+      <article class="card"><h2>03 Permisos</h2><div class="diagram">AcrPush publica - AcrPull descarga</div><div class="takeaway">Pull no sirve para publicar.</div></article>
+      <article class="card"><h2>04 ACR Tasks</h2><div class="diagram">commit/schedule -> task -> ACR</div><div class="takeaway">Automatiza builds del registro.</div></article>
+    </div>
+  </section>
+  <section data-zone="exam_rail">
+    <div class="rail-panel"><div class="rail-title">TRAMPAS DEL EXAMEN</div><p><strong>Mito:</strong> siempre necesitas Docker local.</p><p><strong>Correccion:</strong> az acr build ejecuta el build en Azure.</p><p><strong>Mito:</strong> AcrPull permite hacer push.</p></div>
+    <div class="rail-panel"><div class="rail-title">VERIFICACION AUTOCHECK</div><p><strong>Pregunta:</strong> Que comando revisas primero?</p><p><strong>Respuesta:</strong> az acr build.</p><p>Explicacion: construye en Azure y publica en ACR.</p></div>
+  </section>
+  <footer class="footer" data-zone="footer"><span>AI-200 Visual Study Atlas</span><span>02/61</span></footer>
+</body>
+</html>`;
+
+const page04Html = page02Html
+  .replace("Fixture Visual Atlas 02", "Fixture Visual Atlas 04 Placeholder")
+  .replace("Build y push hacia ACR", "Autenticacion en ACR")
+  .replace("02/61", "04/61")
+  .replace(
+    /<section data-zone="upper_visual">[\s\S]*?<\/section>/,
+    `<section data-zone="upper_visual"><div style="height:100%;border:2px dashed #b9d2f2;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#7a8da8;font-size:14px;font-weight:800;">Visual superior pendiente</div></section>`,
+  );
 
 const qaReport = {
   verdict: "needs_revision",
@@ -265,6 +356,35 @@ const qaReport = {
     blockers: [],
     score: 8.0,
     note: "Fixture visual para smoke test sin OpenAI.",
+  },
+};
+
+const placeholderQaReport = {
+  ...qaReport,
+  verdict: "needs_revision",
+  scores: {
+    total: 6.5,
+    art_direction: 5.0,
+    editorial_consistency: 6.0,
+    readability: 7.0,
+    technical_accuracy: 10.0,
+    useful_density: 5.5,
+    commercial_risk: 5.5,
+  },
+  observations: ["Upper visual placeholder: la pagina no es salida editorial evaluable."],
+  redTeamLog: ["QA bloquea salida premium porque no hay imagen real."],
+  layoutEvidence: {
+    ...qaReport.layoutEvidence,
+    blockers: ["Upper visual placeholder: la pagina no es salida editorial evaluable."],
+    warnings: ["No evaluar como pagina final."],
+    score: 6.5,
+  },
+  visualMeasurement: {
+    ...qaReport.visualMeasurement,
+    available: true,
+    upperImageContent: { available: false, contentWidthPct: 0, contentHeightPct: 0, contentAreaPct: 0, bottomWhitespacePct: 100, rightWhitespacePct: 100 },
+    blockers: ["placeholder"],
+    score: 6.5,
   },
 };
 
@@ -333,6 +453,18 @@ async function installStudioFixtures(page: Page) {
   await page.route("**/api/studio/qa-report/02", async (route) => {
     await route.fulfill({ json: qaReport });
   });
+  await page.route("**/api/studio/output-status/04", async (route) => {
+    await route.fulfill({ json: catalog.pages[1].outputStatus });
+  });
+  await page.route("**/api/studio/qa-report/04", async (route) => {
+    await route.fulfill({ json: placeholderQaReport });
+  });
+  await page.route("**/assets/cloudbooks/ai-200/visual-atlas/pages/02/page.html**", async (route) => {
+    await route.fulfill({ contentType: "text/html", body: page02Html });
+  });
+  await page.route("**/assets/cloudbooks/ai-200/visual-atlas/pages/04/page.html**", async (route) => {
+    await route.fulfill({ contentType: "text/html", body: page04Html });
+  });
   await page.route("**/api/studio/key-status", async (route) => {
     await route.fulfill({
       json: {
@@ -379,6 +511,67 @@ test("Composer variants are comparable and actionable without Replit/API/OpenAI"
   await page.goto("/qa/02");
   await expect(page.getByText(/QA Y APROBACION|QA Y APROBACIÓN/i)).toBeVisible();
   await expect(page.getByText(/Score por dimension|Score por dimensión/i)).toBeVisible();
+
+  expect(pageErrors, pageErrors.join("\n")).toEqual([]);
+});
+
+test("Biblioteca preview exposes a measurable full-page layout, not just a clickable UI", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (err) => pageErrors.push(err.message));
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !/404|favicon/i.test(msg.text())) pageErrors.push(msg.text());
+  });
+  await installStudioFixtures(page);
+
+  await page.goto("/biblioteca");
+
+  await expect(page.getByText("Output real con upper visual premium")).toBeVisible();
+  await expect(page.getByText("Preview - Golden Master")).toBeVisible();
+
+  const frame = page.frameLocator('iframe[title="Pagina 02 - golden master"]');
+  await expect(frame.locator('[data-zone="upper_visual"]')).toBeVisible();
+  await expect(frame.locator('[data-zone="exam_rail"]')).toBeVisible();
+  await expect(frame.locator('[data-zone="footer"]')).toBeVisible();
+
+  const layout = await frame.locator("body").evaluate(() => {
+    const body = document.body.getBoundingClientRect();
+    const upper = document.querySelector('[data-zone="upper_visual"]')?.getBoundingClientRect();
+    const rail = document.querySelector('[data-zone="exam_rail"]')?.getBoundingClientRect();
+    const footer = document.querySelector('[data-zone="footer"]')?.getBoundingClientRect();
+    return {
+      width: Math.round(body.width),
+      height: Math.round(body.height),
+      scrollHeight: document.documentElement.scrollHeight,
+      upperHeight: upper ? Math.round(upper.height) : 0,
+      railHeight: rail ? Math.round(rail.height) : 0,
+      footerBottom: footer ? Math.round(footer.bottom) : 0,
+    };
+  });
+
+  expect(layout.width).toBe(768);
+  expect(layout.height).toBe(1152);
+  expect(layout.scrollHeight).toBeLessThanOrEqual(1152);
+  expect(layout.upperHeight).toBeGreaterThanOrEqual(480);
+  expect(layout.railHeight).toBeLessThanOrEqual(300);
+  expect(layout.footerBottom).toBeLessThanOrEqual(1152);
+  expect(pageErrors, pageErrors.join("\n")).toEqual([]);
+});
+
+test("QA blocks placeholder outputs and caps the editorial score", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (err) => pageErrors.push(err.message));
+  page.on("console", (msg) => {
+    if (msg.type() === "error" && !/404|favicon/i.test(msg.text())) pageErrors.push(msg.text());
+  });
+  await installStudioFixtures(page);
+
+  await page.goto("/qa/04");
+
+  await expect(page.getByText("Bloqueado: upper visual no premium", { exact: true })).toBeVisible();
+  await expect(page.getByText("UPPER VISUAL PLACEHOLDER", { exact: true })).toBeVisible();
+  await expect(page.getByText("6.5/10").first()).toBeVisible();
+  await expect(page.getByText("Bloqueado - upper visual no premium")).toBeVisible();
+  await expect(page.getByRole("button").filter({ hasText: /Aprobar/i }).first()).toBeDisabled();
 
   expect(pageErrors, pageErrors.join("\n")).toEqual([]);
 });
