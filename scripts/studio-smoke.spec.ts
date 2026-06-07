@@ -612,6 +612,13 @@ test("Composer variants are comparable and actionable without Replit/API/OpenAI"
   await page.goto("/composer/02");
 
   await expect(page.getByText("Mesa de decision editorial")).toBeVisible();
+  await expect(page.getByText("QA predictivo bloqueado").first()).toBeVisible();
+  await expect(page.getByText("QA real primero").first()).toBeVisible();
+  await expect(page.getByText("QA oficial").first()).toBeVisible();
+  await expect(page.getByText("8.7/10").first()).toBeVisible();
+  await expect(page.getByText("Draft").first()).toBeVisible();
+  await expect(page.getByText("8.8/10").first()).toBeVisible();
+  await expect(page.getByText("Evidencia real lista para cierre")).toHaveCount(0);
   await expect(page.getByText("Variantes comparables")).toBeVisible();
   await expect(page.getByText("Draft actual")).toBeVisible();
   await expect(page.getByText("Nucleo visual dominante")).toBeVisible();

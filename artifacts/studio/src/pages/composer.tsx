@@ -2033,19 +2033,38 @@ export default function ComposerPage() {
       ? null
       : normalizeQaScoreToTen(lockedQa.scores.total);
     const hasRealOutput = lockedStatus?.hasOutput === true;
+    const hasPremiumImage =
+      hasRealOutput
+      && lockedStatus?.generationStatus === "image_generated"
+      && lockedStatus?.generationMode !== "placeholder_image";
+    const hasOfficialQa = lockedTotalScore != null;
+    const officialTargetReached = lockedTotalScore != null && lockedTotalScore >= 9.5;
+    const hasPostRenderEvidence = Boolean(lockedQa?.layoutEvidence);
+    const postRenderReady =
+      Boolean(lockedQa?.layoutEvidence)
+      && (lockedQa?.layoutEvidence?.blockers.length ?? 0) === 0
+      && (lockedQa?.layoutEvidence?.score ?? 0) >= 9;
     const hasFourTechnical = technicalBlockCount >= 4;
-    const targetReached = projectedTotal != null && projectedTotal >= 9.5;
+    const targetReached = officialTargetReached;
     const serverAligned = lockedTotalScore != null && projectedTotal != null
       ? Math.abs(projectedTotal - lockedTotalScore) <= 0.1
       : false;
 
     return {
       projectedTotal,
+      officialTotal: lockedTotalScore,
       hasRealOutput,
+      hasPremiumImage,
+      hasOfficialQa,
+      hasPostRenderEvidence,
+      postRenderReady,
       hasFourTechnical,
       targetReached,
       serverAligned,
-      isReadyForPublish: hasRealOutput && targetReached && serverAligned,
+      isReadyForPublish: hasPremiumImage && hasOfficialQa && targetReached && serverAligned && postRenderReady,
+      claimHint: hasPremiumImage && hasOfficialQa
+        ? "Mejora demostrable solo si QA oficial y evidencia post-render estan alineados."
+        : "El draft es una estimacion: no reemplaza QA oficial ni demuestra mejora sin render real.",
     };
   }, [projectedQaScores, lockedQa, lockedStatus, technicalBlockCount]);
   const benchmark = useMemo(
@@ -2239,8 +2258,8 @@ export default function ComposerPage() {
   }, [comparableVariants]);
   const decisionFlow = useMemo(() => {
     const step1Done = technicalBlockCount >= 4;
-    const step2Done = (projectedGap ?? 9.5) <= 0.6;
-    const step3Done = composerReadiness.serverAligned && composerReadiness.hasRealOutput;
+    const step2Done = lockedGap != null && lockedGap <= 0.6;
+    const step3Done = composerReadiness.serverAligned && composerReadiness.hasPremiumImage && composerReadiness.postRenderReady;
     const currentStep = !step1Done ? 1 : !step2Done ? 2 : !step3Done ? 3 : 4;
     return {
       currentStep,
@@ -2255,19 +2274,23 @@ export default function ComposerPage() {
           id: 2,
           title: "Brecha editorial",
           done: step2Done,
-          detail: step2Done ? "Brecha <= 0.6 hacia 9.5." : `Brecha actual ${projectedGap?.toFixed(1) ?? "-"} (objetivo <= 0.6).`,
+          detail: step2Done
+            ? "QA oficial deja brecha <= 0.6 hacia 9.5."
+            : lockedGap != null
+              ? `Brecha QA oficial ${lockedGap.toFixed(1)} (objetivo <= 0.6).`
+              : `Solo hay estimacion draft ${projectedQaScores?.total?.toFixed(1) ?? "-"}; falta render real.`,
         },
         {
           id: 3,
           title: "Consolidación QA",
           done: step3Done,
           detail: step3Done
-            ? "Composer y QA servidor alineados."
-            : "Genera y valida QA para consolidar trazabilidad final.",
+            ? "Composer, imagen real y evidencia post-render alineados."
+            : "Genera y valida QA post-render para consolidar trazabilidad final.",
         },
       ],
     };
-  }, [technicalBlockCount, projectedGap, composerReadiness.serverAligned, composerReadiness.hasRealOutput]);
+  }, [technicalBlockCount, lockedGap, projectedQaScores?.total, composerReadiness.serverAligned, composerReadiness.hasPremiumImage, composerReadiness.postRenderReady]);
   const decisionDesk = useMemo<DecisionDeskDecision>(() => {
     const visual = lockedQa?.visualMeasurement;
     const layout = lockedQa?.layoutEvidence;
@@ -5354,7 +5377,10 @@ export default function ComposerPage() {
                   <div>
                     <p className="text-[8px] font-bold text-white/25 uppercase tracking-widest">Estado Composer</p>
                     <p className="text-[12px] font-bold text-white/78 mt-0.5">
-                      {composerReadiness.isReadyForPublish ? "Listo para cierre editorial" : "Ajuste en progreso"}
+                      {composerReadiness.isReadyForPublish ? "Evidencia real lista para cierre" : "Ajuste en progreso"}
+                    </p>
+                    <p className="text-[9px] text-white/45 mt-1 leading-relaxed max-w-2xl">
+                      {composerReadiness.claimHint}
                     </p>
                   </div>
                   <span className={cn(
@@ -5380,9 +5406,12 @@ export default function ComposerPage() {
                     "rounded-sm border px-2.5 py-2",
                     composerReadiness.targetReached ? "border-emerald-500/20 bg-emerald-500/8" : "border-amber-500/20 bg-amber-500/8",
                   )}>
-                    <p className="text-[8px] text-white/30 uppercase tracking-widest">Objetivo 9.5</p>
+                    <p className="text-[8px] text-white/30 uppercase tracking-widest">QA oficial 9.5</p>
                     <p className="text-[10px] font-bold mt-1 text-white/80">
-                      {composerReadiness.projectedTotal?.toFixed(1) ?? "-"} / 10
+                      {composerReadiness.officialTotal?.toFixed(1) ?? "sin QA"} / 10
+                    </p>
+                    <p className="text-[8px] text-white/38 mt-0.5">
+                      Draft: {composerReadiness.projectedTotal?.toFixed(1) ?? "-"} / 10
                     </p>
                   </div>
                   <div className={cn(
@@ -5396,11 +5425,14 @@ export default function ComposerPage() {
                   </div>
                   <div className={cn(
                     "rounded-sm border px-2.5 py-2",
-                    composerReadiness.hasRealOutput ? "border-emerald-500/20 bg-emerald-500/8" : "border-amber-500/20 bg-amber-500/8",
+                    composerReadiness.hasPremiumImage ? "border-emerald-500/20 bg-emerald-500/8" : "border-amber-500/20 bg-amber-500/8",
                   )}>
-                    <p className="text-[8px] text-white/30 uppercase tracking-widest">Output real</p>
+                    <p className="text-[8px] text-white/30 uppercase tracking-widest">Imagen real</p>
                     <p className="text-[10px] font-bold mt-1 text-white/80">
-                      {composerReadiness.hasRealOutput ? "Disponible" : "Aun no generado"}
+                      {composerReadiness.hasPremiumImage ? "Image 2 medido" : "No evaluable"}
+                    </p>
+                    <p className="text-[8px] text-white/38 mt-0.5">
+                      Post-render: {composerReadiness.hasPostRenderEvidence ? (composerReadiness.postRenderReady ? "sano" : "con alertas") : "pendiente"}
                     </p>
                   </div>
                 </div>
