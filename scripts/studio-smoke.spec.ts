@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
+import { assessStudioLayout, type StudioLayoutMeasurement } from "./src/studio-layout-harness";
 
 const now = "2026-06-06T12:00:00.000Z";
 
@@ -317,6 +318,123 @@ const page04Html = page02Html
     `<section data-zone="upper_visual"><div style="height:100%;border:2px dashed #b9d2f2;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#7a8da8;font-size:14px;font-weight:800;">Visual superior pendiente</div></section>`,
   );
 
+const gapHeavyHtml = String.raw`<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Fixture gap-heavy</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; width: 768px; height: 1152px; overflow: hidden; font-family: Arial, sans-serif; background: white; }
+    .topbar, .footer { height: 44px; background: #061b49; color: white; display: flex; align-items: center; padding: 0 28px; font-weight: 800; }
+    .hero { height: 214px; padding: 28px; }
+    .hero h1 { margin: 0; font-size: 40px; }
+    .guide { height: 54px; background: #eef6ff; border-bottom: 3px solid #0b75e5; padding: 18px 28px; font-size: 13px; }
+    [data-zone="upper_visual"] { height: 506px; padding: 28px; background: #f8fbff; border-bottom: 1px solid #d7e4f4; }
+    .tiny-upper { width: 58%; height: 170px; border: 1px solid #b9d2f2; border-radius: 8px; padding: 14px; font-size: 11px; }
+    [data-zone="exam_rail"] { height: 286px; display: grid; grid-template-columns: 1fr 1fr; }
+    .rail-copy { margin: 16px 20px; width: 70%; font-size: 11px; line-height: 1.25; }
+    .footer { height: 48px; justify-content: space-between; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">Dominio 1</div>
+  <section class="hero" data-zone="hero"><h1>Pagina con huecos</h1></section>
+  <section class="guide" data-zone="guide_question">PREGUNTA GUIA: fixture</section>
+  <section data-zone="upper_visual"><div class="tiny-upper">Solo una tarjeta corta. El resto queda blanco y deberia ser detectado por el harness.</div></section>
+  <section data-zone="exam_rail"><div class="rail-copy">Trampa minima.</div><div class="rail-copy">Autocheck minimo.</div></section>
+  <footer class="footer" data-zone="footer"><span>AI-200 Visual Study Atlas</span><span>99/61</span></footer>
+</body>
+</html>`;
+
+async function measureLayout(scope: Locator): Promise<StudioLayoutMeasurement> {
+  return scope.evaluate(() => {
+    function roundedRect(rect: DOMRect) {
+      return {
+        top: Math.round(rect.top),
+        bottom: Math.round(rect.bottom),
+        height: Math.round(rect.height),
+      };
+    }
+
+    function zone(name: string) {
+      const el = document.querySelector(`[data-zone="${name}"]`) as HTMLElement | null;
+      if (!el) {
+        return { present: false, top: 0, bottom: 0, height: 0, childCount: 0, freeBottomPx: null, contentHeightPct: null };
+      }
+      const rect = el.getBoundingClientRect();
+      const textRects: DOMRect[] = [];
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      let node = walker.nextNode();
+      while (node) {
+        if ((node.textContent ?? "").trim().length > 0) {
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          const rect = range.getBoundingClientRect();
+          if (rect.width > 2 && rect.height > 2) textRects.push(rect);
+          range.detach();
+        }
+        node = walker.nextNode();
+      }
+      const visualRects = Array.from(el.querySelectorAll<HTMLElement>("img,svg,canvas"))
+        .map((child) => child.getBoundingClientRect())
+        .filter((rect) => rect.width > 3 && rect.height > 3);
+      const meaningfulRects = [...textRects, ...visualRects];
+      const childBottom = meaningfulRects.length
+        ? Math.max(...meaningfulRects.map((rect) => rect.bottom))
+        : rect.top;
+      const childTop = meaningfulRects.length
+        ? Math.min(...meaningfulRects.map((rect) => rect.top))
+        : rect.top;
+      const freeBottomPx = Math.max(0, Math.round(rect.bottom - childBottom));
+      const contentHeight = meaningfulRects.length ? Math.max(0, childBottom - childTop) : 0;
+      return {
+        present: true,
+        ...roundedRect(rect),
+        childCount: meaningfulRects.length,
+        freeBottomPx,
+        contentHeightPct: Math.round((contentHeight / Math.max(1, rect.height)) * 100),
+      };
+    }
+
+    const textElements = Array.from(document.querySelectorAll<HTMLElement>("body *"))
+      .filter((el) => (el.textContent ?? "").trim().length > 0);
+    const fontSizes = textElements
+      .map((el) => Number.parseFloat(window.getComputedStyle(el).fontSize))
+      .filter((size) => Number.isFinite(size) && size > 0);
+    const minFontPx = fontSizes.length ? Math.min(...fontSizes) : null;
+
+    const bodyRect = document.body.getBoundingClientRect();
+    const contentWidth = Math.max(document.body.scrollWidth, Math.round(bodyRect.width));
+    const contentHeight = Math.max(document.body.scrollHeight, Math.round(bodyRect.height));
+
+    return {
+      page: {
+        width: Math.round(bodyRect.width),
+        height: Math.round(bodyRect.height),
+        scrollWidth: contentWidth,
+        scrollHeight: contentHeight,
+        horizontalOverflowPx: Math.max(0, contentWidth - Math.round(bodyRect.width)),
+        verticalOverflowPx: Math.max(0, contentHeight - Math.round(bodyRect.height)),
+      },
+      zones: {
+        hero: zone("hero"),
+        guide_question: zone("guide_question"),
+        upper_visual: zone("upper_visual"),
+        exam_rail: zone("exam_rail"),
+        footer: zone("footer"),
+      },
+      typography: {
+        minFontPx,
+        smallTextCount: fontSizes.filter((size) => size < 7.5).length,
+      },
+      blockers: [],
+      warnings: [],
+      score: 10,
+    };
+  });
+}
+
 const qaReport = {
   verdict: "needs_revision",
   scores: {
@@ -533,28 +651,31 @@ test("Biblioteca preview exposes a measurable full-page layout, not just a click
   await expect(frame.locator('[data-zone="exam_rail"]')).toBeVisible();
   await expect(frame.locator('[data-zone="footer"]')).toBeVisible();
 
-  const layout = await frame.locator("body").evaluate(() => {
-    const body = document.body.getBoundingClientRect();
-    const upper = document.querySelector('[data-zone="upper_visual"]')?.getBoundingClientRect();
-    const rail = document.querySelector('[data-zone="exam_rail"]')?.getBoundingClientRect();
-    const footer = document.querySelector('[data-zone="footer"]')?.getBoundingClientRect();
-    return {
-      width: Math.round(body.width),
-      height: Math.round(body.height),
-      scrollHeight: document.documentElement.scrollHeight,
-      upperHeight: upper ? Math.round(upper.height) : 0,
-      railHeight: rail ? Math.round(rail.height) : 0,
-      footerBottom: footer ? Math.round(footer.bottom) : 0,
-    };
-  });
+  const layout = assessStudioLayout(await measureLayout(frame.locator("body")));
 
-  expect(layout.width).toBe(768);
-  expect(layout.height).toBe(1152);
-  expect(layout.scrollHeight).toBeLessThanOrEqual(1152);
-  expect(layout.upperHeight).toBeGreaterThanOrEqual(480);
-  expect(layout.railHeight).toBeLessThanOrEqual(300);
-  expect(layout.footerBottom).toBeLessThanOrEqual(1152);
+  expect(layout.page.width).toBe(768);
+  expect(layout.page.height).toBe(1152);
+  expect(layout.page.scrollHeight).toBeLessThanOrEqual(1152);
+  expect(layout.zones.upper_visual.height).toBeGreaterThanOrEqual(480);
+  expect(layout.zones.exam_rail.height).toBeLessThanOrEqual(300);
+  expect(layout.zones.footer.bottom).toBeLessThanOrEqual(1152);
+  expect(layout.blockers, layout.blockers.join("\n")).toEqual([]);
+  expect(layout.score).toBeGreaterThanOrEqual(8.5);
   expect(pageErrors, pageErrors.join("\n")).toEqual([]);
+});
+
+test("Layout harness flags useless whitespace before a human sees the page", async ({ page }) => {
+  await page.setContent(gapHeavyHtml);
+
+  const layout = assessStudioLayout(await measureLayout(page.locator("body")));
+
+  expect(layout.blockers, layout.blockers.join("\n")).toEqual([]);
+  expect(layout.warnings).toEqual(expect.arrayContaining([
+    expect.stringMatching(/^upper_free_bottom_/),
+    expect.stringMatching(/^upper_low_content_height_/),
+    expect.stringMatching(/^rail_free_bottom_/),
+  ]));
+  expect(layout.score).toBeLessThan(9);
 });
 
 test("QA blocks placeholder outputs and caps the editorial score", async ({ page }) => {
