@@ -1,0 +1,9 @@
+# Secretos — NUNCA subir
+.env
+.env.local
+
+# Dependencias
+node_modules/
+
+# Salidas/ledger locales del motor
+*.log

@@ -1,0 +1,1881 @@
+{
+  "cap-03": {
+    "seed": {
+      "chapterId": "cap-03",
+      "chapterNumber": "03",
+      "moduleId": "p2.deploy",
+      "domainId": "p2",
+      "domainLabel": "Ruta 2 — Despliegue y gestión en Azure Container Apps",
+      "title": "Desplegar contenedores en Azure Container Apps",
+      "subtitle": "Desde el entorno hasta la verificación: decisiones prácticas para producción",
+      "intro": "<p>Este capítulo explica cómo desplegar y gestionar contenedores usando Azure Container Apps.\nSe enfoca en las prácticas necesarias para entornos, despliegues, runtime, autenticación y verificación.\nEstos temas son fundamentales en la ruta 2 y aparecen directamente en el examen AI-200.\nEl examen valora no solo conocimientos teóricos, sino la capacidad para construir soluciones operativas y confiables.\nEntender cómo autenticar imágenes privadas y validar despliegues con logs es clave para la evaluación.</p><p>El recorrido del capítulo está organizado en secciones prácticas y conectadas entre sí.\nPrimero se describen los entornos de Container Apps y cómo prepararlos para los despliegues.\nLuego se muestra cómo desplegar aplicaciones con la CLI usando archivos YAML y parámetros de runtime.\nA continuación cubrimos variables, secretos y la autenticación contra registros privados para imágenes.\nFinalmente, aprenderás a verificar el estado y diagnosticar problemas mediante logs y métricas.</p><p>Al terminar, podrás construir un razonamiento práctico para desplegar y operar aplicaciones en Container Apps.\nSabrás configurar entornos, gestionar variables y secretos, y usar YAML y la CLI efectivamente.\nTambién estarás capacitado para autenticar imágenes en registries privados y automatizar despliegues seguros.\nAprenderás a interpretar logs, revisar estados y aplicar correcciones que garanticen soluciones robustas y observables.\nTodo esto te permitirá responder con confianza a las tareas prácticas del AI-200 y diseñar despliegues fiables.</p>",
+      "skillIds": [
+        "p2.deploy.container-apps-environments",
+        "p2.deploy.deploy-container-app",
+        "p2.deploy.configure-runtime",
+        "p2.deploy.connect-to-registries",
+        "p2.deploy.verify-deployment"
+      ],
+      "sections": [
+        {
+          "id": "s1",
+          "heading": "Entornos Container Apps",
+          "prose": "Al diseñar la topología de una solución basada en contenedores conviene tratar el entorno de Container Apps como el límite operativo que define red interna, observabilidad y alcance de comunicaciones entre aplicaciones. Si dos servicios necesitan comunicarse por canales privados, entrégalos al mismo environment y despliega el servicio receptor con --ingress internal; si un servicio debe atender clientes desde Internet, usa --ingress external. Crear el environment de forma explícita antes de desplegar apps da control sobre nombres, región y la integración con Azure Monitor, y evita que despliegues rápidos generen entornos inconsistentes en equipos grandes. Antes de apuntar despliegues, inspecciona la región y la configuración de observabilidad del environment para detectar discrepancias (por ejemplo, logs no exportados o mismatch de región) que luego son costosos de corregir.\n\nCrea primero el resource group y el environment, y después asigna las apps a ese entorno: esta secuencia facilita aplicar políticas y depurar problemas de red o autorizaciones entre aplicaciones. Planifica la separación por lifecycle (dev/test/prod) y por límites de comunicación para minimizar riesgos de impacto lateral cuando actualices una app.\n\n<pre class=\"scn-code\">az group create --name rg-aca-demo --location centralus\n\naz containerapp env create \\\n --name aca-env-demo \\\n --resource-group rg-aca-demo \\\n --location centralus\n\naz containerapp env show \\\n --name aca-env-demo \\\n --resource-group rg-aca-demo</pre>\n\n<div class=\"tip\">\n <p class=\"lab\">En el laboratorio</p>\n <p>Si vas a automatizar infraestructura, crea primero el resource group y el environment en la pipeline de infraestructura (IaC) y deja que las pipelines de aplicaciones solo creen las Container Apps dentro del environment existente. Así separas responsabilidades y evitas que pruebas creen entornos efímeros con nombres dispares.</p>\n</div>",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "s2",
+          "heading": "Deploy Container Apps con CLI y YAML",
+          "prose": "Al pasar del diseño al despliegue tienes dos caminos: la vía rápida con az containerapp up y la vía controlada con az containerapp create o YAML. az containerapp up acelera la primera publicación porque puede crear el environment y los recursos asociados; es ideal para prototipos y pruebas funcionales. Para entornos de producción o equipos que requieren revisión de cambios, la fuente de verdad debe ser YAML almacenado en control de versiones; al aplicar --yaml la CLI toma ese documento como la fuente principal de configuración; el comportamiento exacto varía según el comando y algunos flags (por ejemplo, --resource-group, --name u otros) pueden seguir siendo efectivos o combinarse con la configuración del YAML. Recomendamos evitar mezclar flags y YAML en pipelines para reducir sorpresas.\n\nAntes de desplegar actualiza la CLI y añade la extensión de Container Apps: esto reduce errores por opciones cambiantes. Si solo necesitas actualizar la imagen en producción, un comando habitual es az containerapp update --name <app> --resource-group <rg> --image <imagen:tag>. Para despliegues reproducibles, guarda la definición en YAML y aplica esa versión desde la pipeline.\n\n<pre class=\"scn-code\">az login\naz upgrade\naz extension add --name containerapp --upgrade\n\naz provider register --namespace Microsoft.App\naz provider register --namespace Microsoft.OperationalInsights\n\n# Despliegue rápido (crea recursos si hacen falta y devuelve FQDN)\naz containerapp up \\\n --name my-container-app \\\n --resource-group rg-aca-demo \\\n --location centralus \\\n --environment aca-env-demo \\\n --image mcr.microsoft.com/k8se/quickstart:latest \\\n --target-port 80 \\\n --ingress external \\\n --query properties.configuration.ingress.fqdn\n\n# Despliegue controlado apuntando a un environment existente\naz containerapp create \\\n --name ai-api \\\n --resource-group rg-aca-demo \\\n --environment aca-env-demo \\\n --image mcr.microsoft.com/k8se/quickstart:latest \\\n --ingress external \\\n --target-port 80\n\n# Actualizar solo la imagen (genera nueva revision)\naz containerapp update \\\n --name ai-api \\\n --resource-group rg-aca-demo \\\n --image myregistry.azurecr.io/ai-api:v2</pre>\n\n<div class=\"exam-trap\">\n <p class=\"lab\">Trampa del examen</p>\n <p>Si una pregunta pide actualizar mediante YAML, no mezcles flags en la misma línea: al usar --yaml la CLI toma el documento YAML como fuente principal, pero el efecto exacto sobre otros flags depende del comando; por eso es una buena práctica no combinar ambos. Otra trampa frecuente es olvidar que los nombres de repositorio deben ir en minúsculas; esto provoca fallos de pull que parecen problemas de autenticación.</p>\n</div>",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "s3",
+          "heading": "Runtime con variables y secretos",
+          "prose": "La configuración en tiempo de ejecución distingue variables no sensibles y secretos. Usa environment variables para parámetros no sensibles (LOG_LEVEL, feature flags, endpoints): permiten que la misma imagen se ejecute en distintos entornos sin rebuild. Para valores sensibles —API keys, credenciales, tokens— usa secrets de Container Apps y referencia esos secretos desde variables de entorno con secretref. Guarda en control de versiones solo el nombre del secreto, nunca su valor.\n\nOperativamente crea y actualiza variables y secretos con comandos que separan ambos casos: --env-vars o --set-env-vars para variables públicas, az containerapp secret set para secretos, y referencias secretref:<nombre> para mapear un secreto a una env var. Si rotas credenciales con frecuencia, actualiza el secreto en Container Apps; eso no hace que las instancias en ejecución reciban automáticamente el nuevo valor. Debes provocar una nueva revisión para que las instancias usen el valor rotado: por ejemplo, realiza un cambio que genere una nueva revisión, como az containerapp update -n <app> -g <rg> --set-env-vars DUMMY=1. Ten en cuenta que az containerapp restart solo reinicia las instancias de la revisión actual y no crea una nueva revisión, por lo que por sí solo no hará que las instancias carguen el secreto rotado.\n\n<pre class=\"scn-code\"># Crear app con variables no sensibles\naz containerapp create -n ai-api -g rg-aca-demo \\\n --environment aca-env-demo \\\n --image myregistry.azurecr.io/ai-api:v1 \\\n --ingress external --target-port 8000 \\\n --env-vars LOG_LEVEL=info FEATURE_EMBEDDINGS=true\n\n# Actualizar o añadir variables sin eliminar las existentes\naz containerapp update -n ai-api -g rg-aca-demo \\\n --set-env-vars LOG_LEVEL=debug\n\n# Crear o actualizar un secreto (no lo pongas en YAML)\naz containerapp secret set -n ai-api -g rg-aca-demo \\\n --secrets embeddings-api-key=\"REPLACE_WITH_REAL_VALUE\"\n\n# Referenciar el secreto desde una env var\naz containerapp update -n ai-api -g rg-aca-demo \\\n --set-env-vars EMBEDDINGS_API_KEY=secretref:embeddings-api-key</pre>\n\n<table class=\"dmap\"><thead><tr><th>Si necesitás…</th><th>Elegí…</th></tr></thead><tbody><tr><td class=\"s\">Configurar log level o feature flags que cambian por ambiente</td><td class=\"d\">Variables de entorno (--env-vars / --set-env-vars)</td></tr><tr><td class=\"s\">Proteger API keys o credenciales que se rotan</td><td class=\"d\">Secrets de Container Apps + secretref en la env var</td></tr></tbody></table>",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "s4",
+          "heading": "Autenticación para registries privados",
+          "prose": "Las imágenes de producción suelen residir en registries privados; la decisión operativa es cómo autenticar las descargas. Usuario/contraseña funciona con cualquier registry pero genera carga operativa por rotación y almacenamiento de credenciales. Para Azure Container Registry (ACR) favorece identidad administrada: evita credenciales en scripts y permite aplicar RBAC (por ejemplo, conceder AcrPull a la identidad que use la Container App).\n\nConfigura el pull tanto con credenciales como con identidad administrada usando az containerapp registry set; valida la configuración con az containerapp registry list y az containerapp registry show para detectar drifts entre entornos. En producción, asigna AcrPull al principal mínimo necesario y prueba que los pulls funcionan antes de promover una revisión.\n\n<pre class=\"scn-code\"># Configurar registry con usuario y contraseña\naz containerapp registry set -n ai-api -g rg-aca-demo \\\n --server myregistry.azurecr.io \\\n --username MyRegistryUsername \\\n --password MyRegistryPassword\n\n# Configurar registry usando identidad administrada (ACR)\naz containerapp registry set -n ai-api -g rg-aca-demo \\\n --server myregistry.azurecr.io \\\n --identity system\n\n# Verificar registros configurados\naz containerapp registry list -n ai-api -g rg-aca-demo\n\naz containerapp registry show -n ai-api -g rg-aca-demo \\\n --server myregistry.azurecr.io</pre>\n\n<div class=\"exam-trap\">\n <p class=\"lab\">Trampa del examen</p>\n <p>No confundas registries públicos (sin credenciales) con privados. Preguntas tipo \"¿por qué falla el pull?\" a menudo buscan detectar que el candidato olvidó que el nombre del repositorio tiene mayúsculas o que no se otorgó AcrPull a la identidad.</p>\n</div>",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "s5",
+          "heading": "Verificación con logs y estado",
+          "prose": "La verificación cierra el ciclo entre la intención del despliegue y lo que efectivamente corre. Sigue un orden lógico: confirma configuración e ingress; revisa logs de contenedor; verifica que la actualización creó una nueva revision y, si hace falta, examina réplicas para entender comportamiento de escalado. Empezar por los logs de aplicación suele ser más eficiente que cambiar configuración sin diagnóstico.\n\nUtiliza az containerapp show para comprobar que la app está en el environment correcto y para recuperar el FQDN; usa az containerapp logs show para obtener las salidas de la aplicación y agrega --follow --tail para seguimiento en tiempo real. Si sospechas un problema de plataforma, solicita logs de sistema con --type system. Para revisar versiones y rollouts lista revisiones y réplicas: la combinación te permite encontrar crash loops, fallos de pull o revisiones que no alcanzan estado healthy.\n\n<pre class=\"scn-code\"># Confirmar configuración e ingress\naz containerapp show -n ai-api -g rg-aca-demo\n\n# Ver logs de la aplicación (últimas líneas y seguimiento en tiempo real)\naz containerapp logs show -n ai-api -g rg-aca-demo \\\n --follow --tail 30\n\n# Logs del sistema de la plataforma\naz containerapp logs show -n ai-api -g rg-aca-demo \\\n --type system\n\n# Listar revisiones (incluir --all para ver inactivas)\naz containerapp revision list -n ai-api -g rg-aca-demo --all\n\n# Listar réplicas (puedes especificar una revision)\naz containerapp replica list -n ai-api -g rg-aca-demo\n\naz containerapp replica list -n ai-api -g rg-aca-demo \\\n --revision MyRevision</pre>\n\n<div class=\"tip\">\n <p class=\"lab\">En el laboratorio</p>\n <p>Automatiza comprobaciones frecuentes con --query para extraer campos determinantes (FQDN, estado de la revision) y así integrarlas en pipelines de validación post-despliegue. La secuencia que el examen busca evaluar es: configuración → logs de contenedor → revisiones → réplicas.</p>\n</div>",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "practice",
+          "heading": "Práctica",
+          "prose": "<h2 class=\"ch-h2\">Práctica</h2><div class=\"scn\"><p class=\"scn-q\">Escenario: Has desplegado una API que consume un modelo y ves que las peticiones fallan con error de autenticación al llamar al proveedor de modelos. ¿Cuál es el paso diagnóstico inicial más apropiado?</p><ul class=\"scn-opts\"><li class=\"scn-opt\">A. Cambiar la imagen por una versión anterior y volver a desplegar.</li><li class=\"scn-opt ok\">B. Revisar los logs de contenedor con az containerapp logs show para detectar excepciones de código o variables faltantes.</li><li class=\"scn-opt\">C. Eliminar y volver a crear el environment para limpiar configuraciones.</li></ul><p class=\"scn-x\">Por qué B. Los logs de contenedor suelen mostrar errores de variables faltantes, excepciones de inicio o problemas al conectar con proveedores externos; esas evidencias guían la acción correcta (rotar secreto, corregir secretref, etc.) sin hacer cambios destructivos.</p></div><div class=\"scn\"><p class=\"scn-q\">Escenario: Quieres que una app en Container Apps recupere secretos directamente desde Azure Key Vault en tiempo de ejecución y evitar almacenar valores en YAML. ¿Cuál es la configuración recomendada?</p><ul class=\"scn-opts\"><li class=\"scn-opt\">A. Guardar los valores de Key Vault en el YAML bajo env vars.</li><li class=\"scn-opt ok\">B. Usar referencias a Key Vault desde los secrets de Container Apps y mapearlos con secretref en las env vars.</li><li class=\"scn-opt\">C. Incluir las credenciales de Key Vault en la imagen del contenedor.</li></ul>",
+          "claimRefs": [],
+          "critical": false
+        }
+      ],
+      "graphics": [
+        {
+          "id": "g1",
+          "afterSectionId": "s2",
+          "kind": "comparación",
+          "spec": "Dos TARJETAS grandes lado a lado, con un título corto arriba: 'Dos formas de desplegar'. Tarjeta 1 — 'az containerapp up': rápido, crea el entorno solo (para empezar). Tarjeta 2 — 'env create + YAML': controlado y reproducible (para producción). SIN tabla, SIN listas de pros/contras adentro, SIN texto chico: solo el nombre en grande y UNA línea corta por tarjeta.",
+          "rationale": "Fija la decisión operativa entre despliegue rápido y despliegue revisable; ayuda a responder preguntas que piden seleccionar la acción correcta según el objetivo.",
+          "imageUrl": "/assets/cloudbooks-engine/ai-200/master-book-ab/pages/cap-03/graphic-g1.png"
+        },
+        {
+          "id": "g2",
+          "afterSectionId": "s4",
+          "kind": "arquitectura",
+          "spec": "Esquema de autenticación para image pull: cliente Container App con (1) credenciales username/password hacia un registry genérico; (2) identidad administrada hacia Azure Container Registry con rol AcrPull. Señala dónde aplicar asignación de rol y dónde revisar la configuración con 'az containerapp registry show'.",
+          "rationale": "Fija visualmente la diferencia entre ambos métodos de autenticación y dónde validar permisos, reduciendo la confusión entre registries públicos y privados.",
+          "imageUrl": "/assets/cloudbooks-engine/ai-200/master-book-ab/pages/cap-03/graphic-g2.png"
+        }
+      ],
+      "psychometrics": {
+        "measuredVerbs": [
+          "explorar",
+          "desplegar",
+          "configurar",
+          "verificar",
+          "autenticar",
+          "monitorizar",
+          "troubleshoot",
+          "gestionar",
+          "interpretar",
+          "seleccionar"
+        ],
+        "questionArchetypes": [
+          "caso de escenario",
+          "elegir la acción correcta",
+          "completar comando o YAML",
+          "ordenar pasos para despliegue",
+          "diagnosticar problema a partir de logs",
+          "seleccionar configuración adecuada",
+          "interpretar salida de comandos"
+        ],
+        "cognitiveLevels": [
+          "recordar",
+          "comprender",
+          "aplicar",
+          "analizar"
+        ],
+        "commonTraps": [
+          "confundir variables de entorno con secretos y su configuración",
+          "no distinguir entre autenticación para registros públicos vs privados",
+          "olvidar validar despliegue con logs y estado",
+          "confundir comandos Azure CLI con sintaxis YAML",
+          "no considerar el entorno correcto para despliegues",
+          "pasar por alto la gestión de revisiones en Container Apps"
+        ],
+        "reasoningGoal": "El candidato debe construir un razonamiento práctico para desplegar y gestionar aplicaciones en Azure Container Apps, comprendiendo cómo configurar entornos, autenticar imágenes privadas, y validar despliegues mediante logs y estados para garantizar soluciones robustas."
+      },
+      "keyTakeaways": [
+        "Diseña entornos para alinear límites de red y observabilidad: separa por lifecycle y por comunicación privada vs pública.",
+        "Elige 'az containerapp up' para prototipos y YAML/az create para despliegues revisables; --yaml sobreescribe flags.",
+        "Guarda valores sensibles como secrets y referencia con secretref en env vars; no pongas valores secretos en YAML ni en shell history.",
+        "Prefiere identidad administrada (system/user) para ACR y asigna únicamente AcrPull; usa credenciales solo cuando el registry no soporte identidades.",
+        "Verifica siempre con logs (contenedor y sistema), revisiones y réplicas siguiendo la secuencia: configuración → logs → revision → replicas.",
+        "Pequeños errores (nombres de repositorio en mayúsculas, ingress mal configurado, secrets mal referenciados) suelen aparecer en los logs y no en el portal."
+      ]
+    },
+    "provenance": {
+      "pageId": "cap-03",
+      "skillIds": [
+        "p2.deploy.container-apps-environments",
+        "p2.deploy.deploy-container-app",
+        "p2.deploy.configure-runtime",
+        "p2.deploy.connect-to-registries",
+        "p2.deploy.verify-deployment"
+      ],
+      "sourceIds": [
+        "c1870cf4d27a",
+        "8f59ee107650",
+        "f3b2e900b5ab",
+        "daf9ac82f089",
+        "0b0c3d92b0dc",
+        "b492fcb62997"
+      ],
+      "claims": [
+        {
+          "id": "c1",
+          "field": "section",
+          "text": "Un entorno de Container Apps es el límite lógico donde corren una o más container apps y determina redes y observabilidad.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "c1870cf4d27a",
+            "quote": "A Container Apps environment is a logical boundary where one or more container apps run.",
+            "url": null
+          }
+        },
+        {
+          "id": "c2",
+          "field": "section",
+          "text": "El comando az containerapp up puede crear recursos y devuelve el FQDN de la aplicación desplegada, útil para validaciones rápidas.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "8f59ee107650",
+            "quote": "The following example deploys a public container image and returns the fully qualified domain name (FQDN) for the app.",
+            "url": null
+          }
+        },
+        {
+          "id": "c3",
+          "field": "section",
+          "text": "Asegúrate de que la porción del nombre del repositorio esté en minúsculas para evitar fallos de pull que aparentan ser problemas de autenticación.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "8f59ee107650",
+            "quote": "When you use a container image reference, make sure the repository name is lower case.",
+            "url": null
+          }
+        },
+        {
+          "id": "c4",
+          "field": "section",
+          "text": "Referencia secretos desde variables de entorno usando el formato secretref para evitar exponer valores sensibles en YAML o en el historial.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "f3b2e900b5ab",
+            "quote": "You reference a secret by setting the environment variable value to secretref:<secret-name>.",
+            "url": null
+          }
+        },
+        {
+          "id": "c5",
+          "field": "section",
+          "text": "La identidad administrada reduce la necesidad de credenciales en scripts y se recomienda para ACR, concediendo a la identidad el rol AcrPull.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "daf9ac82f089",
+            "quote": "Managed identity is a good fit for production because it avoids username and password in deployment scripts.",
+            "url": null
+          }
+        },
+        {
+          "id": "c6",
+          "field": "section",
+          "text": "Los logs de Container Apps incluyen logs de consola de la aplicación y logs del sistema de la plataforma; ambos responden a preguntas distintas de diagnóstico.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "0b0c3d92b0dc",
+            "quote": "Container Apps logs can include console logs from your container and system logs from the platform.",
+            "url": null
+          }
+        }
+      ],
+      "checks": [
+        {
+          "claimId": "p1",
+          "field": "section",
+          "text": "Si dos servicios necesitan comunicarse por canales privados, entrégalos al mismo environment y despliega el servicio receptor con --ingress internal; si un servicio debe atender clientes desde Internet, usa --ingress external.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p2",
+          "field": "section",
+          "text": "Crear el environment de forma explícita antes de desplegar apps da control sobre nombres, región y la integración con Azure Monitor, y evita que despliegues rápidos generen entornos inconsistentes en equipos grandes.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p3",
+          "field": "section",
+          "text": "Crea primero el resource group y el environment, y después asigna las apps a ese entorno: esta secuencia facilita aplicar políticas y depurar problemas de red o autorizaciones entre aplicaciones.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p4",
+          "field": "section",
+          "text": "az containerapp up acelera la primera publicación porque puede crear el environment y los recursos asociados; es ideal para prototipos y pruebas funcionales.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p5",
+          "field": "section",
+          "text": "la fuente de verdad debe ser YAML almacenado en control de versiones; al aplicar --yaml la CLI toma ese documento como la fuente principal de configuración; el comportamiento exacto varía según el comando y algunos flags (por ejemplo, --resource-group, --name u otros) pueden seguir siendo efectivos o combinarse con la configuración del YAML.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p6",
+          "field": "section",
+          "text": "# Despliegue rápido (crea recursos si hacen falta y devuelve FQDN)",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p7",
+          "field": "section",
+          "text": "Guarda en control de versiones solo el nombre del secreto, nunca su valor.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p8",
+          "field": "section",
+          "text": "Si rotas credenciales con frecuencia, actualiza el secreto en Container Apps; eso no hace que las instancias en ejecución reciban automáticamente el nuevo valor.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p9",
+          "field": "section",
+          "text": "Debes provocar una nueva revisión para que las instancias usen el valor rotado: por ejemplo, realiza un cambio que genere una nueva revisión, como az containerapp update -n -g --set-env-vars DUMMY=1.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p10",
+          "field": "section",
+          "text": "Ten en cuenta que az containerapp restart solo reinicia las instancias de la revisión actual y no crea una nueva revisión, por lo que por sí solo no hará que las instancias carguen el secreto rotado.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p11",
+          "field": "section",
+          "text": "Otra trampa frecuente es olvidar que los nombres de repositorio deben ir en minúsculas; esto provoca fallos de pull que parecen problemas de autenticación.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p12",
+          "field": "section",
+          "text": "Para Azure Container Registry (ACR) favorece identidad administrada: evita credenciales en scripts y permite aplicar RBAC (por ejemplo, conceder AcrPull a la identidad que use la Container App).",
+          "citationKind": "source",
+          "sourceId": "535e955c5b05",
+          "verdict": "supported",
+          "note": "Using a service principal for Windows container image pull authentication is no longer supported. We recommend that you use managed identity for both Windows and Linux containers."
+        }
+      ],
+      "groundingStatus": "partial",
+      "updatedAt": "2026-08-07T04:00:56.577Z"
+    },
+    "persistedAt": "2026-08-07T04:00:56.577Z"
+  },
+  "cap-04": {
+    "seed": {
+      "chapterId": "cap-04",
+      "chapterNumber": "04",
+      "moduleId": "p2.manage",
+      "domainId": "p2",
+      "domainLabel": "Ruta 2 — Despliegue y gestión en Azure Container Apps",
+      "title": "Gestionar contenedores en Azure Container Apps",
+      "subtitle": "Actualizar, operar y optimizar el ciclo de vida de réplicas y revisiones",
+      "intro": "<p>Este capítulo aborda la gestión del ciclo de vida de contenedores en Azure Container Apps,\ncentrándose en la actualización de imágenes, el manejo de revisiones y las prácticas de despliegue\nque aseguran disponibilidad y trazabilidad en entornos productivos.\nPara el examen AI-200 es crucial comprender estas tareas porque evalúan\nla capacidad de mantener servicios estables, diagnósticos efectivos y despliegues seguros.\nAprenderás a aplicar buenas prácticas que demuestran competencia técnica y criterio operativo.</p><p>El recorrido del capítulo cubre secciones prácticas y conceptuales interconectadas:\nActualización de imágenes y gestión de revisiones para controlar despliegues;\nCiclo de vida de Container Apps para comprender estados y transiciones;\nMonitoreo, logs y probes para diagnosticar salud y realizar troubleshooting;\nOptimización de recursos y escalado automático para eficiencia y resiliencia;\nFinaliza con una práctica guiada que integra todos los elementos en un caso real.</p><p>Al terminar este capítulo podrás razonar sobre decisiones operativas y aplicar procedimientos\npara actualizar imágenes, gestionar revisiones y revertir despliegues cuando sea necesario.\nSabrás interpretar métricas y logs para identificar cuellos de botella y fallas de salud;\nconfigurar health probes y medidas de recuperación, y ajustar políticas de escalado.\nTambién optimizarás recursos para reducir costos sin comprometer la disponibilidad.\nEn suma, estarás preparado para mantener aplicaciones estables, observables y eficientes en Azure.</p>",
+      "skillIds": [
+        "p2.manage.update-images-manage-revisions",
+        "p2.manage.app-lifecycle-management",
+        "p2.manage.monitor-logs-troubleshoot",
+        "p2.manage.health-probes",
+        "p2.manage.optimize-container-settings"
+      ],
+      "sections": [
+        {
+          "id": "s1",
+          "heading": "Actualizar imágenes y revisiones",
+          "prose": "HTML corregido",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "s2",
+          "heading": "Ciclo de vida de Container Apps",
+          "prose": "El ciclo de vida de una Container App combina acciones a nivel de aplicación, comportamiento de escalado y administración de revisiones. La primera decisión debe responder al objetivo operativo, no al nombre de la acción: detener el consumo de recursos, aislar una versión defectuosa, recuperar un proceso bloqueado o permitir que una carga intermitente llegue a cero réplicas.\n\nEl escalado a cero depende de la configuración de escalado y resulta apropiado para servicios orientados a eventos que toleran un <em>cold start</em>. Detener una aplicación es una acción explícita de nivel de aplicación: sirve cuando necesita garantizar que no reaparezcan réplicas mientras mitiga una interrupción, por ejemplo, una dependencia externa caída. Reiniciar fuerza el reinicio de las réplicas y puede resolver un estado transitorio, un bloqueo o un cambio de configuración que deba tomar efecto de inmediato. En servicios que cargan modelos grandes, reiniciar sin un motivo concreto aumenta la frecuencia de los arranques en frío y puede agravar la latencia.\n\n<pre class=\"scn-code\">az containerapp stop \\\n --name &lt;app-name&gt; \\\n --resource-group &lt;resource-group&gt;\n\naz containerapp start \\\n --name &lt;app-name&gt; \\\n --resource-group &lt;resource-group&gt;\n\naz containerapp restart \\\n --name &lt;app-name&gt; \\\n --resource-group &lt;resource-group&gt;</pre>\n\nLa diferencia de alcance determina la respuesta. Si solo una revisión reciente responde mal, desactivar esa revisión suele ser menos invasivo que detener toda la aplicación. Si necesita impedir que se inicien réplicas durante la mitigación, use <code>stop</code>. Si el proceso se bloqueó y no hay indicios de una configuración incorrecta, <code>restart</code> puede acelerar la recuperación; acompáñelo con inspección de logs para saber si resolvió la causa o solo retrasó el siguiente fallo.\n\nUn runbook razonable avanza de menor a mayor impacto: identifique la revisión problemática y aíslela; si la causa está en una dependencia externa, detenga la aplicación; si el estado defectuoso parece transitorio, reinicie y supervise. Esta secuencia reduce interrupciones innecesarias y conserva información para el diagnóstico.\n\n<table class=\"dmap\"><thead><tr><th>Si necesita…</th><th>Elija…</th></tr></thead><tbody><tr><td class=\"s\">Aislar una versión defectuosa sin afectar toda la aplicación</td><td class=\"d\">Desactivar la revisión problemática</td></tr><tr><td class=\"s\">Impedir que aparezcan réplicas durante una mitigación</td><td class=\"d\"><code>stop</code></td></tr><tr><td class=\"s\">Recuperar un proceso bloqueado o un estado transitorio</td><td class=\"d\"><code>restart</code></td></tr><tr><td class=\"s\">Reducir réplicas en una carga intermitente que tolera arranque en frío</td><td class=\"d\">Configurar escalado a cero</td></tr></tbody></table>",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "s3",
+          "heading": "Monitoreo y troubleshooting de logs",
+          "prose": "Los logs constituyen la señal primaria para diagnosticar comportamientos inesperados en Container Apps. El streaming sirve durante un incidente reproducible o ante un ciclo de errores de inicio; Log Analytics aporta el historial necesario para comparar ventanas de tiempo, revisiones y dependencias. El acceso depende de la configuración del entorno: compruebe que la aplicación esté conectada a Log Analytics o que el procedimiento operativo contemple el streaming en tiempo real.\n\nEn una API de IA, registrar solo el mensaje de error rara vez alcanza. Incluya un identificador de petición propagado entre servicios, el identificador de revisión o de build, la versión o el nombre del modelo utilizado y, cuando sea posible, el desglose de latencia por dependencia. Registre metadatos, no documentos ni prompts completos, salvo que exista una justificación y un control explícito de la información sensible.\n\n<pre class=\"scn-code\">az containerapp logs show \\\n --name &lt;app-name&gt; \\\n --resource-group &lt;resource-group&gt; \\\n --follow\n\naz containerapp revision list \\\n --name &lt;app-name&gt; \\\n --resource-group &lt;resource-group&gt; \\\n --query \"[].{name:name,active:properties.active,health:properties.healthState}\" \\\n -o table</pre>\n\nDurante una investigación en caliente, siga siempre la misma secuencia: confirme qué revisión está activa y cuál falla; inicie el streaming mientras reproduce la solicitud o espera el siguiente arranque; compare la configuración de la revisión funcional con la defectuosa; aplique un cambio dirigido y compruebe que la nueva revisión alcance un estado saludable. La correlación entre timestamps, request ID, revisión y versión del modelo permite distinguir un fallo de inicio de un problema que aparece después de varias solicitudes.\n\nNo atribuya automáticamente un aumento de latencia a falta de CPU. Los logs pueden mostrar que la espera se origina en un servicio externo, una llamada al modelo o una conexión que se reintenta. Tampoco interprete la ausencia de errores en los logs de la aplicación como prueba de que la plataforma está sana: un fallo al extraer la imagen, un puerto incorrecto o una probe fallida puede impedir que el proceso llegue a atender solicitudes. Compare los eventos del plano de control con los logs de la aplicación para acotar la causa raíz.\n\n<div class=\"tip\"><p class=\"lab\">En el laboratorio</p><p>Antes de reproducir un error, anote la revisión activa y el digest de la imagen. Si el despliegue cambia mientras investiga, esa referencia permite separar los síntomas de la versión anterior de los introducidos por la nueva.</p></div>",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "s4",
+          "heading": "Health probes y troubleshooting",
+          "prose": "Las health probes impiden que las réplicas inmaduras o bloqueadas reciban o mantengan tráfico. Readiness responde a una pregunta de tráfico: “¿esta réplica puede atender solicitudes ahora?”. Liveness responde a una pregunta de ejecución: “¿el proceso sigue lo bastante sano como para continuar?”. Si readiness falla, la plataforma debe evitar el enrutamiento hacia esa réplica; si liveness falla, puede reiniciarla.\n\nEn un servicio de IA, readiness suele esperar a que el modelo esté cargado, las cachés estén preparadas y las dependencias necesarias estén disponibles. Liveness debe proteger contra bloqueos o problemas persistentes durante la ejecución, no medir si el modelo terminó su calentamiento. Una configuración demasiado agresiva de liveness durante el inicio puede producir reinicios repetidos y más <em>cold starts</em>, sin corregir la causa original.\n\n<pre class=\"scn-code\">properties:\n template:\n containers:\n - name: api\n image: &lt;registry&gt;/&lt;repo&gt;@sha256:&lt;digest&gt;\n probes:\n - type: Readiness\n httpGet:\n path: /health/ready\n port: 8080\n initialDelaySeconds: 20\n periodSeconds: 10\n timeoutSeconds: 2\n failureThreshold: 3\n - type: Liveness\n httpGet:\n path: /health/live\n port: 8080\n initialDelaySeconds: 60\n periodSeconds: 10\n timeoutSeconds: 2\n failureThreshold: 3</pre>\n\nAnte una revisión que falla las probes inmediatamente, compruebe primero el puerto donde escucha el proceso y la ruta expuesta por la aplicación. Después revise los logs de inicio, los tiempos de carga del modelo y los límites de timeout. Una dependencia externa lenta o caída no debería convertir necesariamente el endpoint de liveness en una llamada dependiente de esa misma infraestructura.\n\nAjuste <code>initialDelaySeconds</code> y <code>failureThreshold</code> cuando el tiempo de warmup sea legítimamente mayor, pero no los utilice para ocultar un path incorrecto, un puerto equivocado o una variable de entorno ausente. Tampoco sustituya readiness por liveness para forzar reinicios: ambas probes tienen efectos distintos sobre el tráfico y la recuperación. Las métricas de probe, el estado de la revisión y los logs deben respaldar cada ajuste.",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "s5",
+          "heading": "Optimizar recursos y escalado",
+          "prose": "Optimizar recursos significa relacionar una métrica observada con un cambio concreto. El throttling de CPU suele manifestarse como latencia creciente bajo concurrencia; la presión de memoria puede terminar en reinicios por <em>out-of-memory</em>. En Container Apps, el costo total combina los recursos asignados a cada réplica con la cantidad de réplicas que el escalador crea. Una réplica más grande no siempre es más económica que varias pequeñas, y una cantidad mínima elevada reduce los arranques en frío a cambio de un costo base mayor.\n\nMida con carga representativa y cambie una sola variable por vez. Para una API síncrona, un mínimo de réplicas puede justificar su costo si evita que la latencia dependa del warmup. Un worker orientado a eventos puede tolerar el escalado a cero si el procesamiento soporta la demora de arranque y el descenso de réplicas no interrumpe el trabajo. Alinee la política de escalado con las probes: una revisión con warmup lento puede parecer defectuosa si el tiempo concedido para alcanzar readiness es insuficiente.\n\n<pre class=\"scn-code\">az containerapp update \\\n --name &lt;app-name&gt; \\\n --resource-group &lt;resource-group&gt; \\\n --cpu &lt;cores&gt; \\\n --memory &lt;size&gt;</pre>\n\nAumente CPU cuando las métricas indiquen throttling o saturación bajo la concurrencia prevista. Aumente memoria cuando existan reinicios por falta de memoria o el tamaño del modelo deje un margen insuficiente. Después de cada cambio, ejecute una prueba de carga controlada, observe latencia, errores, uso de CPU, memoria y estabilidad de la revisión, y registre el resultado antes de continuar. Reevalúe el",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "practice",
+          "heading": "Práctica",
+          "prose": "<h2 class=\"ch-h2\">Práctica</h2><div class=\"scn\"><p class=\"scn-q\">Escenario: una nueva revisión de una API de IA inicia, pero no recibe tráfico porque la readiness probe falla durante la carga del modelo. Los logs muestran que el proceso escucha en el puerto 8080 y que el modelo necesita más tiempo para estar disponible. ¿Cuál es la respuesta más adecuada?</p><ul class=\"scn-opts\"><li class=\"scn-opt\">A. Cambiar la readiness probe por una liveness probe para que la plataforma reinicie la réplica.</li><li class=\"scn-opt ok\">B. Confirmar la ruta y el puerto de la probe y ajustar el tiempo inicial o el umbral de fallos para cubrir el warmup real.</li><li class=\"scn-opt\">C. Detener toda la Container App y volver a iniciarla hasta que la revisión alcance el estado listo.</li></ul><p class=\"scn-x\">Por qué B. Readiness controla si una réplica puede recibir tráfico. Si la aplicación inicia correctamente pero tarda en cargar el modelo, corresponde validar el endpoint y concederle tiempo suficiente; cambiar el tipo de probe o detener toda la aplicación no resuelve la causa.</p></div><div class=\"scn\"><p class=\"scn-q\">Escenario: una revisión nueva provoca errores de extracción de imagen y todavía no se ha enviado tráfico de producción. La revisión anterior funciona correctamente y necesita conservarse para investigar el incidente. ¿Qué acción inicial reduce mejor el impacto?</p><ul class=\"scn-opts\"><li class=\"scn-opt\">A. Reiniciar toda la Container App para forzar la extracción de la imagen.</li><li class=\"scn-opt ok\">B. Desactivar la revisión problemática, conservarla para el diagnóstico y comprobar la referencia de imagen y las credenciales del registro.</li><li class=\"scn-opt\">C. Aumentar la memoria de las réplicas de la revisión nueva.</li></ul><p class=\"scn-x\">Por qué B. El problema está acotado a una revisión y no apunta a presión de recursos. Desactivarla evita que reciba tráfico mientras se conserva la evidencia; reiniciar la aplicación completa amplía el impacto y aumentar memoria no corrige un fallo de extracción de imagen.</p></div>",
+          "claimRefs": [],
+          "critical": false
+        }
+      ],
+      "graphics": [
+        {
+          "id": "g1",
+          "afterSectionId": "s2",
+          "kind": "flujo",
+          "spec": "Diagrama de flujo lineal, MÁXIMO 5 pasos grandes: 1) actualizar imagen (tag o digest) → 2) nueva revisión → 3) probes + logs → 4) si OK: pasar tráfico (canary) / si falla: rollback a la revisión previa. Pocas cajas grandes, etiquetas de 1–4 palabras, SIN sub-listas dentro de las cajas, SIN texto chico.",
+          "rationale": "Fija la secuencia operativa entre despliegue, verificación de salud, decisiones de tráfico y acciones de mitigación; ayuda a unir conceptos que el examen separa en preguntas distintas.",
+          "imageUrl": "/assets/cloudbooks-engine/ai-200/master-book-ab/pages/cap-04/graphic-g1.png"
+        }
+      ],
+      "psychometrics": {
+        "measuredVerbs": [
+          "actualizar",
+          "gestionar",
+          "configurar",
+          "monitorear",
+          "solucionar problemas",
+          "optimizar",
+          "implementar",
+          "desplegar",
+          "administrar",
+          "seleccionar",
+          "interpretar",
+          "analizar"
+        ],
+        "questionArchetypes": [
+          "caso de escenario",
+          "elegir la acción correcta",
+          "completar configuración",
+          "diagnóstico de fallas",
+          "ordenar pasos para despliegue o solución",
+          "interpretar logs o métricas",
+          "comparar opciones de configuración",
+          "identificar causa raíz"
+        ],
+        "cognitiveLevels": [
+          "aplicar",
+          "analizar",
+          "evaluar"
+        ],
+        "commonTraps": [
+          "confundir la gestión de revisiones con despliegue de nuevas imágenes",
+          "no distinguir entre tipos de probes de salud y su impacto",
+          "subestimar la importancia de la configuración de escalado automático",
+          "interpretar incorrectamente logs y eventos para troubleshooting",
+          "olvidar pasos para actualización segura sin downtime",
+          "confundir monitoreo de recursos con optimización de escalado"
+        ],
+        "reasoningGoal": "El candidato debe construir un razonamiento orientado a identificar y aplicar prácticas correctas para gestionar el ciclo de vida de contenedores en Azure Container Apps, interpretando escenarios de monitoreo y troubleshooting para mantener aplicaciones estables y optimizadas."
+      },
+      "keyTakeaways": [
+        "Actualiza imágenes referenciando digests en producción para asegurar trazabilidad reproducible.",
+        "Una actualización de imagen crea una revisión: valida su salud antes de mover tráfico y usa desactivación para investigar sin perder evidencia.",
+        "Distingue readiness (recibir tráfico) de liveness (mantener proceso); afina initialDelay y thresholds según warmup del modelo.",
+        "Usa streaming de logs y campos de correlación (request id, revision id, model version) para diagnosticar incidentes rápidamente.",
+        "Optimiza iterando: cambia una variable a la vez, prueba con carga real y ajusta CPU/memoria y mínimos de réplica según perfil de latencia y costo."
+      ]
+    },
+    "provenance": {
+      "pageId": "cap-04",
+      "skillIds": [
+        "p2.manage.update-images-manage-revisions",
+        "p2.manage.app-lifecycle-management",
+        "p2.manage.monitor-logs-troubleshoot",
+        "p2.manage.health-probes",
+        "p2.manage.optimize-container-settings"
+      ],
+      "sourceIds": [
+        "8f1065000dbd",
+        "e0c78490fa6f",
+        "f8e6af3e61c0",
+        "f09e1af63bb4",
+        "14c65104ce8e",
+        "5950dd919338"
+      ],
+      "claims": [
+        {
+          "id": "c1",
+          "field": "section",
+          "text": "Al actualizar la imagen de una Container App, la plataforma crea una nueva revisión con la plantilla actualizada.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "8f1065000dbd",
+            "quote": "When you update the image for a container app, Container Apps creates a new revision with the updated template.",
+            "url": null
+          }
+        },
+        {
+          "id": "c2",
+          "field": "section",
+          "text": "El modo de revisión determina cuántas revisiones pueden estar activas a la vez; el modo single mantiene una sola revisión activa.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "8f1065000dbd",
+            "quote": "Revision mode determines how many revisions can be active at the same time. Single revision mode keeps only one active revision, which simplifies operations but limits advanced rollout strategies.",
+            "url": null
+          }
+        },
+        {
+          "id": "c3",
+          "field": "section",
+          "text": "Los digests de imagen son referencias inmutables recomendadas en producción porque proporcionan trazabilidad para auditoría de incidentes.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "8f1065000dbd",
+            "quote": "Use image digests for production: Digests provide an immutable reference you can audit during incident review.",
+            "url": null
+          }
+        },
+        {
+          "id": "c4",
+          "field": "section",
+          "text": "Los logs son la señal primaria de diagnóstico en una plataforma de contenedores gestionada.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "f8e6af3e61c0",
+            "quote": "Logs are the primary diagnostic signal in a managed container platform.",
+            "url": null
+          }
+        },
+        {
+          "id": "c5",
+          "field": "section",
+          "text": "Readiness responde si una réplica puede recibir tráfico ahora; liveness responde si el proceso debe seguir ejecutándose o requiere reinicio.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "f09e1af63bb4",
+            "quote": "Readiness answers the question, \"Can this replica receive traffic right now?\" If readiness fails, the platform should avoid routing requests to that replica. Liveness answers the question, \"Is this process healthy enough to keep running?\" If liveness fails, the platform restarts the replica.",
+            "url": null
+          }
+        },
+        {
+          "id": "c6",
+          "field": "section",
+          "text": "El dimensionamiento de recursos y el escalado determinan si un servicio de IA mantiene la capacidad de respuesta y si se mantiene dentro del presupuesto.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "14c65104ce8e",
+            "quote": "Resource sizing and scaling determine whether an AI service stays responsive and whether it stays within budget.",
+            "url": null
+          }
+        }
+      ],
+      "checks": [
+        {
+          "claimId": "p1",
+          "field": "section",
+          "text": "El escalado a cero depende de la configuración de escalado y resulta apropiado para servicios orientados a eventos que toleran un cold start .",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p2",
+          "field": "section",
+          "text": "Detener una aplicación es una acción explícita de nivel de aplicación: sirve cuando necesita garantizar que no reaparezcan réplicas mientras mitiga una interrupción, por ejemplo, una dependencia externa caída.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p3",
+          "field": "section",
+          "text": "Reiniciar fuerza el reinicio de las réplicas y puede resolver un estado transitorio, un bloqueo o un cambio de configuración que deba tomar efecto de inmediato.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p4",
+          "field": "section",
+          "text": "az containerapp stop \\ --name app-name \\ --resource-group resource-group az containerapp start \\ --name app-name \\ --resource-group resource-group az containerapp restart \\ --name app-name \\ --resource-group resource-group",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p5",
+          "field": "section",
+          "text": "Si necesita impedir que se inicien réplicas durante la mitigación, use stop .",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p6",
+          "field": "section",
+          "text": "Si el proceso se bloqueó y no hay indicios de una configuración incorrecta, restart puede acelerar la recuperación; acompáñelo con inspección de logs para saber si resolvió la causa o solo retrasó el siguiente fallo.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p7",
+          "field": "section",
+          "text": "az containerapp logs show \\ --name app-name \\ --resource-group resource-group \\ --follow",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p8",
+          "field": "section",
+          "text": "az containerapp revision list \\ --name app-name \\ --resource-group resource-group \\ --query \"[].{name:name,active:properties.active,health:properties.healthState}\" \\ -o table",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p9",
+          "field": "section",
+          "text": "Readiness responde a una pregunta de tráfico: “¿esta réplica puede atender solicitudes ahora?”. Liveness responde a una pregunta de ejecución: “¿el proceso sigue lo bastante sano como para continuar?”.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p10",
+          "field": "section",
+          "text": "properties: template: containers: - name: api image: registry / repo @sha256: digest probes: - type: Readiness httpGet: path: /health/ready port: 8080 initialDelaySeconds: 20 periodSeconds: 10 timeoutSeconds: 2 failureThreshold: 3 - type: Liveness httpGet: path: /health/live port: 8080 initialDelaySeconds: 60 periodSeconds: 10 timeoutSeconds: 2 failureThreshold: 3",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p11",
+          "field": "section",
+          "text": "Si readiness falla, la plataforma debe evitar el enrutamiento hacia esa réplica; si liveness falla, puede reiniciarla.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p12",
+          "field": "section",
+          "text": "Una configuración demasiado agresiva de liveness durante el inicio puede producir reinicios repetidos y más cold starts , sin corregir la causa original.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        }
+      ],
+      "groundingStatus": "partial",
+      "updatedAt": "2026-08-07T04:12:02.516Z"
+    },
+    "persistedAt": "2026-08-07T04:12:02.516Z"
+  },
+  "cap-05": {
+    "seed": {
+      "chapterId": "cap-05",
+      "chapterNumber": "05",
+      "moduleId": "p2.scale",
+      "domainId": "p2",
+      "domainLabel": "Ruta 2 — Despliegue y gestión en Azure Container Apps",
+      "title": "Escalar contenedores en Azure Container Apps",
+      "subtitle": "Decisiones prácticas para configurar autoscaling, recursos y despliegues sin sorpresas",
+      "intro": "<p>Este capítulo explora el escalado de contenedores en Azure Container Apps, con foco en despliegue y gestión.\nCubre reglas de escalado automáticas y escalado por eventos con KEDA y sus componentes.\nSon temas relevantes para el examen AI-200, que exige diseñar soluciones escalables y resilientes.\nTambién se analizan implicaciones de rendimiento y costo en escenarios reales.\nLa aproximación combina teoría, configuración y criterios de decisión.\nLe permitirá justificar estrategias de escalado con criterios técnicos claros.</p><p>Recorreremos las secciones clave: Reglas de escalado; Escalado event-driven con KEDA; KEDA scalers para distintos workloads.\nDespués veremos Recursos para rendimiento y costo, con guías para dimensionar y optimizar.\nSeguimos con Modos de revisión y tráfico, para controlar despliegues y pruebas en entornos reales.\nLa sección Práctica reúne ejercicios y plantillas que aplican lo aprendido.\nLa conexión entre capítulos va de las reglas generales a la implementación específica, ajustes de recursos y gestión del tráfico.</p><p>Al terminar, podrá evaluar escenarios y seleccionar reglas y scalers según demanda, latencia y costo.\nSabrá configurar KEDA y elegir scalers para colas, HTTP, cron y eventos personalizados.\nPodrá dimensionar recursos y estimar costos, aplicando prácticas para optimizar rendimiento sin sobredimensionar.\nDiseñará modos de revisión y estrategias de tráfico para despliegues seguros.\nTendrá criterios técnicos para justificar decisiones en el examen AI-200 y en proyectos reales.\nLa práctica consolidará estas habilidades con ejercicios.</p>",
+      "skillIds": [
+        "p2.scale.configure-scale-rules",
+        "p2.scale.event-driven-scaling-keda",
+        "p2.scale.keda-scalers-custom-workloads",
+        "p2.scale.compute-resources-performance-cost",
+        "p2.scale.revision-modes-traffic-management"
+      ],
+      "sections": [
+        {
+          "id": "s1",
+          "heading": "Reglas de escalado",
+          "prose": "Las reglas de escala se definen en tres capas: límites (min/max réplicas), reglas (los triggers que disparan cambios) y comportamiento (cómo y con qué rapidez se ajusta el número de réplicas). Azure Container Apps convierte esa definición declarativa en especificaciones KEDA: la plataforma observa los triggers y modifica réplicas, pero cada réplica sigue siendo una unidad facturable con la CPU y memoria que usted fijó. Antes de aumentar umbrales o máximos calcule réplica × recursos por réplica para estimar el coste. El escalador HTTP calcula la concurrencia contando el número de solicitudes recibidas en los últimos 15 segundos y dividiéndolas por 15. Cuando ese valor excede el umbral que usted haya configurado por réplica, la plataforma crea réplicas adicionales para manejar la carga. El comportamiento por defecto de escalado crea hasta 10 réplicas con un mínimo de cero cuando el ingress está habilitado y no se definen reglas personalizadas. Un error operativo común es confundir escalado manual con reglas automáticas: definir un mínimo distinto de cero garantiza disponibilidad inmediata y genera coste; permitir scale-to-zero ahorra pero añade latencia por cold start. Cuando hay varias reglas activas, KEDA evalúa cada una y la plataforma elige la cuenta final de réplicas en función de esas evaluaciones, por eso planifique min/max y thresholds en conjunto para evitar ráfagas inesperadas.\n\n<pre class=\"scn-code\">az containerapp create \\\n --name order-api \\\n --resource-group rg-ecommerce \\\n --environment my-environment \\\n --image myregistry.azurecr.io/order-api:v1 \\\n --min-replicas 1 \\\n --max-replicas 10 \\\n --scale-rule-name http-scaling \\\n --scale-rule-type http \\\n --scale-rule-http-concurrency 50</pre>\n\n<div class=\"exam-trap\"><p class=\"lab\">Trampa del examen</p><p>No asuma que una sola regla de escala controla el coste total: varias revisiones o distintas reglas pueden sumar réplicas simultáneamente. Verifique min/max y reglas por revisión antes de responder preguntas sobre consumo.</p></div>",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "s2",
+          "heading": "Escalado event-driven con KEDA",
+          "prose": "KEDA amplía las señales de escala más allá de HTTP y TCP: colas, streams, métricas externas y ventanas programadas. Azure Container Apps expone scalers administrados (Service Bus, Event Hubs, Storage Queue, Log Analytics) y admite scalers comunitarios. La integración se declara como un scaler KEDA con metadata (por ejemplo, nombre de cola y umbral por mensaje) y la referencia a un secreto para autenticación; la plataforma consulta la fuente aproximadamente cada 30 segundos y calcula réplicas deseadas en función del valor leído. Use KEDA cuando la métrica relevante no sea tráfico HTTP sino backlog, lag o eventos; configure min-replicas=0 si desea ahorro y tolera cold starts, o un mínimo mayor si la latencia de arranque es inaceptable. Dimensione thresholds según el tiempo de procesamiento por mensaje y la cadencia de polling (~30s).\n\n<pre class=\"scn-code\">az containerapp create \\\n --name order-processor \\\n --resource-group rg-ecommerce \\\n --environment my-environment \\\n --image myregistry.azurecr.io/order-processor:v1 \\\n --min-replicas 0 \\\n --max-replicas 30 \\\n --secrets \"sb-connection=&lt;SERVICE_BUS_CONNECTION_STRING&gt;\" \\\n --scale-rule-name servicebus-scaling \\\n --scale-rule-type azure-servicebus \\\n --scale-rule-metadata \"queueName=orders\" \"namespace=sb-ecommerce\" \"messageCount=5\" \\\n --scale-rule-auth \"connection=sb-connection\"</pre>\n\n<table class=\"dmap\"><thead><tr><th>Si necesitás…</th><th>Elegí…</th></tr></thead><tbody><tr><td class=\"s\">Procesar backlog intermitente y ahorrar coste</td><td class=\"d\">KEDA scaler con min-replicas=0 y messageCount ajustado</td></tr><tr><td class=\"s\">Baja latencia inicial constante</td><td class=\"d\">min-replicas&gt;0 para evitar cold starts</td></tr></tbody></table>",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "s3",
+          "heading": "KEDA scalers para workloads",
+          "prose": "Elegir el scaler apropiado exige entender la semántica de la métrica: Redis Lists mide longitud absoluta (LLEN), Redis Streams mide pending entries por consumer group, Kafka y Event Hubs exponen lag por partición. El paralelismo efectivo está limitado por particiones: si su tópico tiene 32 particiones, más de 32 réplicas no incrementan el paralelismo por partición; dimensione particiones antes de aumentar el máximo de réplicas. Los cron scalers sirven para preaprovisionar capacidad en ventanas horarias y suelen combinarse con scalers por backlog para cubrir picos. Revise autenticación y compatibilidad: Kafka requiere SASL/TLS según el cluster; Redis puede usar cluster o sentinel. Al final, la pregunta práctica es siempre: ¿la métrica que monitorea este scaler refleja trabajo pendiente real o solo actividad secundaria?\n\n<pre class=\"scn-code\"># Fragmento YAML orientativo para Kafka scaler (ScaledObject-like)\nscale:\n minReplicas: 1\n maxReplicas: 50\n rules:\n - name: kafka-scaling\n custom:\n type: kafka\n metadata:\n bootstrapServers: \"kafka-broker:9092\"\n consumerGroup: \"order-consumers\"\n topic: \"orders\"\n lagThreshold: \"100\"\n auth:\n - secretRef: kafka-credentials\n triggerParameter: sasl</pre>\n\n<div class=\"exam-trap\"><p class=\"lab\">Trampa del examen</p><p>No confunda número de réplicas con paralelismo por partición: aumentar réplicas por encima del número de particiones de Kafka no reduce lag por partición.</p></div>",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "s4",
+          "heading": "Recursos para rendimiento y costo",
+          "prose": "CPU y memoria por contenedor determinan rendimiento y coste. Se especifican en núcleos y GiB; no existe una regla simple del tipo “memoria ≥ 2×CPU (GiB)”. Azure Container Apps admite combinaciones de CPU y memoria soportadas; debe elegir una de las combinaciones válidas para su entorno y plan. Consulte la documentación oficial para ver las opciones de pares CPU/memoria y los límites por plan. El dimensionamiento total es réplicas × recursos por réplica. Superar el límite de memoria provoca terminación (OOM) y reinicios; superar CPU produce throttling. Para diagnosticar: latencias crecientes con contenedores en estado Running suelen indicar CPU insuficiente; reinicios frecuentes con OOM indican memoria baja. Comience con valores modestos (0.25 cores y 0.5 GiB) y aumente tras pruebas de carga. Puede personalizar la configuración de cómputo seleccionando tamaños de memoria como 512MB, 2048MB o 4096MB y, si desea reducir cold starts, usar una o más instancias preaprovisionadas (always-ready). Estos límites aplican por contenedor, no por réplica; si su container app incluye múltiples contenedores (por ejemplo, un contenedor principal y un sidecar), cada contenedor tiene su propia asignación.\n\n<pre class=\"scn-code\">az containerapp create \\\n --name order-api \\\n --resource-group rg-ecommerce \\\n --environment my-environment \\\n --image myregistry.azurecr.io/order-api:v1 \\\n --cpu 0.5 \\\n --memory 1.0Gi \\\n --min-replicas 2 \\\n --max-replicas 20</pre>\n\n<div class=\"tip\"><p class=\"lab\">En el laboratorio</p><p>Al probar un incremento de carga, mida CPU% y número de GC/recalls (si aplica). Primero aumente CPU hasta eliminar throttling; solo luego incremente memoria si aparecen OOM. Esto evita pagar por memoria que no resuelve el cuello de botella.</p></div>",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "s5",
+          "heading": "Modos de revisión y tráfico",
+          "prose": "Una revisión (revision) es una instantánea inmutable de la configuración. Cambios en la plantilla —imagen, reglas de escala, variables de entorno— crean una nueva revisión; cambios en secretos, ingress o pesos de tráfico no la crean. Cada revisión activa escala según sus propias reglas; mantener varias revisiones activas puede multiplicar el consumo total de réplicas si no se gestiona el tráfico. El modo single reemplaza la revisión anterior tras validar la nueva, manteniendo disponibilidad sin que coexistan versiones activas. El modo multiple permite canary, blue/green o A/B mediante reparto de tráfico. No es obligatorio desactivar revisiones antiguas para controlar costes: si una revisión no tiene réplicas activas (minReplicas=0) y no recibe tráfico, no consume réplicas ni genera coste de cómputo. Para activar multiple mode y repartir tráfico use la CLI y ajuste pesos; durante un canary observe réplicas y métricas por revisión porque cada una puede disparar escalado independiente.\n\n<pre class=\"scn-code\">az containerapp update \\\n --name order-api \\\n --resource-group rg-ecommerce \\\n --revision-mode multiple\n\naz containerapp ingress traffic set \\\n --name order-api \\\n --resource-group rg-ecommerce \\\n --revision-weight order-api--v1=80 order-api--v2=20</pre>\n\n<div class=\"exam-trap\"><p class=\"lab\">Trampa del examen</p><p>Si responde que sólo una regla controla el escalado tras un despliegue, verifique si hay revisiones activas adicionales: cada revisión puede escalar por separado y sumar réplicas.</p></div>",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "practice",
+          "heading": "Práctica",
+          "prose": "<h2 class=\"ch-h2\">Práctica</h2><div class=\"scn\"><p class=\"scn-q\">Su aplicación de procesamiento de órdenes recibe picos esporádicos de mensajes en Service Bus; quiere ahorrar coste y tolera latencia en el primer procesamiento. ¿Cuál es la mejor configuración de escala para su Container App?</p><ul class=\"scn-opts\"><li class=\"scn-opt\">Configurar min-replicas=2, max-replicas=30 y messageCount=10 en el scaler de Service Bus.</li><li class=\"scn-opt ok\">Configurar min-replicas=0, max-replicas=30 y messageCount acorde al tiempo de procesamiento (por ejemplo, 5) para ajustarlo al backlog.</li><li class=\"scn-opt\">No usar KEDA; mantener una instancia manual y procesar mensajes en lotes.</li></ul><p class=\"scn-x\">Por qué B. Si se toleran cold starts, min-replicas=0 permite scale-to-zero y ahorro; ajustar messageCount en función del tiempo por mensaje determina cuántas réplicas son necesarias para procesar backlog en un periodo aceptable.</p></div>\n\n<div class=\"scn\"><p class=\"scn-q\">Tiene un tópico Kafka con 8 particiones y desea reducir lag cuanto antes. En un escenario de alta acumulación de mensajes, ¿qué debe evitar al configurar el escalado?</p><ul class=\"scn-opts\"><li class=\"scn-opt\">Aumentar max-replicas por encima de 8 sin cambiar el número de particiones.</li><li class=\"scn-opt ok\">Aumentar el número de particiones y luego ajustar max-replicas para aprovechar el paralelismo.</li><li class=\"scn-opt\">Usar Redis Lists como scaler en lugar de Kafka.</li></ul><p class=\"scn-x\">Por qué B. El paralelismo efectivo de Kafka está limitado por particiones; incrementar réplicas por encima de la cuenta de particiones no reduce lag por partición. La solución correcta es dimensionar particiones y luego permitir más réplicas.</p></div>",
+          "claimRefs": [],
+          "critical": false
+        }
+      ],
+      "graphics": [
+        {
+          "id": "g1",
+          "afterSectionId": "s1",
+          "kind": "arquitectura",
+          "spec": "Esquema simple, MÁXIMO 5 cajas grandes: una caja agrupadora 'Orígenes de eventos (HTTP, colas, streams, cron)' → 'KEDA (scaler)' → 'Decisión de réplicas' en Container Apps. Agrupá los orígenes en UNA sola caja con ejemplos entre paréntesis (NO una caja por origen). Etiquetas grandes, SIN tabla, SIN texto chico.",
+          "rationale": "Fija la idea de que KEDA es el puente entre fuentes de eventos y la acción de escala y visualiza la latencia introducida por polling y traducción de métricas.",
+          "imageUrl": "/assets/cloudbooks-engine/ai-200/master-book-ab/pages/cap-05/graphic-g1.png"
+        },
+        {
+          "id": "g2",
+          "afterSectionId": "s3",
+          "kind": "comparación",
+          "spec": "Cuatro TARJETAS grandes lado a lado (una por estrategia de escalado en Container Apps), con un título corto arriba: 'Cómo escalar según la carga'. Tarjeta 1 — 'HTTP': por peticiones; escala a cero. Tarjeta 2 — 'CPU / memoria': por uso de recursos; no escala a cero. Tarjeta 3 — 'Eventos (KEDA)': por cola/stream (Service Bus, Event Hubs, Kafka); escala a cero. Tarjeta 4 — 'Cron': por horario. SIN tabla, SIN ejes, SIN filas de atributos, SIN texto chico: solo el nombre en grande y UNA línea corta por tarjeta.",
+          "rationale": "Ayuda a decidir entre estrategias de escalado ante un escenario de examen: cuál usar según la métrica disponible, límites operativos y coste esperado.",
+          "imageUrl": "/assets/cloudbooks-engine/ai-200/master-book-ab/pages/cap-05/graphic-g2.png"
+        }
+      ],
+      "psychometrics": {
+        "measuredVerbs": [
+          "configurar",
+          "implementar",
+          "aplicar",
+          "seleccionar",
+          "monitorear",
+          "gestionar",
+          "evaluar",
+          "desplegar",
+          "optimizar",
+          "diagnosticar"
+        ],
+        "questionArchetypes": [
+          "caso de escenario",
+          "elegir la acción correcta",
+          "completar configuración",
+          "ordenar pasos",
+          "interpretar resultados de monitoreo",
+          "identificar errores comunes",
+          "comparar opciones de escalado",
+          "seleccionar recursos adecuados"
+        ],
+        "cognitiveLevels": [
+          "aplicar",
+          "analizar",
+          "evaluar"
+        ],
+        "commonTraps": [
+          "confundir escalado automático basado en métricas con escalado manual",
+          "no distinguir entre diferentes tipos de scalers de KEDA y cuándo aplicarlos",
+          "seleccionar recursos de cómputo sin considerar costo versus rendimiento",
+          "no entender las implicancias de los modos de revisión en Azure Container Apps",
+          "interpretar incorrectamente las reglas de escala y sus disparadores"
+        ],
+        "reasoningGoal": "El candidato debe construir un razonamiento que integre la configuración técnica de escalado y recursos con la evaluación de escenarios prácticos para seleccionar y aplicar las mejores opciones de escalado y gestión en Azure Container Apps."
+      },
+      "keyTakeaways": [
+        "Las reglas de escala combinan límites, reglas y comportamiento: piense en réplicas × recursos antes de ajustar thresholds.",
+        "KEDA extiende escalado a eventos y colas; use min-replicas=0 para ahorrar con patrón intermitente y min>0 cuando la latencia de cold start no sea tolerable.",
+        "Las reglas basadas en CPU/mem no permiten scale-to-zero; combínelas con HTTP o scalers event-driven si necesita cero réplicas.",
+        "Particiones (Kafka/Event Hubs) limitan el paralelismo efectivo; dimensione particiones antes de aumentar el máximo de réplicas.",
+        "Múltiples revisiones pueden escalar en paralelo; gestione tráfico y desactive revisiones para evitar consumo duplicado de réplicas."
+      ]
+    },
+    "provenance": {
+      "pageId": "cap-05",
+      "skillIds": [
+        "p2.scale.configure-scale-rules",
+        "p2.scale.event-driven-scaling-keda",
+        "p2.scale.keda-scalers-custom-workloads",
+        "p2.scale.compute-resources-performance-cost",
+        "p2.scale.revision-modes-traffic-management"
+      ],
+      "sourceIds": [
+        "750055e92ca0",
+        "d6222b3b0137",
+        "78c285dbebdc",
+        "ec16f7566f68",
+        "add4416e3af6",
+        "1d4fd6c0dd13"
+      ],
+      "claims": [
+        {
+          "id": "c1",
+          "field": "section",
+          "text": "Azure Container Apps usa reglas declarativas de escala que la plataforma traduce a especificaciones KEDA para ajustar réplicas automáticamente.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "750055e92ca0",
+            "quote": "Azure Container Apps uses declarative scale rules to manage automatic horizontal scaling. ... Azure Container Apps is powered by KEDA (Kubernetes Event-driven Autoscaling) , which provides the underlying scaling infrastructure.",
+            "url": null
+          }
+        },
+        {
+          "id": "c2",
+          "field": "section",
+          "text": "El comportamiento por defecto crea hasta 10 réplicas con mínimo cero cuando ingress está habilitado y no hay reglas personalizadas.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "750055e92ca0",
+            "quote": "The default scale behavior creates up to 10 replicas with a minimum of zero when ingress is enabled and no custom rules are defined.",
+            "url": null
+          }
+        },
+        {
+          "id": "c3",
+          "field": "section",
+          "text": "Las reglas basadas en CPU y memoria no pueden escalar la aplicación a cero porque la plataforma necesita al menos una réplica para medir utilización.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "750055e92ca0",
+            "quote": "CPU and memory rules can't scale your application to zero. The platform requires at least one running replica to measure utilization...",
+            "url": null
+          }
+        },
+        {
+          "id": "c4",
+          "field": "section",
+          "text": "El escalado orientado a eventos en Container Apps usa KEDA y soporta scale-to-zero, lo que lo hace apropiado para cargas de procesamiento en segundo plano.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "d6222b3b0137",
+            "quote": "Event-driven scaling supports scale-to-zero, making it ideal for background processing workloads.",
+            "url": null
+          }
+        },
+        {
+          "id": "c5",
+          "field": "section",
+          "text": "Cuando múltiples scalers están activos, Container Apps utiliza el recuento de réplicas más alto entre ellos como resultado de escala.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "78c285dbebdc",
+            "quote": "When multiple scalers are active, Container Apps uses the highest replica count among them.",
+            "url": null
+          }
+        }
+      ],
+      "checks": [
+        {
+          "claimId": "p1",
+          "field": "section",
+          "text": "Azure Container Apps convierte esa definición declarativa en especificaciones KEDA: la plataforma observa los triggers y modifica réplicas, pero cada réplica sigue siendo una unidad facturable con la CPU y memoria que usted fijó.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p2",
+          "field": "section",
+          "text": "El escalador HTTP calcula la concurrencia contando el número de solicitudes recibidas en los últimos 15 segundos y dividiéndolas por 15.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p3",
+          "field": "section",
+          "text": "Cuando ese valor excede el umbral que usted haya configurado por réplica, la plataforma crea réplicas adicionales para manejar la carga.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p4",
+          "field": "section",
+          "text": "El comportamiento por defecto de escalado crea hasta 10 réplicas con un mínimo de cero cuando el ingress está habilitado y no se definen reglas personalizadas.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p5",
+          "field": "section",
+          "text": "La plataforma consulta la fuente aproximadamente cada 30 segundos y calcula réplicas deseadas en función del valor leído.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p6",
+          "field": "section",
+          "text": "Azure Container Apps expone scalers administrados (Service Bus, Event Hubs, Storage Queue, Log Analytics) y admite scalers comunitarios.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p7",
+          "field": "section",
+          "text": "Redis Lists mide longitud absoluta (LLEN), Redis Streams mide pending entries por consumer group, Kafka y Event Hubs exponen lag por partición.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p8",
+          "field": "section",
+          "text": "El paralelismo efectivo está limitado por particiones: si su tópico tiene 32 particiones, más de 32 réplicas no incrementan el paralelismo por partición; dimensione particiones antes de aumentar el máximo de réplicas.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p9",
+          "field": "section",
+          "text": "Superar el límite de memoria provoca terminación (OOM) y reinicios; superar CPU produce throttling.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p10",
+          "field": "section",
+          "text": "El dimensionamiento total es réplicas × recursos por réplica.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p11",
+          "field": "section",
+          "text": "Una revisión (revision) es una instantánea inmutable de la configuración.",
+          "citationKind": "source",
+          "sourceId": "fa6e072083d7",
+          "verdict": "supported",
+          "note": "A revision is an immutable snapshot of your container app."
+        },
+        {
+          "claimId": "p12",
+          "field": "section",
+          "text": "Cada revisión activa escala según sus propias reglas; mantener varias revisiones activas puede multiplicar el consumo total de réplicas si no se gestiona el tráfico.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        }
+      ],
+      "groundingStatus": "partial",
+      "updatedAt": "2026-08-07T04:19:48.405Z"
+    },
+    "persistedAt": "2026-08-07T04:19:48.405Z"
+  },
+  "cap-zz-capstone-p2": {
+    "seed": {
+      "chapterId": "cap-zz-capstone-p2",
+      "chapterNumber": "06",
+      "moduleId": "capstone-p2",
+      "domainId": "p2",
+      "domainLabel": "Despliegue y gestión en Azure Container Apps",
+      "title": "Proyecto integrador: Plataforma de inferencia escalable con Azure Container Apps",
+      "subtitle": "API pública y procesamiento por eventos para modelos AI, desplegada y gestionada con Container Apps y KEDA",
+      "intro": "<p>Este capítulo muestra un proyecto integrador para crear una plataforma de inferencia escalable con Azure Container Apps.\nExplica despliegue, orquestación y gestión de modelos en contenedores orientados a producción.\nIncluye prácticas sobre configuración de entornos, escalado automático, enrutamiento y seguridad.\nSe alinea con la ruta 'Despliegue y gestión en Azure Container Apps' del examen AI-200.\nDominar estos temas es clave para demostrar capacidades prácticas y tomar decisiones técnicas acertadas.</p><p>El capítulo se organiza en cinco secciones que guían desde el contexto hasta la evaluación práctica.\nEl escenario plantea requisitos y restricciones reales para motivar decisiones de ingeniería.\nLa arquitectura de la solución muestra componentes, flujos y dependencias para la plataforma de inferencia.\nDecisiones de diseño justifica elecciones tecnológicas y trade-offs; Construcción paso a paso ofrece instrucciones reproducibles.\nLa práctica de examen integra todo en un reto que emula lo que pide AI-200.</p><p>Al terminar, podrás razonar la integración end-to-end del despliegue y la gestión en Azure Container Apps.\nDiseñarás soluciones que integren modelos en contenedores con escalado automático, observabilidad y seguridad.\nImplementarás recursos en Azure y configurarás pipelines y parámetros de despliegue según la carga.\nPodrás evaluar trade-offs de costo, rendimiento y mantenibilidad para justificar decisiones técnicas.\nEstarás listo para enfrentar casos prácticos del AI-200 con argumentos sólidos y confianza operativa.</p>",
+      "skillIds": [
+        "p2.deploy.container-apps-environments",
+        "p2.deploy.deploy-container-app",
+        "p2.deploy.configure-runtime",
+        "p2.deploy.connect-to-registries",
+        "p2.deploy.verify-deployment",
+        "p2.manage.update-images-manage-revisions",
+        "p2.manage.app-lifecycle-management",
+        "p2.manage.monitor-logs-troubleshoot",
+        "p2.manage.health-probes",
+        "p2.manage.optimize-container-settings",
+        "p2.scale.configure-scale-rules",
+        "p2.scale.event-driven-scaling-keda",
+        "p2.scale.keda-scalers-custom-workloads",
+        "p2.scale.compute-resources-performance-cost",
+        "p2.scale.revision-modes-traffic-management"
+      ],
+      "sections": [
+        {
+          "id": "s1",
+          "heading": "El escenario",
+          "prose": "<p>La empresa ofrece dos canales: una API pública para inferencia interactiva (latencia objetivo <200 ms) y un pipeline asíncrono que consume mensajes de Event Hubs para tareas de batch y enriquecimiento. El tráfico es intermitente: picos diurnos en la API y ventanas nocturnas de procesamiento masivo. El presupuesto obliga a combinar scale-to-zero cuando sea posible y réplicas calientes para endpoints sensibles a la latencia.</p>\n\n<p>Requisitos concretos que condicionan el diseño: autenticación segura al registry, trazabilidad de despliegues en producción, capacidad para desactivar revisiones para investigar fallos, y observabilidad suficiente para diagnosticar problemas con request id, revision id y versión del modelo. Además, algunas cargas requieren paralelismo limitado por particiones de Event Hubs.</p>\n\n<p>Constriñamos el alcance: la solución usará imágenes Docker en Azure Container Registry, Container Apps para runtime y revisiones, KEDA para escalado basado en eventos, secrets de Container Apps para credenciales y managed identity para acceso a ACR cuando sea posible. No introducimos servicios nuevos fuera de la ruta.</p>",
+          "claimRefs": [],
+          "critical": false
+        },
+        {
+          "id": "s2",
+          "heading": "Arquitectura de la solución",
+          "prose": "<p>La arquitectura propone tres entornos lógicos en Container Apps: <em>dev</em> (prototipo), <em>staging</em> (pruebas integradas) y <em>prod</em> (tráfico real). Separar entornos facilita límites de red y observabilidad: cada entorno tiene su propio Container Apps Environment para aislar redes y asociar logs a un scope claro.</p>\n\n<p>Componentes principales y su conexión:\n<ul>\n<li>Azure Container Registry (ACR): almacén de imágenes; acceso vía managed identity con rol <code>AcrPull</code> cuando el tenant lo permita.</li>\n<li>Container Apps Environment: red y runtime donde se alojan las Container Apps; una por lifecycle para aislar recursos y políticas de red.</li>\n<li>Container Apps (API y worker): cada servicio corre en su Container App. La API expone ingress público; el worker usa ingress privado y está detrás de reglas KEDA que leen Event Hubs.</li>\n<li>KEDA: scalers sobre Event Hubs para el worker; permite min-replicas=0 para ahorrar durante inactividad y min-replicas>0 para endpoints que no toleran cold start.</li>\n<li>Secrets en Container Apps: claves de terceros y tokens se guardan como secrets y se referencian en env vars con <code>secretRef</code>.</li>\n</ul>\n</p>\n\n<p>El flujo típico de despliegue: construcción de la imagen → push a ACR → despliegue a staging con YAML (imagen por digest) → validar revisión y streaming de logs → promover la misma imagen por digest a prod. Para cambios rápidos de prueba se permite <code>az containerapp up</code>, pero no para producción porque no genera YAML revisable por CI.</p>",
+          "claimRefs": [],
+          "critical": false
+        },
+        {
+          "id": "s3",
+          "heading": "Decisiones de diseño",
+          "prose": "<p>A continuación se presentan las decisiones arquitectónicas más relevantes y cuándo elegir cada opción. Cada elección recoge trade-offs entre costo, latencia, seguridad y operabilidad.</p>\n\n<p>La tabla resume escenarios concretos y la opción recomendada:</p>\n\n<table class=\"dmap\">\n<thead>\n<tr><th>Escenario</th><th>Opción recomendada</th></tr>\n</thead>\n<tbody>\n<tr><td>Prototipo rápido para validar idea</td><td>Usar <code>az containerapp up</code> desde CLI; evita escribir YAML, devuelve fast feedback</td></tr>\n<tr><td>Despliegue reproducible en CI/CD para producción</td><td>Usar YAML declarativo y <code>az containerapp create</code> o <code>az containerapp revision</code>; referenciar imágenes por digest</td></tr>\n<tr><td>Acceso al registro soporta managed identity</td><td>Asignar identidad administrada y rol <code>AcrPull</code> al Container App; evita credenciales en secrets</td></tr>\n<tr><td>Registro no soporta identidades o cross-tenant</td><td>Guardar credenciales en secrets y referenciarlas; rotar credenciales y minimizar scopes</td></tr>\n<tr><td>Workload intermitente tolera cold start</td><td>Usar KEDA con <code>min-replicas=0</code> para ahorrar costos</td></tr>\n<tr><td>Endpoint con demanda de baja latencia</td><td>Establecer <code>min-replicas&gt;0</code> y ajustar readiness inicial para warmup</td></tr>\n<tr><td>Necesita escalado por cola/particiones</td><td>Usar KEDA basándose en la métrica del scaler (Event Hubs/Kafka) y dimensionar particiones para paralelismo</td></tr>\n<tr><td>Debe investigar una versión sin afectar producción</td><td>Desactivar la revisión problemática; crear una revisión local sin mover tráfico y usar streaming de logs para diagnóstico</td></tr>\n</tbody>\n</table>\n\n<p>Sobre readiness vs liveness: configure readiness para evitar recibir tráfico hasta que el modelo esté cargado (ajuste <code>initialDelay</code> y thresholds según warmup). Liveness debe detectar procesos colgados; establezca thresholds menos permisivos que readiness para reinicios tempranos cuando el proceso no responda.</p>\n\n<p>Reglas de escalado: combine umbrales con límites de recursos. Una regla basada en CPU/mem no permite scale-to-zero en Container Apps; si necesita cero réplicas, use scalers HTTP/KEDA. Para workloads que dependen de particiones, dimensione particiones antes de aumentar el máximo de réplicas.</p>",
+          "claimRefs": [],
+          "critical": false
+        },
+        {
+          "id": "s4",
+          "heading": "Construcción paso a paso",
+          "prose": "<p>Describo la secuencia de comandos y los fragmentos YAML que producen la solución. Mantenga dos modos: rápido (CLI) y controlado (YAML en CI). Expongo comandos largos en bloques para facilitar copia/pegado.</p>\n\n<p>1) Crear el grupo de recursos y el ACR (ejemplo abreviado):</p>\n\n<pre class=\"scn-code\">az group create --name rg-inferencia --location eastus\naz acr create --resource-group rg-inferencia --name acrinferencia --sku Standard --admin-enabled false</pre>\n\n<p>2) Construir y push de la imagen (ejemplo usando az acr build o docker). Para reproducibilidad en producción use un tag por digest en el registry. Ejemplo con docker CLI:</p>\n\n<pre class=\"scn-code\">docker build -t acrinferencia.azurecr.io/inferencia-api:1.0.0 .\ndocker push acrinferencia.azurecr.io/inferencia-api:1.0.0\n# Obtener digest después del push\naz acr repository show-manifests --name acrinferencia --repository inferencia-api --query \"[0].digest\" -o tsv</pre>\n\n<p>3) Preparar Container Apps Environment por lifecycle:</p>\n\n<pre class=\"scn-code\">az containerapp env create --name env-prod --resource-group rg-inferencia --location eastus</pre>\n\n<p>4) Asignar identidad administrada y permiso AcrPull (si ACR y tenant permiten managed identity):</p>\n\n<pre class=\"scn-code\"># Crear la identidad y recuperar principalId\naz identity create --name id-containerapps --resource-group rg-inferencia\nPRINCIPAL_ID=$(az identity show --name id-containerapps --resource-group rg-inferencia --query principalId -o tsv)\n# Asignar rol AcrPull en el registry\naz role assignment create --assignee $PRINCIPAL_ID --role AcrPull --scope $(az acr show --name acrinferencia --resource-group rg-inferencia --query id -o tsv)</pre>\n\n<p>5) Despliegue controlado de la API con YAML citando image por digest, readiness/liveness y secretRef. Ejemplo de YAML de Container App (reemplazar valores):</p>\n\n<pre class=\"scn-code\">apiVersion: apps/v1\nkind: ContainerApp\nmetadata:\n name: inferencia-api\nproperties:\n managedEnvironmentId: /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-inferencia/providers/Microsoft.Web/kubeEnvironments/env-prod\n configuration:\n secrets:\n - name: acr-creds\n value: \"<valor-placeholder-no-poner-en-YAML>\"\n registries:\n - server: acrinferencia.azurecr.io\n username: <se-usa-managed-identity-si-aplica>\n template:\n containers:\n - name: api\n image: acrinferencia.azurecr.io/inferencia-api@sha256:<digest-obtenido>\n env:\n - name: MODEL_VERSION\n value: \"v1.0.0\"\n probes:\n readiness:\n httpGet:\n path: /health/ready\n port: 8080\n initialDelaySeconds: 20\n periodSeconds: 10\n failureThreshold: 3\n liveness:\n httpGet:\n path: /health/live\n port: 8080\n initialDelaySeconds: 60\n periodSeconds: 20\n failureThreshold: 3\n scale:\n minReplicas: 2\n maxReplicas: 10\n rules: []</pre>\n\n<p>Notas: en producción use la identidad administrada y evite poner credenciales en YAML. Si debe usar credenciales, guárdelas como secret y referencielas con <code>secretRef</code> en env vars.</p>\n\n<p>6) Despliegue del worker con KEDA sobre Event Hubs (fragmento de reglas; ajuste según namespace y política):</p>\n\n<pre class=\"scn-code\">az containerapp create \\\n --name inferencia-worker \\\n --resource-group rg-inferencia \\\n --environment env-prod \\\n --image acrinferencia.azurecr.io/inferencia-worker@sha256:<digest> \\\n --min-replicas 0 \\\n --max-replicas 20 \\\n --scale-rule-name eh-scaled \\\n --scale-rule-type eventhubs \\\n --scale-rule-auth \"connectionString=\\\"@Microsoft.KeyVault(VaultName=myvault;SecretName=eh-conn)\\\"\" \\\n --scale-rule-metadata eventHubName=trabajos partitionKey=0 consumerGroup=$Default targetMessageCount=5</pre>\n\n<p>Es largo: en CI genere un YAML declarativo equivalente y aplíquelo. KEDA permite escalar desde cero y define el comportamiento cuando sube la cola.</p>\n\n<p>7) Verificación y troubleshooting: siga la secuencia recomendada — configuración → logs → revisión → replicas. Ejemplos:</p>\n\n<pre class=\"scn-code\">az containerapp logs show --name inferencia-api --resource-group rg-inferencia --follow\naz containerapp revision list --name inferencia-api --resource-group rg-inferencia -o table\naz containerapp show --name inferencia-api --resource-group rg-inferencia --query \"properties.template.scale\" -o json</pre>\n\n<p>Para investigar un problema sin perder evidencia, desactive la revisión problemática con el comando de disabling o mueva 0% de tráfico a la revisión en cuestión mientras reproduce el fallo.</p>\n\n<p>8) Actualizar imagen en producción manteniendo trazabilidad: reconstruya, obtenga digest y cree nueva revisión referenciando el digest. Esto asegura que revisiones distintas apunten a trazas de imagen inmutables.</p>",
+          "claimRefs": [],
+          "critical": false
+        },
+        {
+          "id": "s5",
+          "heading": "Práctica de examen",
+          "prose": "<p>Escenario 1 — Un despliegue a prod reporta 502 en la API inmediatamente después de subir la nueva imagen. No hay errores obvios en el CI. ¿Cómo procedo?</p>\n\n<p>Resolución razonada: Primero confirmo que la revisión fue creada y obtengo su health y logs: <code>az containerapp revision list</code> y <code>az containerapp logs show --follow</code>. Busco errores del proceso (stack traces) y errores del sistema (pull del registry). Si los logs muestran fallo al descargar imagen, verificaría si el Container App tiene permiso <code>AcrPull</code> o si el nombre del repo tiene mayúsculas. Si el proceso arranca pero responde mal, reviso readiness probe: tal vez la ruta o el <code>initialDelaySeconds</code> son insuficientes y la revisión recibe tráfico antes de estar lista. Acción práctica: desactivar la revisión, restaurar la revisión anterior con tráfico 100% o corregir readiness y desplegar nuevamente con el mismo digest para reproducir la incidencia.</p>\n\n<p>Escenario 2 — Necesitamos reducir costo y permitir scale-to-zero para el worker, pero algunos trabajos críticos deben procesarse sin cold start. ¿Cuál es la configuración adecuada?</p>\n\n<p>Resolución razonada: Configure KEDA para el worker con <code>minReplicas=0</code>, lo que permite scale-to-zero y ahorros. Para los trabajos críticos, cree una segunda Container App o una revisión del worker con <code>minReplicas&gt;0</code> que reciba tráfico y procese tareas urgentes; esa instancia mantiene réplicas calientes. Alternativamente, si la latencia crítica corresponde a la API, mantenga <code>minReplicas&gt;0</code> en la Container App de la API y use KEDA para el worker. Valide con pruebas de carga ajustando una sola variable a la vez (p. ej. minReplicas) y midiendo latencia y costo.</p>\n\n<p>Ambos escenarios exigen streaming de logs y correlación por request id y revision id para diagnosticar rápidamente. Registrar el model version en cada petición facilita rollback y trazabilidad.</p>",
+          "claimRefs": [],
+          "critical": false
+        }
+      ],
+      "graphics": [],
+      "psychometrics": {
+        "measuredVerbs": [],
+        "questionArchetypes": [],
+        "cognitiveLevels": [],
+        "commonTraps": [],
+        "reasoningGoal": "Integrar la ruta Despliegue y gestión en Azure Container Apps en una solución end-to-end."
+      },
+      "keyTakeaways": [
+        "Separe entornos de Container Apps por lifecycle y por superficie de red para simplificar control y observabilidad.",
+        "Use <code>az containerapp up</code> para prototipos y YAML declarativo en CI/CD para producción; referencie imágenes por digest para trazabilidad.",
+        "Guarde secretos en Container Apps y use <code>secretRef</code>; prefiera identidades administradas y el rol <code>AcrPull</code> cuando sea posible.",
+        "Valide cambios siguiendo la secuencia configuración → logs → revisión → réplicas; los logs de contenedor y sistema son la primera fuente para diagnosticar fallos.",
+        "Configure readiness para evitar recibir tráfico antes del warmup del modelo y liveness para detectar procesos colgados; ajuste <code>initialDelaySeconds</code> según el tiempo de carga del modelo.",
+        "Combine escalado basado en CPU/mem con KEDA para escenarios que requieren scale-to-zero o escalado por eventos; dimensione particiones antes de aumentar réplicas.",
+        "Para investigar sin perder evidencia, desactive revisiones y use revisiones separadas para pruebas; promueva imágenes por digest entre entornos."
+      ]
+    },
+    "provenance": {
+      "pageId": "cap-zz-capstone-p2",
+      "skillIds": [
+        "p2.deploy.container-apps-environments",
+        "p2.deploy.deploy-container-app",
+        "p2.deploy.configure-runtime",
+        "p2.deploy.connect-to-registries",
+        "p2.deploy.verify-deployment",
+        "p2.manage.update-images-manage-revisions",
+        "p2.manage.app-lifecycle-management",
+        "p2.manage.monitor-logs-troubleshoot",
+        "p2.manage.health-probes",
+        "p2.manage.optimize-container-settings",
+        "p2.scale.configure-scale-rules",
+        "p2.scale.event-driven-scaling-keda",
+        "p2.scale.keda-scalers-custom-workloads",
+        "p2.scale.compute-resources-performance-cost",
+        "p2.scale.revision-modes-traffic-management"
+      ],
+      "sourceIds": [],
+      "claims": [],
+      "checks": [],
+      "groundingStatus": "unverified",
+      "updatedAt": "2026-08-07T04:20:41.191Z"
+    },
+    "persistedAt": "2026-08-07T04:20:41.191Z"
+  },
+  "cap-01": {
+    "seed": {
+      "chapterId": "cap-01",
+      "chapterNumber": "01",
+      "moduleId": "p1.acr",
+      "domainId": "p1",
+      "domainLabel": "Ruta 1 — Alojamiento de aplicaciones en contenedores",
+      "title": "Almacenar y administrar contenedores en Azure Container Registry",
+      "subtitle": "Diseñar, versionar y ejecutar imágenes con ACR para despliegues reproducibles",
+      "intro": "<p>Riesgo de una mala gestión de imágenes y etiquetas: un despliegue que falla, versiones confusas y secretos expuestos pueden detener un proyecto. En el examen AI-200 y en el trabajo real deberá justificar decisiones que eviten esos errores y garanticen despliegues fiables.</p><p>Avanzará desde la estructura de un registro hasta los patrones para gestionar repositorios y artefactos, siguiendo flujos de construcción automatizada y control de versiones. El texto explica escenarios de integración y las señales que indican cuándo automatizar o auditar una imagen.</p><p>Al terminar podrá elegir una estrategia de tags y retención, programar purgas con la tarea acr purge y configurar pipelines reproducibles. También aprenderá cuándo activar private endpoints (requieren Premium) y cómo referenciar secretos desde App Service con \"@Microsoft.KeyVault(SecretUri=…)\".</p><p>Al final sabrá construir un razonamiento para el examen que integre versionado, tags y ejecuciones automatizadas, evaluando configuraciones y flujos antes del despliegue. Esta capacidad reduce fallos en producción y facilita decisiones reproducibles sobre cómo publicar imágenes en Azure.</p>",
+      "skillIds": [
+        "p1.acr.image-storage",
+        "p1.acr.build-run-acr-tasks",
+        "p1.acr.tag-version-images"
+      ],
+      "sections": [
+        {
+          "id": "s1",
+          "heading": "Registries, repos y artefactos",
+          "prose": "<p>El registro (registry) es la unidad administrativa: expone un login server en la forma &lt;nombre&gt;.azurecr.io y centraliza autenticación, políticas, SKU y funciones como geo-replicación. Al crear el registro, el nombre elegido forma parte de la URL pública que usarán los clientes para push/pull.</p><p>Dentro del registro, los repositorios agrupan variantes de una imagen por nombre; las rutas con slash permiten segmentar equipos o entornos (por ejemplo production/inference-api y staging/inference-api). Use esa segmentación como boundary de control: otorgue push sólo al namespace del equipo y reserve producción a cuentas de CI controladas.</p><p>Un artefacto OCI consiste en manifest+config+capas (blobs). Las tags son referencias (punteros) a manifests: múltiples tags pueden apuntar al mismo artefacto, pero no forman parte intrínseca del contenido. Decida cuándo referenciar por tag (legible y conveniente) y cuándo por digest (inmutable y reproducible). Para cargas de IA donde la reproducibilidad importa, preferir pulls por digest evita cambios inesperados en producción.</p><p>ACR deduplica blobs por digest dentro del mismo registry (incluso entre repositorios), por lo que no es necesario agrupar imágenes en un mismo repositorio solo para ahorrar almacenamiento. Diseñe repositorios por ciclo de vida, equipo o dominio de responsabilidad, no por deduplicación de capas. Al modelar permisos, no confunda el registro (recurso superior) con el repositorio (espacio lógico dentro del registro): aplicar roles o políticas al scope equivocado causa accesos demasiado amplios o inexistentes.</p><pre class=\"scn-code\">az acr login --name myregistry\naz acr repository list --name myregistry --output table\naz acr repository show-manifests --name myregistry --repository inference-api --output table</pre><p>→ Al ejecutar, espere que az acr login confirme el registro como destino; az acr repository list debe listar repositorios y show-manifests mostrará columnas con digest y tags asociadas al repository. Verifique que el digest mostrado coincida con el manifest que se desea retener.</p><div class=\"exam-trap\"><p class=\"lab\">Trampa del examen</p><p>Confundir registro con repositorio lleva a seleccionar un scope de permiso inadecuado (por ejemplo, aplicar un permiso repo-restringido usando el nombre del registro). Repase la diferencia entre Registry, Repository y Artifact y la manera correcta de aplicar límites de control de acceso.</p></div>",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "s2",
+          "heading": "Build y run con ACR Tasks",
+          "prose": "<p>Delegar el build a ACR Tasks traslada la construcción y el push al entorno controlado del registro, reduciendo la variabilidad entre máquinas locales. En lugar de docker build + docker push, ejecuta az acr build y ACR sube el contexto, ejecuta el Dockerfile y empuja la imagen al registry.</p><p>Use quick tasks para builds ad-hoc y para integrar fácilmente en CI: la misma command line funciona con contextos locales, repositorios Git o tarballs remotos. Para trazabilidad en etiquetas automáticas, emplee variables de task como {{.Run.ID}} para generar tags únicos por ejecución.</p><p>Existen tres triggers principales y criterios de uso:</p><ul><li>Source code triggers: reconstruyen al hacer commit; son apropiados cuando cada cambio en main debe producir una nueva imagen validada.</li><li>Base image triggers: reconstruyen cuando cambia la imagen base; sugeridos para recibir parches de seguridad del runtime sin depender de commits en el repositorio.</li><li>Scheduled triggers: reconstrucciones periódicas; útiles para validar compatibilidad contra dependencias externas que evolucionan.</li></ul><pre class=\"scn-code\">az acr build --registry myregistry --image inference-api:v1.0.0 .\naz acr build --registry myregistry --image inference-api:{{.Run.ID}} https://github.com/myorg/inference-api.git</pre><p>→ En una ejecución exitosa verá líneas del build (salida de Docker) y una confirmación del push a myregistry.azurecr.io/inference-api:vX o al tag generado con {{.Run.ID}}. Si la tarea falla al obtener una base privada, los pulls fallidos por credenciales suelen devolver 401 Unauthorized o mensajes que contienen 'unauthorized', y en algunos casos 403 Forbidden u otros códigos o mensajes según el registrador y la causa (credenciales incorrectas, permisos insuficientes o token expirado).</p><p>Al diagnosticar un build fallido, siga esta secuencia: validar autenticación del principal que ejecuta el task, revisar logs de ACR Task para identificar la etapa (fetch context, pull base, build, push), y confirmar acceso a repositorios remotos (credenciales Git/PAT o credenciales del registro base).</p><p>Ejemplo de salida relevante al fallar por base privada:</p><pre class=\"scn-code\">2026-01-15T12:34:56.789Z Pulling from myprivateregistry.azurecr.io/base-runtime\nunauthorized: access to the requested resource is not authorized\nERROR: failed to fetch base image</pre><p>→ Si encuentra 'unauthorized', 401, 403 u otros errores de autorización en los logs, la causa probable es falta o mal estado de las credenciales para el registry que contiene la base. Configure credenciales válidas o use una identidad gestionada con permiso de pull. Repase ACR Tasks triggers y autenticación de builds para entender las opciones de credenciales.</p><div class=\"tip\"><p class=\"lab\">En el laboratorio</p><p>Para trazabilidad en CI, prefiera --image inference-api:{{.Run.ID}} sobre latest; así podrá mapear cada despliegue a la ejecución exacta del task.</p></div>",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "s3",
+          "heading": "Tags y versiones de imágenes",
+          "prose": "<p>La estrategia de tags determina si un despliegue es reproducible. Los tags estables (por ejemplo latest o 1) permiten actualizaciones automáticas, pero introducen incertidumbre: dos pulls del mismo tag en momentos distintos pueden devolver imágenes diferentes.</p><p>Los tags únicos (build id, commit SHA, timestamp) garantizan que cada push produzca una referencia distinta y recuperable; combine semantic version con build id para equilibrio entre legibilidad y trazabilidad (por ejemplo 1.2.0+build456 o 1.2.0-abc123).</p><p>Para máxima certeza en producción, prefiera pulls por digest: un manifest lleva un digest inmutable en formato sha256:… y docker pull myregistry.azurecr.io/inference-api@sha256:3a7f... descarga exactamente ese artefacto sin ambigüedad.</p><pre class=\"scn-code\">az acr repository show-manifests --name myregistry --repository inference-api --output table\ndocker pull myregistry.azurecr.io/inference-api@sha256:3a7f... </pre><p>→ az acr repository show-manifests lista cada manifest con su digest y tags asociados; confirme que el digest que desea coincide con el que usa docker pull. Al hacer pull por digest, verifique en la salida que el digest descargado coincide exactamente.</p><p>Implemente políticas de retención para conservar las versiones necesarias al rollback y combine tagging único con limpieza automatizada (retention policies o scripts) para evitar pérdida accidental de builds útiles. Recuerde que geo-replication requiere SKU Premium; sin embargo, los private endpoints (Private Link) no están restringidos exclusivamente al nivel Premium. Los registries pueden configurarse con Private Link, aunque las capacidades de red y rendimiento pueden variar según el SKU y la configuración de red, así que ajuste el SKU y la arquitectura de red según sus necesidades de replicación y throughput.</p><table class=\"dmap\"><thead><tr><th>Escenario</th><th>Opción recomendada</th></tr></thead><tbody><tr><td class=\"s\">Despliegue de producción que requiere rollback exacto</td><td class=\"d\">Usar pull por digest y retener manifest en el registry</td></tr><tr><td class=\"s\">Desarrollo continuo donde se desea siempre la última versión de una rama</td><td class=\"d\">Usar tag estable como :latest o :dev en entornos no productivos</td></tr><tr><td class=\"s\">Dependencias base que deben propagar parches automáticamente</td><td class=\"d\">Usar base-image trigger y tags estables para bases de imagen</td></tr></tbody></table><p>→ Use esta tabla para decidir rápidamente cuándo preferir digests frente a tags. Repase estrategias de tagging y políticas de retención para alinear operaciones y cumplimiento.</p>",
+          "claimRefs": [],
+          "critical": true
+        }
+      ],
+      "graphics": [
+        {
+          "id": "g1",
+          "afterSectionId": "s2",
+          "kind": "flujo",
+          "spec": "Diagrama lineal que muestre: (1) build context (local/git/tarball) → (2) ACR Tasks executor en la nube → (3) push al registro (registry/repository:tag) → (4) despliegue que puede usar tag o digest. Resaltar triggers opcionales (source, base image, cron) como bifurcaciones que inician el build.",
+          "caption": "Flujo de build en ACR Tasks: del contexto al build en ACR y push al registro; los triggers pueden iniciar este flujo automáticamente.",
+          "rationale": "Este flujo fija visualmente la secuencia de acciones y dónde encajan los triggers, lo que ayuda a distinguir el orden correcto de operaciones y evita confundir la ejecución local con la delegada a ACR.",
+          "imageUrl": "/assets/cloudbooks-engine/ai-200/master-book-ab/pages/cap-01/graphic-g1.png"
+        }
+      ],
+      "psychometrics": {
+        "measuredVerbs": [
+          "construir",
+          "almacenar",
+          "versionar",
+          "administrar",
+          "ejecutar",
+          "configurar",
+          "implementar",
+          "desplegar",
+          "seleccionar",
+          "optimizar",
+          "monitorear",
+          "solucionar problemas"
+        ],
+        "questionArchetypes": [
+          "caso de escenario",
+          "elegir la acción correcta",
+          "completar código",
+          "ordenar pasos",
+          "interpretar salida de comandos",
+          "diagnosticar error",
+          "comparar opciones de configuración"
+        ],
+        "cognitiveLevels": [
+          "recordar",
+          "comprender",
+          "aplicar",
+          "analizar",
+          "evaluar"
+        ],
+        "commonTraps": [
+          "confundir repositorios con registros",
+          "no distinguir entre versiones y etiquetas de imágenes",
+          "malinterpretar el flujo de tareas de ACR Tasks",
+          "seleccionar comandos o configuraciones de servicios similares pero incorrectos",
+          "olvidar pasos necesarios para la autenticación o permisos en Azure Container Registry",
+          "no considerar el impacto de la configuración de versiones en despliegues"
+        ],
+        "reasoningGoal": "El candidato debe construir un razonamiento que integre la gestión y versionado de imágenes en Azure Container Registry con la ejecución eficiente de tareas automatizadas, evaluando configuraciones y flujos para desplegar contenedores correctamente en Azure."
+      },
+      "keyTakeaways": [
+        "Diferencie claramente registro, repositorio y artefacto; referenciar por digest garantiza inmutabilidad.",
+        "Use ACR Tasks para builds consistentes y automatizados; el comando az acr build sube el contexto, ejecuta el build y empuja la imagen.",
+        "Prefiera tags únicos (build ID, commit SHA) para producción; reserve tags estables solo cuando la actualización automática sea aceptable.",
+        "Configure triggers (source/base/scheduled) según la necesidad de reactividad a cambios y asegure permisos y tokens para acceso al contexto.",
+        "Para despliegues reproducibles, implemente pulls por digest y políticas de retención que permitan rollback."
+      ],
+      "objectives": [
+        "Seleccionar la jerarquía adecuada de registro/repositorio y justificar permisos y namespaces según un escenario de equipos múltiples",
+        "Configurar y ejecutar un build con az acr build desde contexto local o remoto, e interpretar la salida para confirmar push exitoso",
+        "Diseñar una estrategia de tagging (estable vs único) y usar pulls por digest para garantizar despliegues consistentes",
+        "Diagnosticar y solucionar fallas comunes de autenticación y triggers en ACR Tasks siguiendo la secuencia contexto→build→push→pull"
+      ],
+      "prerequisites": [
+        "Tener a mano un Dockerfile con CMD o ENTRYPOINT claramente definido",
+        "Haber iniciado sesión en Azure y en el registro con az login y az acr login (o disponer de una identity con permisos de push/pull)",
+        "Contar con acceso al repositorio de código o un tarball público; si es privado, disponer del PAT o credenciales necesarias"
+      ],
+      "prereqRemedy": "¿Sin práctica con builds locales o az CLI? Instale Azure CLI y pruebe un docker build local con un Dockerfile simple antes de seguir.",
+      "buildGoal": "Construirá y versionará imágenes en Azure Container Registry, automatizando builds con ACR Tasks y seleccionando tags o digests adecuados para despliegues reproducibles.",
+      "practice": [
+        {
+          "question": "Un equipo de ML necesita poder push solo a staging/inference-api dentro de un registro ACR compartido, sin acceso a production/inference-api. ¿Cuál es la opción que otorga el control mínimo necesario y permite auditar pushes por equipo?",
+          "options": [
+            "Asignar la role built-in AcrPush al grupo del equipo sobre todo el registro (registry scope).",
+            "Crear un token de ACR (scope map) que permita push únicamente al repositorio staging/inference-api y entregar ese token al equipo.",
+            "Crear un Service Principal y asignarle la role AcrPull sobre el grupo de recursos que contiene el registro."
+          ],
+          "correctIndex": 1,
+          "explanation": "La creación de un token de ACR con un scope map restringido al repositorio staging/inference-api proporciona control granular y mínimo para push y facilita auditoría. Asignar AcrPush al nivel del registro otorga permisos demasiado amplios (incluye production). Crear un Service Principal con AcrPull no permite push, por lo que no satisface el requisito de envío de imágenes. Repase tokens de ACR y scope maps para permisos por repositorio."
+        },
+        {
+          "question": "Su pipeline de CI debe reconstruir imágenes automáticamente cuando la imagen base sufre parches de seguridad, pero no quiere reconstrucciones por cada commit en el repositorio. ¿Qué trigger de ACR Tasks debe elegir?",
+          "options": [
+            "Source code trigger que se active en cada push a main.",
+            "Base image trigger que reconstruya cuando cambie la imagen base.",
+            "Scheduled trigger que realice builds periódicos diarios."
+          ],
+          "correctIndex": 1,
+          "explanation": "El base image trigger reconstruye la imagen cuando la imagen base cambia, lo que es apropiado para aplicar parches de seguridad sin depender de commits de código. Un source code trigger reconstruye en cada commit y provocaría builds por cambios de código que no interesan para parches de la base. Un scheduled trigger podría detectar cambios con cierto retraso y no reaccionaría inmediatamente ante parches críticos. Repase ACR Tasks triggers y su uso según la naturaleza del cambio."
+        },
+        {
+          "question": "Un ACR Task falla al intentar obtener una imagen base privada y los logs muestran 'unauthorized: access to the requested resource is not authorized'. ¿Cuál es la acción más adecuada para corregir el problema y permitir que el task haga pull de la base privada de forma segura?",
+          "options": [
+            "Hacer pública la imagen base en el registry que la contiene para evitar autenticación.",
+            "Configurar el task para usar credenciales válidas para el registry de la base (o una identidad gestionada con permiso de pull) de modo que el pull esté autorizado.",
+            "Modificar el Dockerfile para eliminar el FROM y reconstruir la imagen localmente antes de subirla al registry."
+          ],
+          "correctIndex": 1,
+          "explanation": "La solución adecuada es proporcionar credenciales válidas al task o usar una identidad gestionada que tenga permiso de pull en el registry de la imagen base; así el task puede autenticar y descargar la base. Hacer pública la imagen puede no ser aceptable por seguridad y altera la posture de seguridad. Eliminar FROM y reconstruir localmente es impráctico y rompe la reproducibilidad del build en la nube. Repase autenticación de ACR Tasks y el uso de managed identities o credenciales para pulls entre registries."
+        }
+      ]
+    },
+    "provenance": {
+      "pageId": "cap-01",
+      "skillIds": [
+        "p1.acr.image-storage",
+        "p1.acr.build-run-acr-tasks",
+        "p1.acr.tag-version-images"
+      ],
+      "sourceIds": [
+        "0dd288d3f404",
+        "b1acb7a933b8",
+        "d6be9c983ed8",
+        "120e751a4051"
+      ],
+      "claims": [
+        {
+          "id": "c1",
+          "field": "section",
+          "text": "Azure Container Registry es un servicio gestionado y privado que almacena y distribuye imágenes de contenedor y artefactos relacionados.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "0dd288d3f404",
+            "quote": "Azure Container Registry is a managed, private Docker registry service that stores and distributes container images and related artifacts.",
+            "url": null
+          }
+        },
+        {
+          "id": "c2",
+          "field": "section",
+          "text": "ACR usa una jerarquía de tres niveles (registry → repository → artifact) para organizar contenido y namespaces.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "0dd288d3f404",
+            "quote": "ACR uses a three-level hierarchy to organize content.",
+            "url": null
+          }
+        },
+        {
+          "id": "c3",
+          "field": "section",
+          "text": "El comando az acr build envía el contexto de código a ACR, construye la imagen en la nube y la empuja al registro.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "b1acb7a933b8",
+            "quote": "The az acr build command sends your source code context to ACR, builds the image in the cloud, and pushes it to your registry.",
+            "url": null
+          }
+        },
+        {
+          "id": "c4",
+          "field": "section",
+          "text": "El manifiesto de una imagen está identificado por un digest SHA-256; los digests son inmutables y garantizan la identidad del artefacto.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "0dd288d3f404",
+            "quote": "The manifest is identified by a SHA-256 digest in the format sha256:abc123... .",
+            "url": null
+          }
+        },
+        {
+          "id": "c5",
+          "field": "section",
+          "text": "Las estrategias de tagging varían: los tags estables se reusán mientras los tags únicos preservan cada push como versión independiente.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "d6be9c983ed8",
+            "quote": "Stable tags like v1 , v1.2 , or latest are reused across multiple image pushes. ... Unique tags like v1.2.0-build456 or 20260102-abc123 are never reused.",
+            "url": null
+          }
+        }
+      ],
+      "checks": [
+        {
+          "claimId": "p1",
+          "field": "section",
+          "text": "El registro (registry) es la unidad administrativa: expone un login server en la forma nombre .azurecr.io y centraliza autenticación, políticas, SKU y funciones como geo-replicación.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p2",
+          "field": "section",
+          "text": "Al crear el registro, el nombre elegido forma parte de la URL pública que usarán los clientes para push/pull.",
+          "citationKind": "source",
+          "sourceId": "48f0a5a8caa5",
+          "verdict": "supported",
+          "note": "Use one global endpoint : Reference myregistry.azurecr.io/myimage:tag in all your builds and deployments."
+        },
+        {
+          "claimId": "p3",
+          "field": "section",
+          "text": "Dentro del registro, los repositorios agrupan variantes de una imagen por nombre; las rutas con slash permiten segmentar equipos o entornos (por ejemplo production/inference-api y staging/inference-api).",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p4",
+          "field": "section",
+          "text": "Un artefacto OCI consiste en manifest+config+capas (blobs).",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p5",
+          "field": "section",
+          "text": "Las tags son referencias (punteros) a manifests: múltiples tags pueden apuntar al mismo artefacto, pero no forman parte intrínseca del contenido.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p6",
+          "field": "section",
+          "text": "ACR deduplica blobs por digest dentro del mismo registry (incluso entre repositorios), por lo que no es necesario agrupar imágenes en un mismo repositorio solo para ahorrar almacenamiento.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p7",
+          "field": "section",
+          "text": "Para máxima certeza en producción, prefiera pulls por digest: un manifest lleva un digest inmutable en formato sha256:… y docker pull myregistry.azurecr.io/inference-api@sha256:3a7f... descarga exactamente ese artefacto sin ambigüedad.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p8",
+          "field": "section",
+          "text": "Para trazabilidad en etiquetas automáticas, emplee variables de task como {{.Run.ID}} para generar tags únicos por ejecución.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p9",
+          "field": "section",
+          "text": "Existen tres triggers principales y criterios de uso: Source code triggers: reconstruyen al hacer commit; son apropiados cuando cada cambio en main debe producir una nueva imagen validada. Base image triggers: reconstruyen cuando cambia la imagen base; sugeridos para recibir parches de seguridad del runtime sin depender de commits en el repositorio. Scheduled triggers: reconstrucciones periódicas; útiles para validar compatibilidad contra dependencias externas que evolucionan.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p10",
+          "field": "section",
+          "text": "Al ejecutar, espere que az acr login confirme el registro como destino; az acr repository list debe listar repositorios y show-manifests mostrará columnas con digest y tags asociadas al repository.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p11",
+          "field": "section",
+          "text": "Si la tarea falla al obtener una base privada, los pulls fallidos por credenciales suelen devolver 401 Unauthorized o mensajes que contienen 'unauthorized', y en algunos casos 403 Forbidden u otros códigos o mensajes según el registrador y la causa (credenciales incorrectas, permisos insuficientes o token expirado).",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p12",
+          "field": "section",
+          "text": "Recuerde que geo-replication requiere SKU Premium; sin embargo, los private endpoints (Private Link) no están restringidos exclusivamente al nivel Premium.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        }
+      ],
+      "groundingStatus": "partial",
+      "updatedAt": "2026-08-12T05:39:32.295Z"
+    },
+    "persistedAt": "2026-08-12T05:39:32.295Z"
+  },
+  "cap-02": {
+    "seed": {
+      "chapterId": "cap-02",
+      "chapterNumber": "02",
+      "moduleId": "p1.appservice",
+      "domainId": "p1",
+      "domainLabel": "Ruta 1 — Alojamiento de aplicaciones en contenedores",
+      "title": "Desplegar contenedores en Azure App Service",
+      "subtitle": "Decisiones y prácticas para publicar, configurar y observar aplicaciones en contenedores",
+      "intro": "<p>Cuando decide dónde ejecutar una aplicación en contenedores, está en juego la disponibilidad, el rendimiento y el costo operativo.\nElegir un runtime, plan o registro inapropiado puede provocar caídas en producción y gastos innecesarios.\nEn el examen AI-200 y en el trabajo real se evaluará la capacidad para justificar decisiones con evidencia técnica.</p><p>El texto acompaña un recorrido práctico: desplegar la imagen, definir cómo corre el contenedor y ajustar la configuración de la aplicación.\nSe explican las alternativas de runtime y las opciones de alojamiento que afectan arranque, escalado y seguridad.\nTambién se muestra cómo instrumentar la app para obtener información operativa antes de diagnosticar un incidente.</p><p>Al terminar, usted podrá decidir cuándo usar una imagen pública o un registro privado, y qué modelo de despliegue conviene en cada caso.\nAprenderá a parametrizar variables, rutas de inicio y secretos para que la app sea reproducible y segura.\nSe propone criterio práctico para balancear costos, rendimiento y facilidad de operación.</p><p>La meta es que la instrumentación y las pruebas de comportamiento pasen de teoría a práctica: métricas, logs y trazas serán la evidencia para actuar.\nSe ejercitará el razonamiento para identificar causas, validar hipótesis y aplicar soluciones reproducibles.\nAl final, la confianza para desplegar y resolver problemas en app service con contenedores será una competencia concreta.</p>",
+      "skillIds": [
+        "p1.appservice.deploy-containers",
+        "p1.appservice.configure-runtime",
+        "p1.appservice.configure-settings",
+        "p1.appservice.observe-troubleshoot"
+      ],
+      "sections": [
+        {
+          "id": "s1",
+          "heading": "Deploy de contenedores App Service",
+          "prose": "<p>La decisión inicial que enfrenta es dónde vive la imagen y cómo App Service la obtiene. Esa elección define tareas operativas distintas: permisos, rotación de credenciales, visibilidad en auditoría y opciones de red privadas.</p><p>Para entornos productivos, prefiera Azure Container Registry (ACR). ACR permite managed identity, roles administrados (AcrPull), geo-replication y mejor integración con Microsoft Entra ID, lo que simplifica auditoría y rotación de acceso.</p><p>Para entornos de desarrollo o imágenes públicas, un registro externo (Docker Hub, GitHub Container Registry o un registry propio) puede bastar; no obstante, las imágenes privadas fuera de ACR obligan a gestionar credenciales en App Service, con el coste operativo de rotarlas y auditar su uso.</p><p>Si elige ACR y quiere evitar credenciales en texto, asigne una identidad gestionada al Web App y otorgue el rol AcrPull sobre el recurso ACR. En el flujo CLI se crean la app, se asigna la identidad y se aplica el role assignment: cada paso tiene razón técnica (crear la app en el plan correcto, dar identidad para autenticación sin secretos, vincular permisos al scope del registro).</p><pre class=\"scn-code\">az webapp create\n--resource-group myResourceGroup\n--plan myAppServicePlan\n--name myDocumentProcessor\n--deployment-container-image-name myregistry.azurecr.io/docprocessor:v1\n\naz webapp identity assign\n--resource-group myResourceGroup\n--name myDocumentProcessor\n\naz webapp show\n--resource-group myResourceGroup\n--name myDocumentProcessor\n--query identity.principalId -o tsv\n\naz role assignment create\n--assignee <principalId>\n--role AcrPull\n--scope /subscriptions/{subscriptionId}/resourceGroups/{acrResourceGroup}/providers/Microsoft.ContainerRegistry/registries/{acrName}</pre><p>→ El primer comando devuelve JSON con campos como 'id' y 'defaultHostName' al crear la app. La asignación de identidad devuelve el objeto identity; para imprimir el principalId en texto plano use --query con -o tsv (por ejemplo --query identity.principalId -o tsv). El role assignment confirma con un objeto JSON o mensaje de creación exitosa.</p><table class=\"dmap\"><thead><tr><th>Escenario</th><th>Opción recomendada</th></tr></thead><tbody><tr><td class=\"s\">Producción con requisitos de auditoría y rotación</td><td class=\"d\">Azure Container Registry + managed identity + rol AcrPull</td></tr><tr><td class=\"s\">Desarrollo rápido o imágenes públicas</td><td class=\"d\">Registro público (Docker Hub/GCR) sin credenciales o ACR si desea reproducibilidad</td></tr><tr><td class=\"s\">Registro privado externo y sin opción a managed identity</td><td class=\"d\">Proveer servidor, usuario y contraseña en la configuración, y rotarlas con procesos automatizados</td></tr></tbody></table>",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "s2",
+          "heading": "Runtime del contenedor",
+          "prose": "<p>Una vez que App Service puede extraer la imagen, la siguiente decisión es cómo ejecutar esa imagen: respetar ENTRYPOINT/CMD del Dockerfile o sobrescribir el comportamiento con un startup command. La elección impacta el arranque y la posibilidad de ejecutar tareas de inicialización (migrations, procesos auxiliares).</p><p>El startup command reemplaza la instrucción CMD de la imagen; ENTRYPOINT permanece a menos que la imagen lo cambie. Use startup command cuando necesite encadenar pasos antes del servidor web o pasar argumentos en tiempo de despliegue.</p><p>Otro ajuste crítico es indicar el puerto interno que escucha la aplicación. App Service espera que el contenedor escuche en el puerto 80 por defecto. Si su aplicación escucha en otro puerto, configure la app setting WEBSITES_PORT con el puerto real para que App Service reenvíe las solicitudes a ese puerto.</p><pre class=\"scn-code\">az webapp config set\n--resource-group myResourceGroup\n--name myDocumentProcessor\n--startup-file \"gunicorn --bind=0.0.0.0:8000 --workers=4 app:application\"\n\naz webapp config appsettings set\n--resource-group myResourceGroup\n--name myDocumentProcessor\n--settings WEBSITES_PORT=8000 WEBSITES_ENABLE_APP_SERVICE_STORAGE=true</pre><p>→ Si la configuración se aplica correctamente, la CLI devuelve el objeto de configuración actualizado en JSON; al reiniciar la app, App Service usará el nuevo startup command y direccionará tráfico al puerto 8000 dentro del contenedor.</p><p>Active el montaje persistente en /home solo si necesita conservar archivos entre reinicios o entre instancias; recuerde que ese almacenamiento se comparte por aplicación en el plan y consume cuota del plan.</p><p>Finalmente, habilite always-on en planes Standard/Basic o superiores para evitar cold starts cuando la latencia de arranque sea inaceptable, y configure health checks que apunten a un endpoint que verifique dependencias críticas para evitar que instancias enfermas reciban tráfico.</p>",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "s3",
+          "heading": "Configuración de apps",
+          "prose": "<p>App Service inyecta app settings como variables de entorno en el contenedor; esa separación permite portar la misma imagen entre entornos cambiando solo la configuración. Para valores no sensibles, use app settings simples.</p><p>Para secretos y requisitos de auditoría o rotación automática, utilice Key Vault references. App Service resuelve la referencia y presenta el secreto como variable de entorno, pero requiere que la web app tenga una managed identity con permiso de lectura sobre el secreto en Key Vault.</p><pre class=\"scn-code\">az webapp config appsettings set\n--resource-group myResourceGroup\n--name myDocumentProcessor\n--settings \nSTORAGE_ACCOUNT_NAME=mystorageaccount \nLOG_LEVEL=INFO \nMAX_DOCUMENT_SIZE_MB=50\n\naz webapp config connection-string set\n--resource-group myResourceGroup\n--name myDocumentProcessor\n--connection-string-type SQLAzure\n--settings DefaultConnection=\"Server=myserver.database.windows.net;Database=mydb;...\"\n\n# ejemplo: establecer un app setting que referencia Key Vault (Portal o CLI usando la cadena de referencia)\naz webapp config appsettings set\n--resource-group myResourceGroup\n--name myDocumentProcessor\n--settings DB_PASSWORD=@Microsoft.KeyVault(SecretUri=https://mykv.vault.azure.net/secrets/db-password/)</pre><p>→ El primer comando devuelve la lista de settings aplicada; la connection-string queda disponible con el prefijo correspondiente en el entorno (ej. SQLAZURECONNSTR_DefaultConnection). La referencia a Key Vault se resuelve si la identidad tiene permisos 'get' sobre el secreto.</p><div class=\"exam-trap\"><p class=\"lab\">Trampa del examen</p><p>Confundir app settings con Key Vault references. Crear un app setting que contenga directamente un secreto funciona técnicamente, pero si la pregunta exige rotación automática o auditoría, la respuesta correcta normalmente es usar Key Vault con managed identity.</p></div><p>Para despliegues con slots, configure settings en el slot correspondiente (por ejemplo con --slot staging) o marque como slot settings aquellas variables que no deben moverse durante un swap; la interfaz o la CLI permiten establecer settings por slot.</p>",
+          "claimRefs": [],
+          "critical": true
+        },
+        {
+          "id": "s4",
+          "heading": "Monitoreo y troubleshooting de apps",
+          "prose": "<p>Observar y depurar contenedores exige evidencia: abra el log stream en vivo, revise archivos en /home/LogFiles y, cuando sea imprescindible, use el SSH de App Service para entrar al contenedor. Siga siempre una secuencia que permita reproducir la falla: logs → configuración de puerto y credenciales → estado de extracción de la imagen → health checks.</p><p>App Service captura stdout y stderr del contenedor; por eso la aplicación debe escribir logs al console para que la plataforma los recoja. Habilite logging en filesystem para conservarlos en /home/LogFiles y use log tail para inspección en vivo.</p><pre class=\"scn-code\">az webapp log config\n--resource-group myResourceGroup\n--name myDocumentProcessor\n--docker-container-logging filesystem\n\naz webapp log tail\n--resource-group myResourceGroup\n--name myDocumentProcessor\n\n# SSH del portal de App Service (contenedor custom): sshd_config + fragmento del Dockerfile\n# sshd_config en la raíz del proyecto -> Port 2222 / PermitRootLogin yes / Ciphers aes128-cbc,3des-cbc,aes256-cbc / MACs hmac-sha1\nRUN apt-get update && apt-get install -y openssh-server && echo \"root:Docker!\" | chpasswd\nCOPY sshd_config /etc/ssh/\nEXPOSE 8000 2222\nCMD [\"/bin/bash\", \"-c\", \"service ssh start && gunicorn app:application\"]</pre><p>→ El primer comando habilita la persistencia de logs en /home/LogFiles; az webapp log tail imprime en tiempo real stdout/stderr con un identificador de instancia por línea.</p><p>Sobre el SSH: la contraseña debe ser exactamente <code>root:Docker!</code> porque es el valor con el que App Service abre la sesión —es un centinela, no un secreto que usted elija— y el puerto 2222 solo es accesible por el túnel autenticado de Kudu, nunca desde internet. Por eso este patrón, el oficial para contenedores custom, no expone credenciales.</p><p>Ejemplo real de fallo y razonamiento: al iniciar la app, el log stream muestra:</p><p><code>ModuleNotFoundError: No module named 'gunicorn'</code></p><p>Diagnóstico paso a paso: (1) el log muestra que el proceso especificado en el startup command no existe dentro de la imagen; (2) verificar si el startup command coincide con los binarios instalados en la imagen; (3) si falta el paquete, reconstruya la imagen incluyendo gunicorn o ajuste el startup command a un servidor presente. Esta traza indica un error en la imagen, no un problema de WEBSITES_PORT ni de permisos ACR.</p><p>Kudu ofrece vistas de entorno y dumps descargables, pero no es el contenedor en ejecución: para inspección de procesos en tiempo real, use la función SSH de App Service (portal o <code>az webapp ssh</code>), que llega al puerto 2222 por el túnel de Kudu; la imagen debe traer el sshd_config y arrancar el servicio SSH como arriba.</p>",
+          "claimRefs": [],
+          "critical": true
+        }
+      ],
+      "graphics": [
+        {
+          "id": "g1",
+          "afterSectionId": "s4",
+          "kind": "flujo",
+          "spec": "Diagrama de flujo que muestre: inicio → elegir origen de imagen (ACR vs Other registries) → si ACR: opciones de autenticación (managed identity con AcrPull o admin credentials) → resultado operativo (pull automático, rotación de credenciales, auditoría). Resaltar roles y permisos mínimos (AcrPull) como nodo.",
+          "caption": "Flujo de selección de origen de imagen y método de autenticación para App Service (ACR vs registries externos).",
+          "rationale": "Fija la decisión operacional entre ACR y registries externos y enlaza la necesidad de rol AcrPull cuando se elige managed identity.",
+          "imageUrl": "/assets/cloudbooks-engine/ai-200/master-book-ab/pages/cap-02/graphic-g1.png"
+        },
+        {
+          "id": "g2",
+          "afterSectionId": "s2",
+          "kind": "comparación",
+          "spec": "Tres TARJETAS grandes lado a lado (una por opción), con un título corto arriba: 'Cómo configurar la app'. Tarjeta 1 — 'App settings': configuración no sensible. Tarjeta 2 — 'Connection strings': cadenas de conexión. Tarjeta 3 — 'Key Vault references': secretos (managed identity). SIN tabla, SIN filas de atributos, SIN texto chico: solo el nombre en grande y UNA línea corta por tarjeta.",
+          "caption": "Comparación entre app settings, connection strings y Key Vault references: cuándo usar cada una según seguridad y swap.",
+          "rationale": "Aclara visualmente la diferencia conceptual y operativa entre variables, conexiones y secretos referenciados, lo que desactiva la trampa que confunde app settings con secretos gestionados.",
+          "imageUrl": "/assets/cloudbooks-engine/ai-200/master-book-ab/pages/cap-02/graphic-g2.png"
+        }
+      ],
+      "psychometrics": {
+        "measuredVerbs": [
+          "desplegar",
+          "configurar",
+          "observar",
+          "solucionar problemas",
+          "administrar",
+          "implementar",
+          "elegir",
+          "interpretar",
+          "monitorear",
+          "diagnosticar"
+        ],
+        "questionArchetypes": [
+          "caso de escenario",
+          "selección múltiple",
+          "completar configuración",
+          "ordenar pasos",
+          "diagnóstico de error",
+          "interpretación de logs",
+          "comparación de opciones",
+          "pregunta de correspondencia"
+        ],
+        "cognitiveLevels": [
+          "aplicar",
+          "analizar",
+          "evaluar"
+        ],
+        "commonTraps": [
+          "confundir la configuración de variables de entorno con la configuración de secretos",
+          "no distinguir entre los diferentes servicios para desplegar contenedores (App Service vs AKS vs Container Apps)",
+          "interpretar incorrectamente los mensajes de error o logs de contenedores",
+          "seleccionar opciones que aplican a imágenes de contenedor pero no a su despliegue en App Service",
+          "olvidar pasos necesarios para habilitar el runtime de contenedores o para observar el comportamiento"
+        ],
+        "reasoningGoal": "El candidato debe construir un razonamiento práctico que le permita seleccionar y configurar correctamente opciones para desplegar, configurar y monitorear aplicaciones en contenedores en Azure App Service, interpretando escenarios y resolviendo problemas basados en evidencias técnicas."
+      },
+      "keyTakeaways": [
+        "Use ACR con managed identity y rol AcrPull para producción; evite almacenar credenciales de registro en app settings",
+        "Configure WEBSITES_PORT si la aplicación escucha en un puerto distinto a 80/8080; sin esto la app no recibirá tráfico HTTP",
+        "Separe configuración (app settings) de secretos (Key Vault references) y marque las variables que no deben swapear como slot settings",
+        "Empiece el diagnóstico por log stream y archivos en /home/LogFiles/ antes de modificar la imagen; health checks y permisos de pull son causas frecuentes de fallo",
+        "Active always-on y almacenamiento persistente según necesidades de latencia y persistencia; evalúe coste y cuota del App Service plan"
+      ],
+      "objectives": [
+        "Seleccionar el origen de la imagen y el método de autenticación para App Service dado requisitos de seguridad y operación",
+        "Configurar el runtime del contenedor (startup command, WEBSITES_PORT, almacenamiento persistente y always-on) usando la CLI",
+        "Administrar app settings y Key Vault references para separar configuración no sensible de secretos centralizados",
+        "Observar y diagnosticar un contenedor que no arranca mediante log stream, archivos en /home/LogFiles y health checks",
+        "Interpretar mensajes de error y decidir la acción correcta: ajustar puerto, habilitar almacenamiento o revisar permisos AcrPull"
+      ],
+      "prerequisites": [
+        "Tener a mano un Dockerfile con ENTRYPOINT y/o CMD bien definidos",
+        "Contar con una imagen construida y subida a un registro (por ejemplo: myregistry.azurecr.io/docprocessor:v1)",
+        "Iniciar sesión en Azure CLI (az login) y tener permisos para crear recursos en la suscripción objetivo"
+      ],
+      "prereqRemedy": "¿Sin práctica con imágenes? Repase cómo construir y etiquetar una imagen Docker y cómo subirla a un registro (Docker Hub o ACR) antes de continuar.",
+      "buildGoal": "Construirá y configurará una Web App for Containers que use una imagen versionada en ACR con managed identity, ajustará el runtime (puerto, startup, storage) y validará su despliegue mediante logs y health checks.",
+      "practice": [
+        {
+          "question": "Su equipo desplegará una aplicación crítica en Azure App Service. La imagen privada está en Azure Container Registry dentro de la misma suscripción. Se requiere rotación automática de credenciales y trazabilidad de acceso. ¿Qué opción implementa mejor estos requisitos?",
+          "options": [
+            "Asignar una identidad gestionada al Web App y otorgarle el rol AcrPull sobre el scope del registro ACR",
+            "Habilitar el usuario admin en ACR y guardar el usuario/contraseña en App Settings del Web App para que App Service pueda hacer pull",
+            "Crear un service principal y guardar su client id y client secret en Key Vault, luego poner el secreto como app setting en la Web App",
+            "Hacer pública la imagen en el registro para evitar la autenticación desde App Service"
+          ],
+          "correctIndex": 0,
+          "explanation": "Asignar una managed identity y concederle AcrPull evita almacenar credenciales en la configuración y permite auditoría por identidad; es la opción recomendada para producción. Usar el usuario admin de ACR y almacenar sus credenciales en app settings expone secretos y requiere rotación manual. Poner un service principal en Key Vault y luego copiar el secreto como app setting falla el objetivo de no almacenar credenciales en la app (la referencia debe usarse directamente) y añade complejidad innecesaria frente a managed identity. Hacer pública la imagen elimina control de acceso y ofrece poca trazabilidad; no cumple requisitos de seguridad ni auditoría. Repase managed identity authentication y asignación de rol AcrPull."
+        },
+        {
+          "question": "Una aplicación Python con Gunicorn escucha internamente en el puerto 8000 y necesita ejecutar migraciones antes de arrancar el servidor. En App Service desea aplicar la mínima configuración desde la CLI sin reconstruir la imagen. ¿Cuál es la mejor combinación de acciones?",
+          "options": [
+            "Establecer WEBSITES_PORT=8000 y configurar startup-file para ejecutar las migraciones y luego lanzar gunicorn",
+            "Cambiar el plan de App Service a Basic para evitar cold starts y dejar el CMD de la imagen sin cambios",
+            "Modificar el Dockerfile en producción para que el CMD incluya las migraciones y redeployar la imagen",
+            "Configurar WEBSITES_ENABLE_APP_SERVICE_STORAGE=true y confiar en que App Service ejecutará las migraciones automáticamente"
+          ],
+          "correctIndex": 0,
+          "explanation": "Establecer WEBSITES_PORT=8000 asegura el ruteo correcto y usar startup-file permite encadenar las migraciones con el arranque del servidor sin reconstruir la imagen. Cambiar el plan a Basic no ejecuta migraciones ni modifica el CMD. Modificar el Dockerfile implica reconstruir y redeployar la imagen; es una alternativa válida pero no la mínima desde la CLI. Habilitar app service storage persiste /home pero no ejecuta migraciones automáticamente. Repase configuración de startup commands y WEBSITES_PORT."
+        },
+        {
+          "question": "Tras desplegar, el contenedor falla al iniciar y el log stream muestra: \"ModuleNotFoundError: No module named 'gunicorn'\". ¿Cuál es la acción más apropiada para resolver la causa raíz y garantizar que el servicio arranque correctamente?",
+          "options": [
+            "Reconstruir la imagen incluyendo gunicorn en las dependencias y volver a desplegar la imagen al registro",
+            "Agregar WEBSITES_ENABLE_APP_SERVICE_STORAGE=true para que el contenedor pueda instalar paquetes en /home",
+            "Asignar el rol AcrPull a la identidad del Web App porque la imagen no se está extrayendo correctamente",
+            "Habilitar el usuario administrador en ACR y actualizar las credenciales en App Settings"
+          ],
+          "correctIndex": 0,
+          "explanation": "El error indica que el binario solicitado por el startup command no existe dentro de la imagen; la solución es reconstruir la imagen incluyendo la dependencia (gunicorn) o cambiar el startup command por uno válido. Activar app service storage no instala dependencias en la imagen en tiempo de arranque. Asignar AcrPull o cambiar credenciales no soluciona un error de dependencia dentro de la imagen. Repase técnicas de troubleshooting con log stream y diagnóstico de dependencias en la imagen."
+        }
+      ]
+    },
+    "provenance": {
+      "pageId": "cap-02",
+      "skillIds": [
+        "p1.appservice.deploy-containers",
+        "p1.appservice.configure-runtime",
+        "p1.appservice.configure-settings",
+        "p1.appservice.observe-troubleshoot"
+      ],
+      "sourceIds": [
+        "33e4fb7dc709",
+        "ea3c6c96f0a3",
+        "55e4c25f1922",
+        "188aff69f3e8",
+        "4c828daa3856"
+      ],
+      "claims": [
+        {
+          "id": "c1",
+          "field": "section",
+          "text": "Azure App Service ejecuta contenedores Linux personalizados como aplicaciones web.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "33e4fb7dc709",
+            "quote": "Azure App Service runs custom Linux containers as web applications.",
+            "url": null
+          }
+        },
+        {
+          "id": "c2",
+          "field": "section",
+          "text": "ACR soporta autenticación mediante managed identity y admin credentials; managed identity es la opción recomendada para producción.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "33e4fb7dc709",
+            "quote": "Managed identity is the recommended approach for production.",
+            "url": null
+          }
+        },
+        {
+          "id": "c3",
+          "field": "section",
+          "text": "App Service necesita saber qué puerto interno en el contenedor recibe solicitudes HTTP y se configura con WEBSITES_PORT cuando no es 80 o 8080.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "ea3c6c96f0a3",
+            "quote": "App Service needs to know which port inside your container receives HTTP requests.",
+            "url": null
+          }
+        },
+        {
+          "id": "c4",
+          "field": "section",
+          "text": "App Service captura la salida de stdout y stderr del contenedor para logs de aplicación, errores y mensajes de framework.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "188aff69f3e8",
+            "quote": "App Service captures output from your container's stdout and stderr streams.",
+            "url": null
+          }
+        },
+        {
+          "id": "c5",
+          "field": "section",
+          "text": "App Service puede montar almacenamiento persistente en /home para contenedores Linux, y ese almacenamiento se comparte entre instancias escaladas.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "ea3c6c96f0a3",
+            "quote": "App Service can mount persistent storage at /home for Linux custom containers.",
+            "url": null
+          }
+        },
+        {
+          "id": "c6",
+          "field": "section",
+          "text": "App Service enruta todo el tráfico HTTP y HTTPS al puerto especificado para el contenedor.",
+          "citation": {
+            "kind": "source",
+            "sourceId": "ea3c6c96f0a3",
+            "quote": "App Service routes all incoming HTTP and HTTPS traffic to the specified port.",
+            "url": null
+          }
+        }
+      ],
+      "checks": [
+        {
+          "claimId": "p1",
+          "field": "section",
+          "text": "Para entornos productivos, prefiera Azure Container Registry (ACR).",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p2",
+          "field": "section",
+          "text": "ACR permite managed identity, roles administrados (AcrPull), geo-replication y mejor integración con Microsoft Entra ID, lo que simplifica auditoría y rotación de acceso.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p3",
+          "field": "section",
+          "text": "App Service inyecta app settings como variables de entorno en el contenedor; esa separación permite portar la misma imagen entre entornos cambiando solo la configuración.",
+          "citationKind": "source",
+          "sourceId": "7bc9406ae1d1",
+          "verdict": "supported",
+          "note": "For Linux apps and custom containers, App Service passes app settings to the container by using the --env flag to set the environment variable in the container. The same code uses your development set"
+        },
+        {
+          "claimId": "p4",
+          "field": "section",
+          "text": "Para secretos y requisitos de auditoría o rotación automática, utilice Key Vault references. App Service resuelve la referencia y presenta el secreto como variable de entorno, pero requiere que la web app tenga una managed identity con permiso de lectura sobre el secreto en Key Vault.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p5",
+          "field": "section",
+          "text": "asigne una identidad gestionada al Web App y otorgue el rol AcrPull sobre el recurso ACR.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p6",
+          "field": "section",
+          "text": "El primer comando devuelve JSON con campos como 'id' y 'defaultHostName' al crear la app.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p7",
+          "field": "section",
+          "text": "La asignación de identidad devuelve el objeto identity; para imprimir el principalId en texto plano use --query con -o tsv (por ejemplo --query identity.principalId -o tsv).",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p8",
+          "field": "section",
+          "text": "El role assignment confirma con un objeto JSON o mensaje de creación exitosa.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p9",
+          "field": "section",
+          "text": "App Service espera que el contenedor escuche en el puerto 80 por defecto.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p10",
+          "field": "section",
+          "text": "Si su aplicación escucha en otro puerto, configure la app setting WEBSITES_PORT con el puerto real para que App Service reenvíe las solicitudes a ese puerto.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p11",
+          "field": "section",
+          "text": "Si la configuración se aplica correctamente, la CLI devuelve el objeto de configuración actualizado en JSON; al reiniciar la app, App Service usará el nuevo startup command y direccionará tráfico al puerto 8000 dentro del contenedor.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        },
+        {
+          "claimId": "p12",
+          "field": "section",
+          "text": "Finalmente, habilite always-on en planes Standard/Basic o superiores para evitar cold starts cuando la latencia de arranque sea inaceptable, y configure health checks que apunten a un endpoint que verifique dependencias críticas para evitar que instancias enfermas reciban tráfico.",
+          "citationKind": "source",
+          "sourceId": null,
+          "verdict": "unsupported",
+          "note": ""
+        }
+      ],
+      "groundingStatus": "partial",
+      "updatedAt": "2026-08-12T05:50:29.186Z"
+    },
+    "persistedAt": "2026-08-12T05:50:29.186Z"
+  },
+  "cap-zz-capstone-p1": {
+    "seed": {
+      "chapterId": "cap-zz-capstone-p1",
+      "chapterNumber": "03",
+      "moduleId": "capstone-p1",
+      "domainId": "p1",
+      "domainLabel": "Alojamiento de aplicaciones en contenedores",
+      "title": "Proyecto integrador: Alojamiento de servicio de inferencia en contenedores con Azure Container Registry y App Service",
+      "subtitle": "API de inferencia para modelos ML en contenedores, optimizando despliegue, seguridad y coste",
+      "intro": "<p>Desplegar modelos en contenedores y exponerlos como servicio no es solo técnica: es la decisión que define disponibilidad, coste y seguridad de una solución AI. Aquí se muestra cómo evitar errores comunes —confundir escala con resiliencia o dejar secretos al descubierto— y por qué importa.</p><p>El capítulo ofrece un recorrido práctico que sitúa la arquitectura y las elecciones operativas antes de las instrucciones. Avanza desde las implicaciones de diseño hasta la implementación guiada, de modo que cada paso esté ligado a un criterio claro para seleccionar alternativas.</p><p>Al finalizar, Usted podrá decidir si conviene usar private endpoints para el registro de contenedores —recuerde que requieren SKU Premium—, configurar referencias de Key Vault en App Service como @Microsoft.KeyVault(SecretUri=...) y automatizar builds con variables de ACR Tasks ({{.Run.ID}}).</p><p>Las prácticas le exigirán justificar compromisos entre coste, latencia y seguridad, y enseñan a instrumentar la observabilidad y el ciclo de vida de imágenes. Así, su equipo podrá replicar la solución en producción y argumentar las decisiones ante un evaluador o cliente.</p>",
+      "skillIds": [
+        "p1.acr.image-storage",
+        "p1.acr.build-run-acr-tasks",
+        "p1.acr.tag-version-images",
+        "p1.appservice.deploy-containers",
+        "p1.appservice.configure-runtime",
+        "p1.appservice.configure-settings",
+        "p1.appservice.observe-troubleshoot"
+      ],
+      "sections": [
+        {
+          "id": "s1",
+          "heading": "El escenario",
+          "prose": "<p>La organización opera en dos países y exige alta disponibilidad regional, control de costes y auditoría de imágenes. El equipo de ML entrega contenedores diarios con modelos que cambian frecuentemente durante experimentación, y versiones estables para producción.</p>\n<p>Requisitos funcionales: API HTTP de inferencia con latencia baja, logs para auditoría, y posibilidad de rollback a imágenes verificadas. Restricciones operativas: presupuesto moderado, cumplimiento con políticas de inmutabilidad de artefactos y sin almacenar credenciales en texto plano.</p>\n<p>Lo que está en juego: una mala decisión en SKU o permisos puede impedir pulls en producción; un puerto mal configurado hace que el App Service no reciba tráfico; un tag mutable compromete reproducibilidad. Las acciones del capítulo apuntan a evitar exactamente esos errores.</p>",
+          "claimRefs": [],
+          "critical": false
+        },
+        {
+          "id": "s2",
+          "heading": "Arquitectura de la solución",
+          "prose": "<p>La arquitectura combina tres componentes principales: Azure Container Registry como fuente de verdad de imágenes, pipeline de builds con ACR Tasks y Azure App Service for Containers como runtime del servicio.</p>\n<p>El flujo es: el repositorio Git dispara ACR Tasks que construye la imagen y la empuja al ACR. App Service usa la imagen referenciada por digest para despliegues reproducibles, y obtiene permisos mediante su managed identity con rol AcrPull sobre el registro.</p>\n<p>Complementos operativos: health checks en App Service para detectar contenedores que no respondan, diagnostic logs en /home/LogFiles/ para análisis y una política de retención en ACR que guarde digests de producción para rollback.</p>\n<p>Cuándo conviene cada SKU de ACR:</p>\n<table class=\"dmap\">\n<thead><tr><th>Escenario</th><th>Opción recomendada</th></tr></thead>\n<tbody>\n<tr><td class=\"s\">Poca carga, imagenes pequeñas, coste mínimo</td><td class=\"d\">ACR Basic</td></tr>\n<tr><td class=\"s\">Desarrollo y CI con throughput moderado</td><td class=\"d\">ACR Standard</td></tr>\n<tr><td class=\"s\">Geo-replicación, mayor throughput, tareas complejas y network peering</td><td class=\"d\">ACR Premium</td></tr>\n</tbody>\n</table>",
+          "claimRefs": [],
+          "critical": false
+        },
+        {
+          "id": "s3",
+          "heading": "Decisiones de diseño",
+          "prose": "<p>Elegir el digest frente al tag: para producción, la referencia por digest garantiza inmutabilidad y rollback exacto. Use tags legibles (build ID o commit SHA) en CI y genere un manifest digest cuando promueva a producción.</p>\n<p>Gestión de credenciales: otorgue a App Service una managed identity y asigne el rol AcrPull en el scope del registry. Evite poner credenciales en App Settings; use referencias a Key Vault para secretos distintos al acceso al registry.</p>\n<p>Puerto y runtime: si el contenedor escucha en 5000, configure WEBSITES_PORT=5000 en App Service. Sin ese ajuste App Service no enruta tráfico al contenedor cuando el puerto no es 80/8080.</p>\n<div class=\"exam-trap\"><p class=\"lab\">Trampa del examen</p><p>Asignar la identidad gestionada del usuario o del deploy pipeline no concede automáticamente AcrPull al App Service. El rol AcrPull debe estar en la identidad principal del recurso que realiza el pull (la managed identity del App Service). Repase la asignación de roles y el scope del recurso.</p></div>\n<p>Retención y retagging: mantenga política de retención que conserve digests de producción y purgue nightly los tags temporales. Para reproducibilidad, promueva únicamente mediante un proceso que capture digest y registre metadatos (build ID, commit SHA).</p>",
+          "claimRefs": [],
+          "critical": false
+        },
+        {
+          "id": "s4",
+          "heading": "Construcción paso a paso",
+          "prose": "<p>Prerrequisitos concretos: tenga un Dockerfile que exponga el puerto que usa la app y defina CMD/ENTRYPOINT; un repositorio Git con código; Azure CLI autenticado (az login) y permisos para crear recursos. Si no cuenta con esto, repase el capítulo de builds y del Dockerfile antes de continuar.</p>\n<p>Crear ACR (ejemplo SKU Standard):</p>\n<pre class=\"scn-code\">az acr create --name acrafinreg --resource-group rg-ml --sku Standard --location eastus\n</pre>\n<p>→ la salida contiene \"loginServer\": acrafinreg.azurecr.io y \"sku\": \"Standard\"</p>\n<p>Construir y empujar con ACR Tasks usando la fuente Git (build por commit SHA y tag único):</p>\n<pre class=\"scn-code\">az acr build --registry acrafinreg --image inference-api:$(git rev-parse --short HEAD) --file Dockerfile https://github.com/orga/repo.git#main\n</pre>\n<p>→ al terminar imprime el digest sha256: por ejemplo sha256:abcdef...; guarde ese digest para producción</p>\n<p>Ejemplo de referencia inmutable al desplegar: <code>acrafinreg.azurecr.io/inference-api@sha256:abcdef...</code>. Use el manifest digest en App Service para rollback predecible.</p>\n<p>Asignar managed identity al App Service y otorgar AcrPull:</p>\n<pre class=\"scn-code\"># crear App Service plan S1\naz appservice plan create --name plan-ml --resource-group rg-ml --sku S1 --is-linux\n# crear Web App for Containers con system-assigned identity\naz webapp create --resource-group rg-ml --plan plan-ml --name inference-web --deployment-container-image-name acrafinreg.azurecr.io/inference-api@sha256:abcdef...\naz webapp identity assign --resource-group rg-ml --name inference-web\n# obtener principalId de la identidad asignada y otorgar AcrPull\nPRINCIPAL_ID=$(az webapp identity show --resource-group rg-ml --name inference-web --query principalId -o tsv)\nREGISTRY_ID=$(az acr show --name acrafinreg --resource-group rg-ml --query id -o tsv)\naz role assignment create --assignee $PRINCIPAL_ID --role AcrPull --scope $REGISTRY_ID\n</pre>\n<p>→ compruebe que la asignación devuelve un id; si el exit code es 0, la identidad tiene AcrPull</p>\n<p>Configurar WEBSITES_PORT y health check en App Service:</p>\n<pre class=\"scn-code\">az webapp config appsettings set --resource-group rg-ml --name inference-web --settings WEBSITES_PORT=5000\naz webapp config set --resource-group rg-ml --name inference-web --min-tls-version 1.2\n# configurar path de readiness probe en el portal o con REST (example): /health\n</pre>\n<p>→ WEBSITES_PORT aparece en la lista de app settings; la URL /api/health debe devolver 200 cuando el contenedor está listo</p>\n<p>Diagnóstico si el contenedor no arranca: 1) revisar log stream; 2) verificar que App Service puede hacer pull del registry; 3) comprobar que ENTRYPOINT/CMD no falle. Ejemplo de salida cuando el pull falla: \"image pull failed: unauthorized: authentication required\"; esto indica problema de permisos AcrPull.</p>\n<p>Comando de troubleshooting de logs:</p>\n<pre class=\"scn-code\">az webapp log tail --name inference-web --resource-group rg-ml\n</pre>\n<p>→ si ve error 401 en docker pull, repase la asignación de AcrPull; si el contenedor falla con exit code 1, inspeccione stderr para errores de ENTRYPOINT.</p>",
+          "claimRefs": [],
+          "critical": false
+        }
+      ],
+      "graphics": [],
+      "psychometrics": {
+        "measuredVerbs": [],
+        "questionArchetypes": [],
+        "cognitiveLevels": [],
+        "commonTraps": [],
+        "reasoningGoal": "Integrar la ruta Alojamiento de aplicaciones en contenedores en una solución end-to-end."
+      },
+      "keyTakeaways": [
+        "Referenciar imágenes por digest asegura despliegues reproducibles y rollback exacto; guarde el digest al promover a producción.",
+        "Otorgue AcrPull a la managed identity del App Service, no al usuario; verifique el scope del role assignment.",
+        "Configure WEBSITES_PORT cuando la app escucha en un puerto distinto a 80/8080; sin esto App Service no enruta tráfico HTTP.",
+        "Use ACR Tasks para builds automáticos desde Git y tags únicos (commit SHA) para CI; reserve tags estables solo para promoción controlada.",
+        "Revise log stream y /home/LogFiles/ antes de cambiar la imagen; errores comunes: pull autorizado, ENTRYPOINT fallido y puerto mal configurado."
+      ],
+      "practice": [
+        {
+          "question": "Un equipo entrega una imagen etiquetada con latest tras cada build. La app en App Service comenzó a servir una versión inesperada luego de un despliegue automático. ¿Qué acción garantiza que el despliegue en producción sea exactamente la misma imagen probada anteriormente?",
+          "options": [
+            "Cambiar la política para que App Service haga pull siempre del tag latest y confiar en la canalización de CI para controlar versiones",
+            "Desplegar referenciando la imagen por su digest sha256 registrado tras el build de CI para garantizar inmutabilidad",
+            "Etiquetar la imagen con un número de versión semántica y usar ese tag en App Service",
+            "Hacer un pull manual de la imagen en una VM y luego empujarla de nuevo a ACR con un tag estable"
+          ],
+          "correctIndex": 1,
+          "explanation": "Desplegar por digest garantiza inmutabilidad: el digest referencia un manifest exacto. Usar tags como latest o semver puede llevar a que el contenido del tag cambie; confiar en latest rompe reproducibilidad. El pull manual y repush complica el control de versionado y no es necesario si se usa digest. Repase la técnica de referenciar imágenes por digest en ACR."
+        },
+        {
+          "question": "Al crear el App Service para el API de inferencia, la app no recibe tráfico HTTP aunque los logs muestren el contenedor en estado running. ¿Cuál es la configuración más probable que falta?",
+          "options": [
+            "Establecer WEBSITES_PORT al puerto en el que el contenedor escucha (por ejemplo 5000)",
+            "Asignar el rol Contributor al principal del App Service sobre el resource group",
+            "Habilitar Always On en el App Service plan",
+            "Agregar la URL del registry como app setting llamada REGISTRY_URL"
+          ],
+          "correctIndex": 0,
+          "explanation": "Si el contenedor escucha en un puerto distinto a 80/8080, App Service requiere que se configure WEBSITES_PORT para enrutar tráfico. Contributor es excesivo y no afecta al enrutamiento; Always On evita cold starts pero no resuelve puertos; una app setting REGISTRY_URL no cambia el proxy de App Service. Repase la configuración WEBSITES_PORT en App Service."
+        },
+        {
+          "question": "Se necesita automatizar builds y pushes desde Git y garantizar que App Service solo pueda hacer pull de imágenes en producción. Elija la secuencia correcta de pasos para implementar esto con mínimos privilegios:",
+          "options": [
+            "Crear ACR, crear identidad administrada en App Service, construir con ACR Tasks desde Git y asignar a la managed identity el rol AcrPull sobre el scope del registry",
+            "Crear ACR, crear un service principal con Contributor, usar credenciales en app settings y construir con Docker CLI en CI que haga push al registry",
+            "Crear ACR en SKU Premium, hacer que el pipeline CI haga push con credenciales de deploy del usuario y configurar policies de IP para el registry",
+            "Crear ACR, configurar el App Service para usar admin user del registry y programar tareas cron en App Service para actualizar la imagen"
+          ],
+          "correctIndex": 0,
+          "explanation": "La secuencia correcta usa managed identity y rol AcrPull para mínimos privilegios, y ACR Tasks o az acr build para builds desde Git. Usar un service principal con Contributor o el admin user del registry introduce riesgo y almacenamiento de credenciales; Policies de IP o crons no sustituyen el control de identidad. Repase la asignación de AcrPull a managed identity y el uso de ACR Tasks para builds."
+        }
+      ],
+      "objectives": [
+        "Diseñar la arquitectura de una API de inferencia en contenedores (ACR + ACR Tasks + App Service) y justificar la SKU de ACR y el uso de private endpoints según coste, latencia y seguridad.",
+        "Construir y versionar imágenes con ACR Tasks referenciándolas por digest, y definir una política de retención que permita rollback reproducible.",
+        "Desplegar la imagen en App Service for Containers autenticando el pull con managed identity y rol AcrPull, sin credenciales en claro.",
+        "Configurar el runtime y la app: WEBSITES_PORT, almacenamiento persistente y referencias de Key Vault para separar configuración de secretos.",
+        "Instrumentar la observabilidad (health checks, diagnostic logs) y diagnosticar un contenedor que no arranca hasta la causa raíz."
+      ]
+    },
+    "provenance": {
+      "pageId": "cap-zz-capstone-p1",
+      "skillIds": [
+        "p1.acr.image-storage",
+        "p1.acr.build-run-acr-tasks",
+        "p1.acr.tag-version-images",
+        "p1.appservice.deploy-containers",
+        "p1.appservice.configure-runtime",
+        "p1.appservice.configure-settings",
+        "p1.appservice.observe-troubleshoot"
+      ],
+      "sourceIds": [],
+      "claims": [],
+      "checks": [],
+      "groundingStatus": "unverified",
+      "updatedAt": "2026-08-12T05:51:17.947Z"
+    },
+    "persistedAt": "2026-08-12T05:51:17.947Z"
+  }
+}

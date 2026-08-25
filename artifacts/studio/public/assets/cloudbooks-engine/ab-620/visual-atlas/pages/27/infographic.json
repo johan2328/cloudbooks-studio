@@ -1,0 +1,53 @@
+{
+  "pageId": "27",
+  "mode": "infographic",
+  "spread": true,
+  "outcome": "real",
+  "generatedAt": "2026-08-24T04:48:18.487Z",
+  "promptVersion": "infographic-v6-optionweight",
+  "model": "gpt-image-2",
+  "contentHash": "1579b59b7cd9c3f0",
+  "attempts": 4,
+  "costUsd": 0.28,
+  "qa": {
+    "ran": true,
+    "highlightedLetter": null,
+    "expectedLetter": "C",
+    "answerMatches": false,
+    "garbled": false,
+    "garbledSamples": [],
+    "doubleLetter": false,
+    "cardsWhite": true,
+    "saturationOk": true,
+    "numberingOk": true,
+    "bordersOk": true,
+    "bandsSeparated": true,
+    "guidePin": true,
+    "guideAligned": true,
+    "correctIsGreen": false,
+    "contentBleed": false,
+    "edgeClipped": false,
+    "fidelityIssues": [
+      "Sección 4: dibuja de más iconos de Azure AI Search y conectores de Power Platform en tiempo real",
+      "Sección 5: dibuja de más Microsoft Foundry, Microsoft Fabric Data, Microsoft 365 Agents SDK, Agent2Agent protocolo",
+      "Sección 6: dibuja de más iconos de SharePoint, conector de Copilot, conector en tiempo real, Azure AI Search"
+    ],
+    "conformanceIssues": [
+      "No hay opción resaltada en 'Verificación autocheck', opción_resaltada es 'ninguna'",
+      "Las secciones 4, 5 y 6 dibujan iconos y servicios que no se mencionan en su texto, agregando elementos de Azure y otros agentes que no corresponden al texto literal"
+    ],
+    "criticalFailures": [],
+    "styleFailures": [
+      "infidelidad: Sección 4: dibuja de más iconos de Azure AI Search y conectores de Power Platform en tiempo real · Sección 5: dibuja de más Microsoft Foundry, Microsoft Fabric Data, Microsoft 365 Agents SDK, Agent2Agent protocolo · Sección 6: dibuja de más iconos de SharePoint, conector de Copilot, conector en tiempo real, Azure AI Search"
+    ],
+    "advisory": [],
+    "correctiveHint": "PREVIOUS ATTEMPT HAD THESE PROBLEMS — FIX THEM: infidelidad: Sección 4: dibuja de más iconos de Azure AI Search y conectores de Power Platform en tiempo real · Sección 5: dibuja de más Microsoft Foundry, Microsoft Fabric Data, Microsoft 365 Agents SDK, Agent2Agent protocolo · Sección 6: dibuja de más iconos de SharePoint, conector de Copilot, conector en tiempo real, Azure AI Search. Para las tarjetas infieles, dibujá ÚNICAMENTE los servicios que nombra el texto de esa sección y NO agregues ningún otro ícono de servicio: Sección 4: dibuja de más iconos de Azure AI Search y conectores de Power Platform en tiempo real; Sección 5: dibuja de más Microsoft Foundry, Microsoft Fabric Data, Microsoft 365 Agents SDK, Agent2Agent protocolo; Sección 6: dibuja de más iconos de SharePoint, conector de Copilot, conector en tiempo real, Azure AI Search.",
+    "ok": false,
+    "notes": "estilo → re-roll: infidelidad: Sección 4: dibuja de más iconos de Azure AI Search y conectores de Power Platform en tiempo real · Sección 5: dibuja de más Microsoft Foundry, Microsoft Fabric Data, Microsoft 365 Agents SDK, Agent2Agent protocolo · Sección 6: dibuja de más iconos de SharePoint, conector de Copilot, conector en tiempo real, Azure AI Search."
+  },
+  "imageUrl": "/assets/cloudbooks-engine/ab-620/visual-atlas/pages/27/infographic-A.png",
+  "parts": {
+    "A": "32a7404be443af1a",
+    "B": "c70e5e3976a7befe"
+  }
+}

@@ -1,0 +1,8 @@
+# Git LFS — binarios pesados de los libros CloudBooks (portadas, láminas, PDFs).
+# Scopeado al árbol de assets del engine → el repo main queda liviano (punteros),
+# los binarios viven en el store LFS. Los JSON/stores siguen como texto normal.
+artifacts/studio/public/assets/cloudbooks-engine/**/*.png  filter=lfs diff=lfs merge=lfs -text
+artifacts/studio/public/assets/cloudbooks-engine/**/*.pdf  filter=lfs diff=lfs merge=lfs -text
+artifacts/studio/public/assets/cloudbooks-engine/**/*.jpg  filter=lfs diff=lfs merge=lfs -text
+artifacts/studio/public/assets/cloudbooks-engine/**/*.jpeg filter=lfs diff=lfs merge=lfs -text
+artifacts/studio/public/assets/cloudbooks-engine/**/*.webp filter=lfs diff=lfs merge=lfs -text

@@ -1,0 +1,29 @@
+{
+  "name": "@workspace/studio-engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "InDesign AI engine (v2) — motor editorial local, Replit-ready. Paralelo a api-server: NO lo modifica. Emula y mejora lo que aprende del repo.",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "openai": "^6.39.0",
+    "pdf-lib": "^1.17.1",
+    "pdf-to-img": "^6.2.0",
+    "puppeteer-core": "^25.1.0",
+    "sharp": "^0.35.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "~5.9.3"
+  }
+}

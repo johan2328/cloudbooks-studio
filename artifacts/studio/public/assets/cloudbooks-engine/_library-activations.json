@@ -1,0 +1,19 @@
+{
+  "certs": {
+    "ai-200": {
+      "activatedAt": "2026-08-01T00:42:54.906Z",
+      "books": [
+        "master-book",
+        "visual-atlas",
+        "exam-traps"
+      ]
+    },
+    "ab-620": {
+      "activatedAt": "2026-08-21T09:52:31.605Z",
+      "books": [
+        "master-book",
+        "visual-atlas"
+      ]
+    }
+  }
+}

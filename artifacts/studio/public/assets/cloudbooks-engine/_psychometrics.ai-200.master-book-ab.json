@@ -1,0 +1,61 @@
+{
+  "p1.acr|psycho-v1": {
+    "outcome": "real",
+    "model": "gpt-5-mini",
+    "moduleId": "p1.acr",
+    "profile": {
+      "measuredVerbs": [
+        "construir",
+        "almacenar",
+        "versionar",
+        "etiquetar",
+        "gestionar",
+        "ejecutar",
+        "configurar",
+        "autenticar",
+        "autorizar",
+        "automatizar",
+        "depurar",
+        "seleccionar",
+        "comparar"
+      ],
+      "questionArchetypes": [
+        "caso de escenario (restricciones, requisitos y costes) — elegir la solución más adecuada",
+        "elegir la(s) acción(es) correcta(s) en un flujo de trabajo de ACR (multiple choice / multiple answer)",
+        "completar comandos o fragmentos (Azure CLI, az acr, Docker, Bicep/ARM) para realizar una tarea concreta",
+        "ordenar pasos para construir, etiquetar, y publicar una imagen (arrastrar y soltar / orden lógico)",
+        "interpretar la salida de un build o logs de ACR Tasks para identificar la causa del fallo",
+        "asignar permisos/RBAC o identificar alcance correcto (repository-scoped) en un escenario de seguridad",
+        "emparejar características de SKU o configuración (por ejemplo: georeplicación, retención, Tasks) con requisitos",
+        "diagnóstico comparativo entre alternativas (ACR Tasks vs CI/CD externo) y justificar la elección",
+        "pregunta de tipo verdadero/falso sobre comportamiento de tags, digests y políticas de retención",
+        "mapear artefactos OCI/helm/imagen a repositorios y rutas dentro del registro"
+      ],
+      "cognitiveLevels": [
+        "recordar",
+        "comprender",
+        "aplicar",
+        "analizar",
+        "evaluar",
+        "crear"
+      ],
+      "commonTraps": [
+        "Confundir 'registro' (Azure Container Registry) con 'repositorio' o con el nombre completo del repositorio (login server + path).",
+        "Confundir tag (etiqueta legible) con digest (sha) y asumir incorrectamente que tags son inmutables o equivalen a versiones definitivas.",
+        "Asumir que todas las características (por ejemplo georeplicación, tareas programadas, retención automática) están disponibles en cualquier SKU del registro.",
+        "No distinguir entre ACR Tasks (build/run en ACR) y otros mecanismos de build (Docker local o pipelines CI/CD) — errores sobre capacidades de cache y orígenes de contexto (Git, storage).",
+        "Creer que habilitar el usuario administrador del registro es la única forma de autenticar; pasar por alto el uso recomendado de identidades gestionadas o permisos a nivel de repositorio.",
+        "Subestimar el alcance de permisos: confundir roles a nivel de registro con repository-scoped permissions y fallar al otorgar el permiso mínimo necesario.",
+        "Ignorar diferencias entre artefactos OCI y las imágenes Docker tradicionales (por ejemplo rutas y comandos para push/pull).",
+        "Pensar que las etiquetas semánticas gestionan automáticamente el versionado/retención sin configurar políticas o procesos de etiquetado reproducibles.",
+        "Interpretar mal logs de ACR Tasks y atribuir fallos a ACR cuando en realidad son problemas en el Dockerfile, dependencias externas o contexto de build.",
+        "Confundir triggers de build (webhook vs schedule vs manual/az acr task run) y sus implicaciones operativas.",
+        "No considerar las implicaciones de red/privacidad (por ejemplo firewall, privado enlace a ACR) cuando se diseña el flujo de despliegue y acceso.",
+        "Asumir que una imagen 'funciona' localmente implica que el despliegue en App Service/AKS no requerirá ajustes de variables de entorno, secretos o compatibilidad de plataforma."
+      ],
+      "reasoningGoal": "Traducir requisitos funcionales y de seguridad sobre imágenes en decisiones concretas de configuración y operación del registro (etiquetado, versionado, permisos, SKU y flujos de build), justificando la elección entre alternativas y diagnosticando fallos en builds o despliegues."
+    },
+    "cached": false,
+    "error": null
+  }
+}

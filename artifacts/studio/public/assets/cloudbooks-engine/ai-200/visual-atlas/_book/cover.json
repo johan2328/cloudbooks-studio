@@ -1,0 +1,28 @@
+{
+  "active": "t-1785870252522-4ccdd69afca8.png",
+  "label": "VISUAL ATLAS",
+  "takes": [
+    {
+      "file": "t-1785870252522-4ccdd69afca8.png",
+      "url": "/assets/cloudbooks-engine/ai-200/visual-atlas/_book/covers/t-1785870252522-4ccdd69afca8.png",
+      "generatedAt": "2026-08-04T19:04:12.530Z",
+      "hash": "4ccdd69afca8",
+      "palette": [
+        "#001C4E",
+        "#001C4E",
+        "#DAE7EC"
+      ]
+    },
+    {
+      "file": "t-legacy-1785870205778.png",
+      "url": "/assets/cloudbooks-engine/ai-200/visual-atlas/_book/covers/t-legacy-1785870205778.png",
+      "generatedAt": "2026-08-01T19:49:39.336Z",
+      "hash": "924752d0ec30f1d2",
+      "palette": [
+        "#001C4E",
+        "#001C4E",
+        "#DAE7EC"
+      ]
+    }
+  ]
+}

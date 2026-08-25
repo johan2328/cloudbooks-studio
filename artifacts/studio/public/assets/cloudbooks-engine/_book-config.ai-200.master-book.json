@@ -1,0 +1,148 @@
+{
+  "style": {
+    "bg": "#0B2E2A",
+    "accent": "#0E8A6E",
+    "accent2": "#3FA34D",
+    "text": "#0F1B3D",
+    "onDark": "#FFFFFF"
+  },
+  "cover": {
+    "mode": "generated",
+    "imageUrl": "/assets/cloudbooks-engine/ai-200/master-book/_book/cover.png",
+    "palette": [
+      "#0B2E2A",
+      "#0E8A6E",
+      "#3FA34D",
+      "#0F1B3D",
+      "#FFFFFF"
+    ]
+  },
+  "blocks": {
+    "copyright": "<p class=\"cp-brand\">CloudBooks</p>\n<p class=\"cp-sub\">Visual Atlas — AI-200 · Desarrollo en Azure de Soluciones de IA</p>\n<p>© 2026 CloudBooks. Todos los derechos reservados. Ninguna parte de esta obra puede reproducirse sin autorización escrita del editor.</p>\n<p>Microsoft, Azure y los nombres de servicios son marcas de Microsoft Corporation. Esta obra es material de estudio independiente.</p>\n<p>Primera edición · 2026.</p>",
+    "preface": "<p>Estudiar para una certificación cloud suele significar leer cientos de páginas y memorizar lo que no se entiende. Este atlas nace de la idea contraria: <strong>una skill, una lámina</strong>, pensada para fijar el concepto y su trampa de un vistazo.</p>\n<p>Cada página condensa lo esencial de un objetivo del examen AI-200 en una infografía: el concepto desarmado, el error frecuente y una verificación tipo examen. No reemplaza la documentación oficial — la <em>destila</em> para que rinda en el examen y en el trabajo real.</p>\n<p>Úsalo como un mapa: no para leerlo de corrido, sino para ubicarte rápido, volver a lo que flaquea y llegar al examen con criterio en lugar de memoria. Cada lámina es una parada; las trampas, los desvíos donde caen los demás. Si entiendes por qué cada corrección es correcta, ya tienes media certificación.</p>\n<p>El AI-200 cubre bastante terreno —contenedores, bases de datos vectoriales, mensajería e integración de servicios backend, con la seguridad y la observabilidad que un caso real exige— y por eso un mapa visual rinde más que un manual extenso: muestra el bosque sin perderte en cada árbol.</p>\n<p>Recórrelo a tu ritmo, marca las láminas que más te cuesten y vuelve a ellas seguido. Cuando una trampa te resulte obvia de solo verla, esa batalla ya está ganada.</p>\n<p>Cada ruta abre con una <strong>introducción</strong> que sintetiza lo que vas a encontrar, y al final del libro hay un <strong>glosario</strong> con los términos clave: si una lámina te pierde en la abstracción, vuelve al glosario para reorientarte.</p>",
+    "intro": "<p>Este libro convierte cada skill del examen <strong>AI-200</strong> en una <strong>lámina visual</strong>: el concepto, sus matices y la trampa donde caen la mayoría, listos para fijar de un vistazo. La mayoría de las unidades entran en una página; las más densas se despliegan en dos páginas enfrentadas para que cada bloque respire.</p>\n<ul class=\"feat\">\n  <li><strong>Pregunta guía</strong> — la idea que organiza la lámina.</li>\n  <li><strong>Bloques numerados</strong> — el concepto desarmado en diagramas (hasta ocho por unidad, según lo que la fuente enseñe).</li>\n  <li><strong>Trampas del examen</strong> — el mito frecuente y su corrección.</li>\n  <li><strong>Verificación autocheck</strong> — una pregunta tipo examen con su respuesta.</li>\n</ul>\n<p>Recorre las láminas en orden o saltea al dominio que te falta. Lee primero la pregunta guía, estudia los bloques numerados, presta atención a las trampas y responde el autocheck tapando la respuesta. Cuando el autocheck te salga solo, esa skill está lista.</p>\n<p>No se trata de memorizar las láminas, sino de entenderlas. Un diagrama bien leído vale más que diez definiciones sueltas: te permite reconstruir la respuesta aunque la pregunta venga disfrazada, que es justo lo que hace el examen.</p>\n<p>Ten el atlas a mano mientras haces simulacros. Cada vez que falles una pregunta, busca la lámina del tema y vuelve a su trampa. Ese ida y vuelta entre práctica y lámina es lo que de verdad fija el conocimiento antes del día del examen.</p>",
+    "conclusions": "<p>Llegaste al final del atlas. Estas últimas pasadas valen oro:</p>\n<ul>\n  <li>Repasa <strong>solo las trampas</strong> de cada lámina: son los errores que el examen busca.</li>\n  <li>Resuelve los <strong>autochecks</strong> de corrido, tapando las respuestas; marca los que dudes.</li>\n  <li>Vuelve a las láminas de los autochecks fallados — ahí está tu brecha real.</li>\n  <li>El día del examen, lee cada pregunta buscando la trampa antes de elegir.</li>\n</ul>\n<p>El examen premia el criterio, no la memoria. Si entiendes <em>por qué</em> cada corrección es correcta, ya lo tienes.</p>\n<p>Descansa la noche anterior y llega con tiempo. El examen no mide cuánto sabes bajo presión, sino cuánto entiendes con la cabeza clara: lee cada enunciado dos veces, descarta lo absurdo y elige lo que defenderías frente a un colega.</p>\n<p>Y cuando lo apruebes, este atlas no deja de servir: las mismas láminas que te prepararon son la referencia que vas a abrir en el trabajo, cuando tengas que decidir el tier, la red o la identidad correcta para un caso real de producción. Éxitos.</p>",
+    "studyGuide": "<h1>Cómo se comporta el examen</h1>\n<p>El examen AI-200 de Microsoft está diseñado para evaluar tus conocimientos y habilidades en el desarrollo de soluciones de inteligencia artificial en la nube utilizando Azure. Antes de comenzar a estudiar, es importante comprender la estructura del examen, los dominios que cubre y cómo se evalúa, para que puedas enfocar tu preparación de manera efectiva.</p>\n<ul class=\"feat\">\n  <li>Desarrollar soluciones containerizadas en Azure (20–25%)</li>\n  <li>Desarrollar soluciones de IA utilizando servicios de gestión de datos de Azure (25–30%)</li>\n  <li>Conectarse y consumir servicios de Azure (20–25%)</li>\n  <li>Asegurar, monitorear y solucionar problemas en soluciones de Azure (20–25%)</li>\n</ul>\n<p>El examen incluye preguntas que evalúan tanto características en disponibilidad general (GA) como algunas en vista previa, siempre que estas últimas sean de uso común. Las preguntas pueden abordar distintos aspectos prácticos y teóricos relacionados con los dominios mencionados. Para aprobar, se requiere una puntuación mínima de 700 puntos. El formato puede incluir diversos tipos de preguntas, y si el examen no está disponible en tu idioma preferido, puedes solicitar 30 minutos adicionales para completarlo.</p>\n<p>Este libro está estructurado para que puedas preparar cada dominio con profundidad, siguiendo la proporción de peso que tienen en el examen. Te recomendamos estudiar cada sección con atención, practicar con los recursos sugeridos y familiarizarte con las herramientas y servicios de Azure que se mencionan. Así, estarás listo para enfrentar el examen con confianza y éxito.</p>",
+    "glossary": "<dl class=\"gloss\"><dt>ACR Tasks</dt><dd>Servicio de Azure Container Registry que ejecuta compilaciones de imágenes en Azure y puede publicar el resultado en un registro. Evita depender de una instalación local de Docker.</dd><dt>App Service</dt><dd>Servicio administrado de Azure para alojar aplicaciones web y APIs. En Linux puede ejecutar imágenes de contenedor mediante Web App for Containers.</dd><dt>Azure CLI</dt><dd>Interfaz de línea de comandos para administrar recursos de Azure mediante comandos y scripts. Se utiliza, entre otras tareas, para desplegar Container Apps y configurar App Service.</dd><dt>Azure Container Apps</dt><dd>Servicio administrado para ejecutar aplicaciones contenedorizadas sin administrar directamente máquinas virtuales o clústeres de Kubernetes. Admite revisiones, ingreso, secretos y escalado.</dd><dt>Azure Container Registry</dt><dd>Registro privado administrado de Azure para almacenar y distribuir imágenes y otros artefactos de contenedor. El registro constituye la frontera principal de administración y autenticación.</dd><dt>Azure Cosmos DB for NoSQL</dt><dd>Servicio distribuido de base de datos NoSQL de Azure. Su diseño requiere elegir una clave de partición adecuada para distribuir documentos, enrutar consultas y controlar el consumo de RU/s.</dd><dt>Azure Kubernetes Service</dt><dd>Servicio administrado de Azure para ejecutar clústeres de Kubernetes. Azure gestiona componentes del plano de control, mientras el usuario administra las cargas de trabajo y su configuración.</dd><dt>Azure Monitor</dt><dd>Plataforma de observabilidad de Azure para recopilar y analizar métricas, registros y señales de diagnóstico. Ayuda a identificar tendencias de rendimiento y fallos operativos.</dd><dt>ClusterIP</dt><dd>Tipo de Service de Kubernetes que proporciona una dirección accesible únicamente desde el clúster. Es apropiado para comunicación interna entre servicios.</dd><dt>CMD</dt><dd>Instrucción del Dockerfile que define el comando predeterminado del contenedor. Un comando de inicio personalizado puede reemplazarlo, mientras que el ENTRYPOINT normalmente permanece.</dd><dt>ConfigMap</dt><dd>Recurso de Kubernetes para almacenar pares clave-valor de configuración no sensible. Sus valores pueden inyectarse en los contenedores como variables de entorno o archivos.</dd><dt>Consumer group lag</dt><dd>Diferencia entre los mensajes disponibles y la posición confirmada por un grupo de consumidores. En Kafka, puede utilizarse como señal para escalar procesadores mediante KEDA.</dd><dt>Container Apps environment</dt><dd>Límite operativo de Azure Container Apps donde se agrupan aplicaciones que comparten integración de red y observabilidad. También puede facilitar la comunicación entre servicios relacionados.</dd><dt>Contexto de compilación</dt><dd>Conjunto de archivos y directorios que Docker envía al motor de compilación. En un comando como `az acr build`, el punto `.` representa el directorio actual.</dd><dt>CosmosClient</dt><dd>Objeto principal del SDK de Azure Cosmos DB para NoSQL para administrar conexiones y operaciones. Debe crearse durante el arranque y reutilizarse durante toda la vida de la aplicación.</dd><dt>CrashLoopBackOff</dt><dd>Estado de Kubernetes que indica que un contenedor falla, se reinicia y vuelve a fallar con esperas crecientes. Requiere investigar el proceso de inicio, la configuración, la imagen y las sondas.</dd><dt>Deployment</dt><dd>Recurso de Kubernetes que declara el estado deseado de una aplicación, incluida su imagen y cantidad de réplicas. Su controlador crea y reemplaza Pods para mantener ese estado.</dd><dt>Digest</dt><dd>Identificador inmutable basado en el contenido de una imagen de contenedor. Permite demostrar exactamente qué artefacto se ejecutó, a diferencia de una etiqueta mutable.</dd><dt>Dockerfile</dt><dd>Archivo que describe cómo construir una imagen de contenedor. Puede definir instrucciones como `ENTRYPOINT`, `CMD`, variables de entorno y archivos incluidos.</dd><dt>EndpointSlice</dt><dd>Recurso de Kubernetes que representa los extremos de red disponibles para un Service. Su presencia ayuda a comprobar que el servicio tiene Pods seleccionados.</dd><dt>ENTRYPOINT</dt><dd>Instrucción del Dockerfile que establece el ejecutable principal del contenedor. Un comando de inicio personalizado normalmente modifica el CMD, pero no reemplaza el ENTRYPOINT.</dd><dt>FQDN</dt><dd>Nombre de dominio completamente cualificado que identifica una dirección de red, como el nombre público de una aplicación. Permite comprobar el acceso mediante DNS al servicio desplegado.</dd><dt>Gunicorn</dt><dd>Servidor WSGI utilizado habitualmente para ejecutar aplicaciones web Python en producción. Debe iniciarse de forma compatible con el puerto que la plataforma espera recibir.</dd><dt>Health probe</dt><dd>Sonda que comprueba una condición operacional de un contenedor o aplicación. Según su tipo, puede controlar el arranque, la disponibilidad o la permanencia del proceso.</dd><dt>HTTP scaling</dt><dd>Escalado basado en solicitudes HTTP o concurrencia recibida por una aplicación. No es adecuado por sí solo para un procesador cuyo trabajo real está determinado por una cola.</dd><dt>ImagePullBackOff</dt><dd>Estado de Kubernetes que indica que no pudo extraerse una imagen y que los reintentos se espacian progresivamente. Deben verificarse la referencia, el registro y las credenciales.</dd><dt>Ingress</dt><dd>Configuración o componente que dirige tráfico externo hacia servicios dentro de Kubernetes. Define reglas de entrada, aunque la conectividad final también depende de DNS, red y balanceadores.</dd><dt>Kafka</dt><dd>Plataforma distribuida de mensajería y streaming basada en temas y particiones. KEDA puede escalar consumidores según el retraso de un consumer group.</dd><dt>KEDA</dt><dd>Componente de escalado impulsado por eventos que consulta fuentes externas, como colas o Kafka, y solicita réplicas según sus métricas. En Azure Container Apps puede permitir escalar hasta cero.</dd><dt>Kubernetes</dt><dd>Orquestador de contenedores que administra Pods, servicios, despliegues, configuración, almacenamiento y escalado. AKS proporciona una versión administrada en Azure.</dd><dt>LoadBalancer</dt><dd>Tipo de Service de Kubernetes que aprovisiona un punto de acceso externo, normalmente mediante un balanceador de Azure. Puede proporcionar una dirección pública, por lo que no debe usarse para APIs exclusivamente internas.</dd><dt>Managed identity</dt><dd>Identidad administrada por Azure que permite a un recurso autenticarse ante otros servicios sin almacenar credenciales explícitas. Puede utilizarse para que Container Apps extraiga imágenes de un registro privado.</dd><dt>Manifiesto de Kubernetes</dt><dd>Archivo declarativo, normalmente YAML, que describe recursos y estado deseado de Kubernetes. `kubectl apply` lo envía al clúster para iniciar la reconciliación.</dd><dt>Namespace</dt><dd>Ámbito lógico dentro de un clúster de Kubernetes para organizar y aislar recursos. Permite separar aplicaciones, equipos o ambientes dentro del mismo clúster.</dd><dt>PersistentVolumeClaim</dt><dd>Solicitud de almacenamiento persistente realizada por una carga de trabajo de Kubernetes. Separa la necesidad de almacenamiento de la implementación concreta del volumen.</dd><dt>Pod</dt><dd>Unidad mínima desplegable de Kubernetes que contiene uno o más contenedores relacionados. Su dirección IP puede cambiar cuando el Pod se reemplaza, por lo que los clientes deben usar un Service.</dd><dt>Private registry</dt><dd>Registro de contenedores que requiere autenticación para extraer imágenes. La identidad que ejecuta la aplicación no siempre coincide con la identidad usada para realizar el pull.</dd><dt>Replica</dt><dd>Instancia adicional de una aplicación que ejecuta el mismo artefacto para atender carga o mejorar disponibilidad. El escalado horizontal aumenta o reduce réplicas, pero no cambia los recursos de cada una.</dd><dt>Revisión</dt><dd>Instantánea de una versión de una aplicación en Azure Container Apps. Los cambios de imagen, variables y reglas de escalado suelen crear una nueva revisión que puede recibir tráfico de forma controlada.</dd><dt>RU/s</dt><dd>Unidades de solicitud por segundo utilizadas por Azure Cosmos DB para expresar capacidad de rendimiento. El diseño de particiones y las consultas influyen directamente en su consumo.</dd><dt>Scale-to-zero</dt><dd>Capacidad de reducir una aplicación a cero réplicas cuando no existe trabajo. Es especialmente útil para cargas impulsadas por eventos y ayuda a disminuir costos durante periodos inactivos.</dd><dt>Secret</dt><dd>Recurso de Kubernetes para almacenar datos sensibles, como contraseñas, claves de API y cadenas de conexión. Puede inyectarse en Pods sin incluir esos valores en la imagen.</dd><dt>Service</dt><dd>Recurso de Kubernetes que proporciona un punto de acceso estable y dirige tráfico hacia Pods seleccionados. Su tipo determina si el acceso es interno o externo.</dd><dt>Service Bus</dt><dd>Servicio de mensajería administrado de Azure para colas y temas. Sus mensajes activos o su retraso pueden servir como señal de escalado event-driven.</dd><dt>Sistema de archivos efímero</dt><dd>Almacenamiento local del contenedor que puede perderse cuando el Pod o la réplica se reinicia o reemplaza. Los datos que deben sobrevivir requieren almacenamiento persistente o externo.</dd><dt>Sonda de actividad</dt><dd>Comprobación que determina si el proceso sigue suficientemente sano para continuar ejecutándose. Si falla repetidamente, Kubernetes puede reiniciar el contenedor.</dd><dt>Sonda de inicio</dt><dd>Comprobación destinada a proteger el periodo de arranque de una aplicación. Es útil cuando la carga de un modelo, cachés o dependencias iniciales tarda mucho tiempo.</dd><dt>Sonda de preparación</dt><dd>Comprobación que indica si una réplica está lista para recibir tráfico. Una falla puede retirar temporalmente el Pod del balanceo sin reiniciar necesariamente el contenedor.</dd><dt>Tag</dt><dd>Referencia con nombre asociada a una imagen, como `latest`, `1.1` o `stable`. Puede cambiar de manifiesto con el tiempo, por lo que no garantiza reproducibilidad como un digest.</dd><dt>TLS</dt><dd>Protocolo criptográfico utilizado para proteger comunicaciones mediante cifrado y autenticación. En scalers como Kafka puede formar parte de la configuración segura de conexión.</dd><dt>Variable de entorno</dt><dd>Valor de configuración que la plataforma o el orquestador inyecta al iniciar un contenedor. Permite cambiar comportamiento entre ambientes sin reconstruir la imagen.</dd><dt>Web App for Containers</dt><dd>Modalidad de Azure App Service para ejecutar una aplicación web desde una imagen de contenedor. App Service administra aprovisionamiento, balanceo y escalado de la aplicación.</dd><dt>YAML</dt><dd>Formato de serialización legible utilizado para declarar configuraciones y recursos. En Kubernetes se usa habitualmente para manifiestos de Deployment, Service, ConfigMap y Secret.</dd></dl>",
+    "scenarioReview": ""
+  },
+  "routeIntros": {},
+  "backCover": {
+    "mode": "template",
+    "imageUrl": "/assets/cloudbooks-engine/ai-200/master-book/_book/backcover.png",
+    "html": "",
+    "isbn": "978-987-23451-2-2",
+    "price": "9.99",
+    "overlay": {
+      "top": 12,
+      "left": 9,
+      "width": 55,
+      "color": "#0F1B3D",
+      "align": "left"
+    }
+  },
+  "collection": {
+    "note": "La colección completa AI-200 en CloudBooks — suma los otros formatos a tu preparación.",
+    "items": []
+  },
+  "domainMap": {
+    "note": "Mapa de las rutas del atlas AI-200: qué cubre cada una y dónde poner el foco al estudiar. OJO: el peso en el examen NO es proporcional al número de láminas. Los cuatro dominios oficiales pesan aproximadamente: contenedores 20-25%, datos y vectores 25-30%, integración de servicios backend (Service Bus, Event Grid y Functions — Ruta 7) 20-25%, y seguridad y observabilidad 20-25%. La integración backend pesa MÁS de lo que su cantidad de láminas sugiere: dedícale tiempo extra. Prioriza las rutas con más trampas y las que te resulten nuevas.",
+    "rows": [
+      {
+        "skill": "Ruta 1 — Alojamiento de aplicaciones en contenedores",
+        "domain": "7 láminas",
+        "notes": "Prioriza dominar el almacenamiento y despliegue de contenedores en Azure, enfocándote en cómo gestionar eficientemente el registro y la implementación en App Service. Evita subestimar la configuración correcta del entorno para evitar fallos en la ejecución."
+      },
+      {
+        "skill": "Ruta 2 — Despliegue y gestión en Azure Container Apps",
+        "domain": "15 láminas",
+        "notes": "Repasa el despliegue, gestión y escalado de contenedores en Azure Container Apps, enfatizando la administración dinámica y la escalabilidad. No pases por alto la importancia de configurar adecuadamente las políticas de escalado para evitar problemas de rendimiento."
+      },
+      {
+        "skill": "Ruta 3 — Despliegue y supervisión en Azure Kubernetes Service",
+        "domain": "9 láminas",
+        "notes": "Domina el despliegue, configuración y monitoreo de aplicaciones en Azure Kubernetes Service, con especial atención a la supervisión y solución de problemas. Evita ignorar las métricas y logs que son clave para identificar y resolver fallos rápidamente."
+      },
+      {
+        "skill": "Ruta 4 — Soluciones de IA con Azure Cosmos DB for NoSQL",
+        "domain": "12 láminas",
+        "notes": "Prioriza construir y optimizar consultas en Azure Cosmos DB for NoSQL, incluyendo la implementación de búsqueda vectorial. Ten cuidado con la optimización insuficiente que puede afectar la velocidad y precisión de las consultas."
+      },
+      {
+        "skill": "Ruta 5 — Soluciones de IA con Azure Database for PostgreSQL",
+        "domain": "15 láminas",
+        "notes": "Domina la construcción y consulta de bases de datos PostgreSQL, enfocándote en la búsqueda vectorial y su optimización. No subestimes la complejidad de ajustar las consultas para mantener un rendimiento óptimo en cargas de trabajo intensivas."
+      },
+      {
+        "skill": "Ruta 6 — Soluciones de IA con Azure Managed Redis",
+        "domain": "9 láminas",
+        "notes": "Repasa las operaciones de datos, mensajería de eventos y almacenamiento vectorial en Azure Managed Redis, priorizando la integración eficiente de estos servicios. Evita la configuración inadecuada que puede generar pérdidas de datos o latencia elevada."
+      },
+      {
+        "skill": "Ruta 7 — Integración de servicios backend para IA",
+        "domain": "13 láminas",
+        "notes": "Domina la integración de servicios backend como Service Bus, Event Grid y Azure Functions para flujos de trabajo IA, enfocándote en la orquestación y procesamiento eficiente. Ten cuidado con la falta de sincronización que puede causar fallos en la cadena de eventos."
+      },
+      {
+        "skill": "Ruta 8 — Secretos y configuración de aplicaciones",
+        "domain": "8 láminas",
+        "notes": "Prioriza la gestión segura de secretos y configuraciones con Azure Key Vault y App Configuration, asegurando el control de acceso y actualización. Evita la exposición accidental de secretos o configuraciones sensibles en entornos de producción."
+      },
+      {
+        "skill": "Ruta 9 — Observabilidad y troubleshooting",
+        "domain": "10 láminas",
+        "notes": "Domina la instrumentación con OpenTelemetry y el análisis de telemetría mediante logs y métricas para una observabilidad efectiva. No pases por alto la correcta interpretación de datos que es esencial para identificar y resolver problemas oportunamente."
+      }
+    ]
+  },
+  "sections": {
+    "copyright": true,
+    "preface": true,
+    "collection": true,
+    "domainMap": true,
+    "intro": true,
+    "studyGuide": true,
+    "routeIntros": true,
+    "conclusions": true,
+    "scenarioReview": true,
+    "glossary": true,
+    "bibliography": true,
+    "backCover": true
+  },
+  "ficha": {
+    "synopsis": "Este libro visual-atlas está diseñado para profesionales que buscan dominar el desarrollo y despliegue de soluciones de inteligencia artificial en Azure, alineado con la certificación AI-200 — Azure AI Cloud Developer Associate. A través de rutas prácticas y detalladas, aprenderás a gestionar contenedores, bases de datos NoSQL y PostgreSQL, así como a integrar servicios backend y optimizar la observabilidad de tus aplicaciones. Ideal tanto para preparar el examen como para aplicar conocimientos avanzados en proyectos reales de IA en la nube. Con este recurso, potenciarás tu carrera en el ecosistema Azure y te convertirás en un desarrollador de IA altamente competente.",
+    "about": [
+      "Gestionar y desplegar contenedores en Azure Container Registry, App Service, Container Apps y Kubernetes Service.",
+      "Construir y optimizar consultas y búsquedas vectoriales en Azure Cosmos DB y Azure Database for PostgreSQL.",
+      "Implementar operaciones de datos, mensajería y almacenamiento vectorial con Azure Managed Redis y Azure Service Bus.",
+      "Desarrollar flujos de trabajo AI basados en eventos usando Azure Event Grid y Azure Functions.",
+      "Administrar secretos y configuraciones de aplicaciones con Azure Key Vault y Azure App Configuration.",
+      "Instrumentar, monitorear y solucionar problemas de aplicaciones con OpenTelemetry, logs y métricas."
+    ],
+    "categories": [
+      "Certificaciones Microsoft",
+      "Azure",
+      "Inteligencia Artificial",
+      "Desarrollo en la Nube"
+    ],
+    "tags": [
+      "azure ai",
+      "certificación ai-200",
+      "desarrollo en azure"
+    ],
+    "marketingBlurb": "Domina Azure AI y prepárate para la certificación AI-200 con este completo visual-atlas.",
+    "toc": "Ruta 1 — Alojamiento de aplicaciones en contenedores\n  · Registries, repos y artefactos\n  · Build y run con ACR Tasks\n  · Tags y versiones de imágenes\n  · Deploy de contenedores App Service\n  · Runtime del contenedor\n  · Configuración de apps\n  · Monitoreo y troubleshooting de apps\nRuta 2 — Despliegue y gestión en Azure Container Apps\n  · Entornos Container Apps\n  · Deploy Container Apps con CLI y YAML\n  · Runtime con variables y secretos\n  · Autenticación para registries privados\n  · Verificación con logs y estado\n  · Actualizar imágenes y revisiones\n  · Ciclo de vida de Container Apps\n  · Monitoreo y troubleshooting de logs\n  · Health probes y troubleshooting\n  · Optimizar recursos y escalado\n  · Reglas de escalado\n  · Escalado event-driven con KEDA\n  · KEDA scalers para workloads\n  · Recursos para rendimiento y costo\n  · Modos de revisión y tráfico\nRuta 3 — Despliegue y supervisión en Azure Kubernetes Service\n  · Manifiestos de Kubernetes\n  · Exponer apps en AKS\n  · Deploy y verificación en AKS\n  · ConfigMaps para apps\n  · Secrets para datos sensibles\n  · Almacenamiento persistente\n  · Logs y métricas de apps\n  · Troubleshoot de pods y servicios\n  · Verificar conectividad de servicios\nRuta 4 — Soluciones de IA con Azure Cosmos DB for NoSQL\n  · Azure Cosmos DB NoSQL\n  · SDK de Azure Cosmos DB NoSQL\n  · Consultas en Cosmos DB NoSQL\n  · Embeddings en Cosmos DB\n  · Consultas de similitud vectorial\n  · Similitud y filtrado de metadatos\n  · Change feed y refresh de embeddings\n  · Índices en Cosmos DB\n  · Índices de rango y compuestos\n  · Optimizar índices vectoriales\n  · Reducir costos de RU con índices\n  · Niveles de consistencia y rendimiento\nRuta 5 — Soluciones de IA con Azure Database for PostgreSQL\n  · Azure Database for PostgreSQL\n  · Conexión a PostgreSQL\n  · Esquemas en PostgreSQL\n  · Consultas de datos\n  · Integrar SDKs y apps\n  · Embeddings con pgvector\n  · Búsqueda rápida vectorial\n  · Ciclo de vida de índices\n  · Similitud vectorial semántica\n  · Patrones RAG de recuperación\n  · Optimizar PostgreSQL y pgvector\n  · Configurar índices vectoriales\n  · Optimizar el layout de datos\n  · Escalar workloads de alto volumen\n  · Optimización de conexiones\nRuta 6 — Soluciones de IA con Azure Managed Redis\n  · Azure Managed Redis\n  · Librerías y buenas prácticas\n  · Operaciones de datos\n  · Eventos con Redis pub/sub\n  · Colas con Redis Streams\n  · Distribución broadcast y coordinada\n  · Indexar y consultar datos vectoriales\n  · Tipos vectoriales y estrategias\n  · Optimizar estructuras Redis\nRuta 7 — Integración de servicios backend para IA\n  · Azure Service Bus para IA\n  · Queues, topics y suscripciones\n  · Estructurar mensajes para cargas de IA\n  · Procesamiento confiable de mensajes\n  · Azure Event Grid para IA\n  · Esquemas y propiedades de eventos\n  · Políticas de entrega y reintento\n  · Publicar eventos personalizados\n  · Hosting y escalado de Functions\n  · Entorno local para Functions\n  · Triggers y bindings para IA\n  · Secrets y configuración de Functions\n  · Identidad y acceso en Functions\nRuta 8 — Secretos y configuración de aplicaciones\n  · Secrets, keys y certificados\n  · Recuperar secrets con SDK\n  · Versiones y rotación de secrets\n  · Caching para Key Vault\n  · Conexión a App Configuration\n  · Labels y feature flags\n  · Referenciar secrets de Key Vault\n  · App Config vs Key Vault\nRuta 9 — Observabilidad y troubleshooting\n  · OpenTelemetry y observabilidad\n  · Agregar el SDK de OpenTelemetry\n  · Configurar spans y traces\n  · Exportar a Azure Monitor\n  · Debug con datos de traza\n  · Consultas básicas KQL\n  · Logs, errores y rendimiento\n  · Dashboards para telemetría\n  · Workbooks para análisis\n  · Alertas por fallos y anomalías",
+    "samples": [
+      "/assets/cloudbooks-engine/ai-200/master-book/_book/cover.png",
+      "/assets/cloudbooks-engine/ai-200/master-book/_book/backcover.png",
+      "/assets/cloudbooks-engine/ai-200/master-book/domains/p1/part-opener.png",
+      "/assets/cloudbooks-engine/ai-200/master-book/pages/cap-01/divider.png",
+      "/assets/cloudbooks-engine/ai-200/master-book/pages/cap-02/divider.png",
+      "/assets/cloudbooks-engine/ai-200/master-book/pages/cap-03/divider.png",
+      "/assets/cloudbooks-engine/ai-200/master-book/pages/cap-04/divider.png",
+      "/assets/cloudbooks-engine/ai-200/master-book/pages/cap-05/divider.png"
+    ],
+    "status": "publicado",
+    "updatedAt": "2026-08-05T05:33:07.018Z"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "01": {
+    "overall": 10,
+    "verdict": "approve",
+    "at": "2026-06-08T02:44:35.590Z"
+  },
+  "02": {
+    "overall": 10,
+    "verdict": "approve",
+    "at": "2026-06-08T03:01:36.785Z"
+  },
+  "03": {
+    "overall": 10,
+    "verdict": "approve",
+    "at": "2026-06-08T03:46:46.985Z"
+  },
+  "04": {
+    "overall": 10,
+    "verdict": "approve",
+    "at": "2026-06-13T21:59:47.366Z",
+    "scores": {
+      "claridad": 9,
+      "fidelidadExamen": 10,
+      "coherencia": 10,
+      "autocheckCorrecto": 10,
+      "trampasValidas": 10
+    },
+    "findings": [],
+    "summary": "La página de estudio presenta información clara y técnica correcta sobre ACR y ACR Tasks, alineada con las fuentes. El autocheck y las trampas están bien formulados.",
+    "model": "gpt-4o-mini"
+  },
+  "05": {
+    "overall": 9,
+    "verdict": "approve",
+    "at": "2026-06-17T04:40:38.223Z",
+    "scores": {
+      "claridad": 9,
+      "fidelidadExamen": 9,
+      "coherencia": 9,
+      "autocheckCorrecto": 10,
+      "trampasValidas": 10
+    },
+    "findings": [],
+    "summary": "El contenido es técnicamente correcto y coincide con las fuentes oficiales. La explicación del puerto y la configuración de WEBSITES_PORT es precisa y adecuada para el contexto del examen.",
+    "model": "gpt-4.1-nano"
+  }
+}
