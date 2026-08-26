@@ -553,6 +553,7 @@ export default function EstudioIndesign() {
   // Libro activo: el Master Book usa modelo de CAPÍTULO (no láminas). Se ramifica todo por acá.
   const activeBookId = library?.activeBookId ?? "visual-atlas";
   const activeCertId = library?.activeCertId ?? "ai-200";   // cert activo → base de assets de la galería (evita el bleed AI-200↔AB-620)
+  const certLabel = activeCertId.toUpperCase();             // "AB-620" / "AI-200" → breadcrumb + headers (no hardcodear)
   const isMaster = activeBookId === "master-book";
   // Cambiar el TIPO de libro activo pasa por un modal de confirmación (evita activaciones accidentales por un click).
   const [pendingSwitch, setPendingSwitch] = useState<{ certId: string; bookId: string; stay?: boolean } | null>(null);
@@ -686,7 +687,7 @@ export default function EstudioIndesign() {
       <div className="flex-1 min-w-0 flex flex-col">
         {/* ── barra de migas ── */}
         <header className="sticky top-0 z-30 backdrop-blur-md flex items-center justify-between gap-4 px-6 h-14" style={{ backgroundColor: "rgba(10,10,14,0.85)", borderBottom: `1px solid ${C.ink}1f` }}>
-          <Breadcrumb stage={stage} bookLabel={library ? labelForBook(library.activeBookId) : "Visual Atlas"} globalSection={view === "global" ? globalSection : null} />
+          <Breadcrumb stage={stage} certLabel={certLabel} bookLabel={library ? labelForBook(library.activeBookId) : "Visual Atlas"} globalSection={view === "global" ? globalSection : null} />
           <div className="flex items-center gap-3">
             <EngineBadge keyStatus={keyStatus} offline={!!err} />
             <button onClick={() => setReload(n => n + 1)} className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-[12px] transition-all hover:bg-white/5" style={{ border: `1px solid ${C.ink}26`, color: C.inkSoft }}>
@@ -723,7 +724,7 @@ export default function EstudioIndesign() {
           )}
           {view === "book" && (<>
           {stage === "dashboard" && (isMaster
-            ? <DashboardMaster chapters={chapters} setStage={setStage} onOpenChapter={(id) => { setMasterChapterId(id); setStage("contenido"); }} />
+            ? <DashboardMaster chapters={chapters} setStage={setStage} certLabel={certLabel} onOpenChapter={(id) => { setMasterChapterId(id); setStage("contenido"); }} />
             : <DashboardStage
               catalog={catalog}
               loading={loading}
@@ -732,6 +733,7 @@ export default function EstudioIndesign() {
               onPick={(id) => { setPageId(id); setStage("contenido"); }}
               onOpenQa={() => setStage("qa")}
               setStage={setStage}
+              certLabel={certLabel}
               bookLabel={library ? labelForBook(library.activeBookId) : "Visual Atlas"}
             />)}
 
@@ -1454,12 +1456,12 @@ function Sidebar({ stage, onSelect, view, globalSection, onSelectGlobal, library
 }
 
 /* ── migas de pan ── */
-function Breadcrumb({ stage, bookLabel, globalSection = null }: { stage: StageId; bookLabel: string; globalSection?: GlobalSectionId | null }) {
+function Breadcrumb({ stage, certLabel, bookLabel, globalSection = null }: { stage: StageId; certLabel: string; bookLabel: string; globalSection?: GlobalSectionId | null }) {
   const crumbs = globalSection
-    ? ["Biblioteca", "Azure", "AI-200", "Global", GLOBAL_SECTIONS.find(g => g.id === globalSection)?.label ?? globalSection]
+    ? ["Biblioteca", "Azure", certLabel, "Global", GLOBAL_SECTIONS.find(g => g.id === globalSection)?.label ?? globalSection]
     : stage === "catalogo"
     ? ["Biblioteca", "Azure", "Activar certificaciones"]
-    : ["Biblioteca", "Azure", "AI-200", bookLabel, sectionLabel(stage)];
+    : ["Biblioteca", "Azure", certLabel, bookLabel, sectionLabel(stage)];
   return (
     <nav className="flex items-center gap-1.5 text-[12px] min-w-0 overflow-hidden" style={{ color: C.inkSoft }}>
       {crumbs.map((c, i) => {
@@ -1978,7 +1980,7 @@ function EnsamblarMaster({ chapters, certId }: { chapters: EngineChapter[]; cert
   return (
     <div className="flex flex-col gap-5 max-w-[900px]">
       <div className="rounded-2xl p-6" style={{ background: `linear-gradient(120deg, ${C.violet}12, ${C.card})`, border: `1px solid ${C.violet}33` }}>
-        <p className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: C.violet }}>AI-200 · Master Book</p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: C.violet }}>{certId.toUpperCase()} · Master Book</p>
         <h1 className="text-2xl tracking-tight" style={{ fontFamily: D, fontWeight: 700 }}>Ensamblar el libro</h1>
         <p className="text-[13px] mt-1 leading-relaxed" style={{ color: C.inkSoft }}>El libro documental 6×9″: front matter + <b style={{ color: C.ink }}>capítulos por ruta</b> (divisor + exposición + figuras + puntos clave) + back matter. Folios continuos; el relleno dinámico ajusta las figuras para que no queden huecos.</p>
       </div>
@@ -2405,7 +2407,7 @@ function QaMasterView({ ch }: { ch: EngineChapter }) {
 }
 
 /* ── Dashboard del MASTER BOOK: modelo de CAPÍTULO (no láminas/infografía) ── */
-function DashboardMaster({ chapters, setStage, onOpenChapter }: { chapters: EngineChapter[]; setStage: (s: StageId) => void; onOpenChapter: (id: string) => void }) {
+function DashboardMaster({ chapters, setStage, onOpenChapter, certLabel }: { chapters: EngineChapter[]; setStage: (s: StageId) => void; onOpenChapter: (id: string) => void; certLabel: string }) {
   const ordered = [...chapters].sort((a, b) => chapSortKey(a.seed).localeCompare(chapSortKey(b.seed)));   // integrador ÚLTIMO en su ruta (sin número)
   const rutas = new Set(chapters.map(c => c.seed.domainId)).size;
   const conRelato = chapters.filter(c => (c.seed.sections?.length ?? 0) > 0).length;
@@ -2450,7 +2452,7 @@ function DashboardMaster({ chapters, setStage, onOpenChapter }: { chapters: Engi
     <div className="flex flex-col gap-5 max-w-[1200px]">
       <div className="rounded-2xl p-6 flex flex-wrap items-center justify-between gap-5" style={{ background: `linear-gradient(120deg, ${C.violet}12, ${C.card})`, border: `1px solid ${C.violet}33` }}>
         <div className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: C.violet }}>AI-200 · Master Book</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: C.violet }}>{certLabel} · Master Book</p>
           <h1 className="text-2xl tracking-tight" style={{ fontFamily: D, fontWeight: 700 }}>Construcción del libro</h1>
           <div className="flex items-center gap-2 mt-1">
             <p className="text-[13px]" style={{ color: C.inkSoft }}>Del temario al PDF documental: {chapters.length} capítulo(s) escritos en {rutas} ruta(s).</p>
@@ -2548,8 +2550,8 @@ function DashboardMaster({ chapters, setStage, onOpenChapter }: { chapters: Engi
   );
 }
 
-function DashboardStage({ catalog, loading, reloadKey, onOpenContenido, onPick: _onPick, onOpenQa, setStage, bookLabel }: {
-  catalog: EngineCatalog | null; loading: boolean; reloadKey: number; onOpenContenido: () => void; onPick: (id: string) => void; onOpenQa: () => void; setStage: (s: StageId) => void; bookLabel: string;
+function DashboardStage({ catalog, loading, reloadKey, onOpenContenido, onPick: _onPick, onOpenQa, setStage, bookLabel, certLabel }: {
+  catalog: EngineCatalog | null; loading: boolean; reloadKey: number; onOpenContenido: () => void; onPick: (id: string) => void; onOpenQa: () => void; setStage: (s: StageId) => void; bookLabel: string; certLabel: string;
 }) {
   const [rollup, setRollup] = useState<EngineQaRollup | null>(null);
   const [cov, setCov] = useState<EngineCoverageReport | null>(null);
@@ -2602,7 +2604,7 @@ function DashboardStage({ catalog, loading, reloadKey, onOpenContenido, onPick: 
       {/* header + titular % construido */}
       <div className="rounded-2xl p-6 flex flex-wrap items-center justify-between gap-5" style={{ background: `linear-gradient(120deg, ${C.violet}12, ${C.card})`, border: `1px solid ${C.violet}33` }}>
         <div className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: C.violet }}>AI-200 · {bookLabel}</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: C.violet }}>{certLabel} · {bookLabel}</p>
           <h1 className="text-2xl tracking-tight" style={{ fontFamily: D, fontWeight: 700 }}>Construcción del libro</h1>
           <div className="flex items-center gap-2 mt-1">
             <p className="text-[13px]" style={{ color: C.inkSoft }}>Totales del libro: del temario al PDF. {inBook} de {total} unidades listas en el libro.</p>

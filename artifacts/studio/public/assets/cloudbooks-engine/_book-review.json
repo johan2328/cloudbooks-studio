@@ -1,0 +1,34 @@
+{
+  "issuesByPage": {
+    "01": [],
+    "02": [
+      {
+        "pageId": "05",
+        "type": "estructura",
+        "detail": "La estructura de la Página 05 incluye una explicación más extensa en el contexto en comparación con otras páginas que son más concisas.",
+        "suggestion": "Reducir la extensión del contexto en la Página 05 para alinearse con la estructura de las demás páginas."
+      }
+    ],
+    "03": [
+      {
+        "pageId": "06",
+        "type": "duplicado",
+        "detail": "La información sobre identidades administradas se menciona en la Página 06 y también se hace referencia en la Página 08, lo que puede causar redundancia.",
+        "suggestion": "Eliminar la referencia a identidades administradas en la Página 08 o resumirla para evitar duplicación."
+      }
+    ],
+    "06": [],
+    "07": []
+  },
+  "pages": [
+    "01",
+    "02",
+    "03",
+    "01",
+    "02",
+    "03",
+    "06",
+    "07"
+  ],
+  "at": "2026-06-09T03:09:20.894Z"
+}

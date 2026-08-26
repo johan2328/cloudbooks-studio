@@ -5,7 +5,7 @@ import puppeteer from "puppeteer-core";
 import { closeBrowserHard } from "../render/browser-util.js";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { CONFIG, pageOutputDir, domainOutputDir } from "../config.js";
-import { getBookConfig } from "./book-config.js";
+import { getBookConfig, saveBookConfig } from "./book-config.js";
 import { renderToPdf, TEXT_OVERRIDE, balanceFigures } from "./assemble-book.js";
 import { buildChapterBody, chapterCss } from "./render-chapter.js";
 import { generateChapterDivider } from "./chapter-divider-gen.js";
@@ -214,5 +214,7 @@ export async function assembleMasterBook(chapterIds?: string[]): Promise<Assembl
   const outPath = path.join(exportDir, fname);
   await writeFile(outPath, await out.save());
   const url = `${CONFIG.publicAssetsBase}/${CONFIG.certId}/${CONFIG.format}/_export/${fname}`;
+  // Persistir el conteo REAL de páginas en la ficha → el storefront (/libro) muestra páginas reales, no el estático de catalog.ts.
+  await saveBookConfig({ ficha: { ...getBookConfig().ficha, pages: pages.length } });
   return { ok: true, url, path: outPath, pages: pages.length, chapters: groupedCount };   // conteo REAL ensamblado (no el persistido crudo)
 }

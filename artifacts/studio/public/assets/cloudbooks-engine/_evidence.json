@@ -1,0 +1,106 @@
+{
+  "available": true,
+  "shots": [
+    {
+      "id": "p1",
+      "label": "Ruta 1 — Alojamiento de aplicaciones en contenedores",
+      "url": "https://learn.microsoft.com/en-us/training/paths/implement-container-app-hosting-azure/",
+      "title": "Implement Container Application Hosting on Azure - Training | Microsoft Learn",
+      "imagePath": "/assets/cloudbooks-engine/evidence/p1.png",
+      "gitCommit": "e5d0ac051b6ba1fea4cb5073a0cec8cf811ae175",
+      "capturedAt": "2026-06-13T02:28:41.798Z",
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "p2",
+      "label": "Ruta 2 — Despliegue y gestión en Azure Container Apps",
+      "url": "https://learn.microsoft.com/en-us/training/paths/deploy-manage-apps-azure-container-apps/",
+      "title": "Deploy and Manage Apps on Azure Container Apps - Training | Microsoft Learn",
+      "imagePath": "/assets/cloudbooks-engine/evidence/p2.png",
+      "gitCommit": "4d4d9b29047eb91d08acb3a80b8da0b2dcd85c65",
+      "capturedAt": "2026-06-13T02:28:41.798Z",
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "p3",
+      "label": "Ruta 3 — Despliegue y supervisión en Azure Kubernetes Service",
+      "url": "https://learn.microsoft.com/en-us/training/paths/deploy-monitor-apps-azure-kubernetes-service/",
+      "title": "Deploy and Monitor Applications on Azure Kubernetes Service - Training | Microsoft Learn",
+      "imagePath": "/assets/cloudbooks-engine/evidence/p3.png",
+      "gitCommit": "195a0ce4c2540207e9ae5536d1a544dbb17de93e",
+      "capturedAt": "2026-06-13T02:28:41.798Z",
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "p4",
+      "label": "Ruta 4 — Soluciones de IA con Azure Cosmos DB for NoSQL",
+      "url": "https://learn.microsoft.com/en-us/training/paths/develop-ai-solutions-azure-cosmos-db/",
+      "title": "Develop AI Solutions with Azure Cosmos DB for NoSQL - Training | Microsoft Learn",
+      "imagePath": "/assets/cloudbooks-engine/evidence/p4.png",
+      "gitCommit": "6ca776907577c32c4610184da3d09babd7501093",
+      "capturedAt": "2026-06-13T02:28:41.798Z",
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "p5",
+      "label": "Ruta 5 — Soluciones de IA con Azure Database for PostgreSQL",
+      "url": "https://learn.microsoft.com/en-us/training/paths/develop-ai-solutions-azure-database-postgresql/",
+      "title": "Develop AI Solutions with Azure Database for PostgreSQL - Training | Microsoft Learn",
+      "imagePath": "/assets/cloudbooks-engine/evidence/p5.png",
+      "gitCommit": "2920b9b3a64ce761ea8ac4c7a99cf48e3312fb03",
+      "capturedAt": "2026-06-13T02:28:41.798Z",
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "p6",
+      "label": "Ruta 6 — Soluciones de IA con Azure Managed Redis",
+      "url": "https://learn.microsoft.com/en-us/training/paths/enhance-ai-solutions-azure-managed-redis/",
+      "title": "Enhance AI solutions with Azure Managed Redis - Training | Microsoft Learn",
+      "imagePath": "/assets/cloudbooks-engine/evidence/p6.png",
+      "gitCommit": "236c634affc0334a2134565d9716b4dac12daac4",
+      "capturedAt": "2026-06-13T02:28:41.798Z",
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "p7",
+      "label": "Ruta 7 — Integración de servicios backend para IA",
+      "url": "https://learn.microsoft.com/en-us/training/paths/integrate-backend-services-ai-solutions/",
+      "title": "Integrate Backend Services for AI Solutions - Training | Microsoft Learn",
+      "imagePath": "/assets/cloudbooks-engine/evidence/p7.png",
+      "gitCommit": "2edc951cc8531b1c332f1d9bd05b5715cbe205e6",
+      "capturedAt": "2026-06-13T02:28:41.798Z",
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "p8",
+      "label": "Ruta 8 — Secretos y configuración de aplicaciones",
+      "url": "https://learn.microsoft.com/en-us/training/paths/manage-app-secrets-configuration/",
+      "title": "Manage Application Secrets and Configuration for AI Solutions - Training | Microsoft Learn",
+      "imagePath": "/assets/cloudbooks-engine/evidence/p8.png",
+      "gitCommit": "4cde95f430dab9ef2162536a9bfe9d8129440b21",
+      "capturedAt": "2026-06-13T02:28:41.798Z",
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "p9",
+      "label": "Ruta 9 — Observabilidad y troubleshooting",
+      "url": "https://learn.microsoft.com/en-us/training/paths/observe-troubleshoot-apps/",
+      "title": "Observe and Troubleshoot Apps on Azure - Training | Microsoft Learn",
+      "imagePath": "/assets/cloudbooks-engine/evidence/p9.png",
+      "gitCommit": "3cbfbabc88d47c63272fe91bff363126598d06dc",
+      "capturedAt": "2026-06-13T02:28:41.798Z",
+      "ok": true,
+      "error": null
+    }
+  ],
+  "capturedAt": "2026-06-13T02:28:41.798Z",
+  "error": null
+}

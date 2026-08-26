@@ -147,14 +147,14 @@
     "backCover": true
   },
   "ficha": {
-    "synopsis": "Este libro es una guía completa para desarrolladores que desean certificar sus habilidades en Azure AI Cloud Developer Associate, enfocándose en el desarrollo, despliegue y gestión de soluciones de inteligencia artificial en la nube. A través de rutas claras y visuales, aprenderás a manejar contenedores, bases de datos avanzadas, integración de servicios backend y observabilidad, con un enfoque práctico para dominar las herramientas clave de Azure.\n\nIdeal para profesionales que buscan no solo aprobar el examen de certificación AI-200, sino también aplicar sus conocimientos en proyectos reales de IA y desarrollo cloud. Esta obra te prepara para enfrentar desafíos técnicos, optimizar el rendimiento de tus aplicaciones y gestionar configuraciones y secretos con seguridad, elevando tu perfil profesional en el mercado tecnológico.",
+    "synopsis": "Este atlas visual reúne los conocimientos prácticos necesarios para desarrollar, desplegar, integrar y supervisar soluciones de IA en Azure. Recorre desde el alojamiento de contenedores en Azure Container Registry, App Service, Container Apps y AKS, hasta el trabajo con bases de datos vectoriales, mensajería, funciones serverless, secretos, configuración y observabilidad.\n\nEstá dirigido a desarrolladores cloud, ingenieros de software y profesionales que se preparan para la certificación AI-200 — Azure AI Cloud Developer Associate. Sus explicaciones visuales y orientadas a escenarios ayudan a conectar los conceptos del examen con decisiones reales de arquitectura, rendimiento, escalabilidad, integración y troubleshooting en aplicaciones de IA.",
     "about": [
-      "Dominar el despliegue y gestión de contenedores en Azure App Service, Azure Container Apps y Azure Kubernetes Service.",
-      "Construir, consultar y optimizar bases de datos NoSQL y PostgreSQL para soluciones de inteligencia artificial.",
-      "Implementar operaciones de datos, mensajería y almacenamiento vectorial con Azure Managed Redis y Azure Service Bus.",
-      "Desarrollar flujos de trabajo de IA basados en eventos y backends serverless con Azure Event Grid y Azure Functions.",
-      "Gestionar secretos y configuraciones de aplicaciones con Azure Key Vault y Azure App Configuration.",
-      "Instrumentar aplicaciones y analizar su telemetría para mejorar la observabilidad y el troubleshooting."
+      "Desplegar, configurar, escalar y supervisar aplicaciones en contenedores con App Service, Container Apps y AKS.",
+      "Diseñar consultas, búsquedas vectoriales y estrategias de optimización para Azure Cosmos DB for NoSQL y Azure Database for PostgreSQL.",
+      "Implementar operaciones de datos, mensajería y almacenamiento vectorial con Azure Managed Redis.",
+      "Integrar flujos de IA mediante Azure Service Bus, Event Grid y Azure Functions.",
+      "Gestionar secretos y configuración de aplicaciones con Azure Key Vault y Azure App Configuration.",
+      "Instrumentar aplicaciones y analizar logs, métricas y telemetría con OpenTelemetry para resolver problemas con mayor rapidez."
     ],
     "categories": [
       "Azure",
@@ -162,18 +162,17 @@
       "Desarrollo cloud"
     ],
     "tags": [
-      "azure",
-      "inteligencia artificial",
+      "azure ai",
+      "ai-200",
       "desarrollo cloud",
       "contenedores",
       "kubernetes",
-      "cosmos db",
-      "postgresql",
-      "redis",
-      "service bus",
+      "búsqueda vectorial",
+      "bases de datos",
+      "serverless",
       "observabilidad"
     ],
-    "marketingBlurb": "Domina Azure AI y desarrolla soluciones inteligentes para certificarte y avanzar profesionalmente.",
+    "marketingBlurb": "Domina visualmente el desarrollo de soluciones de IA en Azure y prepárate para AI-200 con escenarios prácticos de producción.",
     "toc": "Ruta 1 — Alojamiento de aplicaciones en contenedores\n  · Registries, repos y artefactos\n  · Build y run con ACR Tasks\n  · Tags y versiones de imágenes\n  · Deploy de contenedores App Service\n  · Runtime del contenedor\n  · Configuración de apps\n  · Monitoreo y troubleshooting de apps\nRuta 2 — Despliegue y gestión en Azure Container Apps\n  · Entornos Container Apps\n  · Deploy Container Apps con CLI y YAML\n  · Runtime con variables y secretos\n  · Autenticación para registries privados\n  · Verificación con logs y estado\n  · Actualizar imágenes y revisiones\n  · Ciclo de vida de Container Apps\n  · Monitoreo y troubleshooting de logs\n  · Health probes y troubleshooting\n  · Optimizar recursos y escalado\n  · Reglas de escalado\n  · Escalado event-driven con KEDA\n  · KEDA scalers para workloads\n  · Recursos para rendimiento y costo\n  · Modos de revisión y tráfico\nRuta 3 — Despliegue y supervisión en Azure Kubernetes Service\n  · Manifiestos de Kubernetes\n  · Exponer apps en AKS\n  · Deploy y verificación en AKS\n  · ConfigMaps para apps\n  · Secrets para datos sensibles\n  · Almacenamiento persistente\n  · Logs y métricas de apps\n  · Troubleshoot de pods y servicios\n  · Verificar conectividad de servicios\nRuta 4 — Soluciones de IA con Azure Cosmos DB for NoSQL\n  · Azure Cosmos DB NoSQL\n  · SDK de Azure Cosmos DB NoSQL\n  · Consultas en Cosmos DB NoSQL\n  · Embeddings en Cosmos DB\n  · Consultas de similitud vectorial\n  · Similitud y filtrado de metadatos\n  · Change feed y refresh de embeddings\n  · Índices en Cosmos DB\n  · Índices de rango y compuestos\n  · Optimizar índices vectoriales\n  · Reducir costos de RU con índices\n  · Niveles de consistencia y rendimiento\nRuta 5 — Soluciones de IA con Azure Database for PostgreSQL\n  · Azure Database for PostgreSQL\n  · Conexión a PostgreSQL\n  · Esquemas en PostgreSQL\n  · Consultas de datos\n  · Integrar SDKs y apps\n  · Embeddings con pgvector\n  · Búsqueda rápida vectorial\n  · Ciclo de vida de índices\n  · Similitud vectorial semántica\n  · Patrones RAG de recuperación\n  · Optimizar PostgreSQL y pgvector\n  · Configurar índices vectoriales\n  · Optimizar el layout de datos\n  · Escalar workloads de alto volumen\n  · Optimización de conexiones\nRuta 6 — Soluciones de IA con Azure Managed Redis\n  · Azure Managed Redis\n  · Librerías y buenas prácticas\n  · Operaciones de datos\n  · Eventos con Redis pub/sub\n  · Colas con Redis Streams\n  · Distribución broadcast y coordinada\n  · Indexar y consultar datos vectoriales\n  · Tipos vectoriales y estrategias\n  · Optimizar estructuras Redis\nRuta 7 — Integración de servicios backend para IA\n  · Azure Service Bus para IA\n  · Queues, topics y suscripciones\n  · Estructurar mensajes para cargas de IA\n  · Procesamiento confiable de mensajes\n  · Azure Event Grid para IA\n  · Esquemas y propiedades de eventos\n  · Políticas de entrega y reintento\n  · Publicar eventos personalizados\n  · Hosting y escalado de Functions\n  · Entorno local para Functions\n  · Triggers y bindings para IA\n  · Secrets y configuración de Functions\n  · Identidad y acceso en Functions\nRuta 8 — Secretos y configuración de aplicaciones\n  · Secrets, keys y certificados\n  · Recuperar secrets con SDK\n  · Versiones y rotación de secrets\n  · Caching para Key Vault\n  · Conexión a App Configuration\n  · Labels y feature flags\n  · Referenciar secrets de Key Vault\n  · App Config vs Key Vault\nRuta 9 — Observabilidad y troubleshooting\n  · OpenTelemetry y observabilidad\n  · Agregar el SDK de OpenTelemetry\n  · Configurar spans y traces\n  · Exportar a Azure Monitor\n  · Debug con datos de traza\n  · Consultas básicas KQL\n  · Logs, errores y rendimiento\n  · Dashboards para telemetría\n  · Workbooks para análisis\n  · Alertas por fallos y anomalías",
     "samples": [
       "/assets/cloudbooks-engine/ai-200/visual-atlas/_book/cover.png",
@@ -188,6 +187,7 @@
       "/assets/cloudbooks-engine/ai-200/visual-atlas/pages/07/infographic.png"
     ],
     "status": "publicado",
-    "updatedAt": "2026-08-05T05:33:07.285Z"
+    "updatedAt": "2026-08-26T06:25:15.423Z",
+    "pages": 170
   }
 }

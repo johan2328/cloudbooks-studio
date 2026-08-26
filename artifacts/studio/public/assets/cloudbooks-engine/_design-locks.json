@@ -1,0 +1,55 @@
+{
+  "ai-200.master-book": {
+    "locked": true,
+    "lockedAt": "2026-08-16T10:21:03.592Z",
+    "pieces": [
+      "cover",
+      "back",
+      "route:p1",
+      "route:p2",
+      "route:p3",
+      "route:p4",
+      "route:p5",
+      "route:p6",
+      "route:p7",
+      "route:p8",
+      "route:p9",
+      "chapter:cap-01",
+      "chapter:cap-02",
+      "chapter:cap-04",
+      "chapter:cap-06",
+      "chapter:cap-07",
+      "chapter:cap-08",
+      "chapter:cap-09",
+      "chapter:cap-10",
+      "chapter:cap-11",
+      "chapter:cap-12",
+      "chapter:cap-13",
+      "chapter:cap-14",
+      "chapter:cap-15",
+      "chapter:cap-16",
+      "chapter:cap-17",
+      "chapter:cap-18",
+      "chapter:cap-20",
+      "chapter:cap-21",
+      "chapter:cap-22",
+      "chapter:cap-23",
+      "chapter:cap-24"
+    ]
+  },
+  "ai-200.visual-atlas": {
+    "locked": false,
+    "lockedAt": null,
+    "pieces": []
+  },
+  "ab-620.visual-atlas": {
+    "locked": true,
+    "lockedAt": "2026-08-24T09:44:23.946Z",
+    "pieces": []
+  },
+  "ab-620.master-book": {
+    "locked": false,
+    "lockedAt": null,
+    "pieces": []
+  }
+}

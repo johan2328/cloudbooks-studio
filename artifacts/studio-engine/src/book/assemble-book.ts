@@ -11,7 +11,7 @@ import { getProvenance } from "../page-store.js";
 import { listSources } from "../grounding/source-store.js";
 import { getOutline, totalUnits } from "../skills/ai-200-outline.js";
 import type { SourceKind } from "../types.js";
-import { getBookConfig, type BookConfig, type BookStyle } from "./book-config.js";
+import { getBookConfig, saveBookConfig, type BookConfig, type BookStyle } from "./book-config.js";
 import { certMetaByEngineId } from "../certifications.js";
 import { getMatterContract, type MatterContract } from "./matter-contract.js";
 import { buildSheet, SHEET_CSS, laminaImage } from "../export-pdf.js";
@@ -642,6 +642,8 @@ export async function assembleBook(): Promise<AssembleResult> {
       await fs.writeFile(file, bytes);
       const expected = totalUnits();
       if (g.laminas < expected) warnings.unshift(`el libro tiene ${g.laminas} de ${expected} skills aprobadas — faltan ${expected - g.laminas} (no entran las no aprobadas o las que fallaron al regenerar)`);
+      // Persistir el conteo REAL de páginas en la ficha → el storefront (/libro) muestra páginas reales, no el estático de catalog.ts.
+      await saveBookConfig({ ficha: { ...getBookConfig().ficha, pages: pages.length } });
       return { ok: true, url: `/assets/cloudbooks-engine/_export/${certSlug()}_libro.pdf`, pages: pages.length, laminas: g.laminas, sections: g.sections, warnings: warnings.length ? warnings : undefined };
     } catch (err) {
       lastErr = err;

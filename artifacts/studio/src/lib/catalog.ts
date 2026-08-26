@@ -95,7 +95,7 @@ export const FORMATS: FormatDef[] = [
 export interface CertDef { cert: string; title: string; domain: string; available: boolean; eta: string | null; }
 
 export const CERTS: CertDef[] = [
-  { cert: "AI-200", title: "Azure AI Developer", domain: "Inteligencia artificial en Azure", available: true, eta: null },
+  { cert: "AI-200", title: "Azure AI Cloud Developer Associate", domain: "Inteligencia artificial en Azure", available: true, eta: null },
   { cert: "AB-620", title: "AI Agent Builder Associate", domain: "Agentes de IA en Copilot Studio", available: true, eta: null },
   { cert: "AZ-900", title: "Azure Fundamentals", domain: "Fundamentos de nube", available: false, eta: "Q3 2026" },
   { cert: "AI-900", title: "Azure AI (Generativa)", domain: "IA generativa en Azure", available: false, eta: "Q3 2026" },

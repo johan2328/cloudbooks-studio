@@ -30,7 +30,7 @@ export interface BookConfig {
   domainMap: { note: string; rows: DomainMapRow[] };
   sections: { copyright: boolean; preface: boolean; collection: boolean; domainMap: boolean; intro: boolean; studyGuide: boolean; routeIntros: boolean; conclusions: boolean; scenarioReview: boolean; glossary: boolean; bibliography: boolean; backCover: boolean };
   /** Ficha comercial del libro (Publicación · Plan G): generada por IA + editable, para vender en la tienda. */
-  ficha: { synopsis: string; about: string[]; categories: string[]; tags: string[]; marketingBlurb: string; toc: string; samples: string[]; status: "borrador" | "listo" | "publicado"; updatedAt: string };
+  ficha: { synopsis: string; about: string[]; categories: string[]; tags: string[]; marketingBlurb: string; toc: string; samples: string[]; status: "borrador" | "listo" | "publicado"; updatedAt: string; pages?: number };
 }
 
 /** Contenido editable de la ficha comercial (sub-objeto `ficha` de BookConfig). */
