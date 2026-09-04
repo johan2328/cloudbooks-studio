@@ -118,6 +118,22 @@ Devolvé EXACTO: {"opcion_resaltada":"A|B|C|D|ninguna","texto_garabateado":true|
     });
     recordTextSpend(CONFIG.visionModel, res.usage, { kind: "vision", pageId: seed.pageId, label: "infographic-qa" });
     const raw = JSON.parse(res.choices[0]?.message?.content ?? "{}") as Record<string, unknown>;
+    // ── ANTI FAIL-OPEN (P0) ──────────────────────────────────────────────────────────
+    // `b()` es leniente (ausente = cumple) para no penalizar un dato faltante suelto. Pero con una
+    // respuesta VACÍA o TRUNCADA ({} sintácticamente válido, modelo degradado) esa lenidad aprobaba
+    // los 12 chequeos de estilo Y los críticos → ok=true, corte del re-roll y `outcome:"real"`:
+    // el gate CERTIFICABA cualquier lámina reportando que había corrido. Si el veredicto no trae una
+    // masa mínima de las claves esperadas, el QA NO corrió — y "no corrió" nunca es un aprobado.
+    const EXPECTED_KEYS = [
+      "opcion_resaltada", "texto_garabateado", "letra_duplicada", "cards_blancas", "saturacion_ok",
+      "numeracion_ok", "bordes_ok", "guia_pin", "correcta_verde", "bandas_separadas", "guia_alineada",
+      "guia_una_linea", "trampa_icono_ok", "texto_autocheck_ok", "iconos_unicos", "bloque_lleno",
+      "contenido_filtrado", "contenido_cortado",
+    ];
+    const presentKeys = EXPECTED_KEYS.filter((k) => raw[k] !== undefined).length;
+    if (presentKeys < 8) {
+      return { ...base, ran: false, notes: `QA no corrió: el veredicto de visión trajo ${presentKeys}/${EXPECTED_KEYS.length} claves esperadas (respuesta vacía o truncada). NO se certifica la lámina.` };
+    }
     const hl = typeof raw.opcion_resaltada === "string" ? raw.opcion_resaltada.trim().toUpperCase().charAt(0) : "";
     const highlightedLetter = ["A", "B", "C", "D"].includes(hl) ? hl : null;
     const garbled = raw.texto_garabateado === true;

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-C:/Users/jguerra/OneDrive - Datco S.A/Documentos/claude_cloudbooks/cloudbooks-studio}/.claude/hooks/engine-typecheck.mjs\"",
+            "timeout": 120,
+            "statusMessage": "Typecheck del studio-engine..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-C:/Users/jguerra/OneDrive - Datco S.A/Documentos/claude_cloudbooks/cloudbooks-studio}/.claude/hooks/guard-secrets.mjs\"",
+            "timeout": 20,
+            "statusMessage": "Guardia de secretos..."
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-C:/Users/jguerra/OneDrive - Datco S.A/Documentos/claude_cloudbooks/cloudbooks-studio}/.claude/hooks/guard-db-push.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

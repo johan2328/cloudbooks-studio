@@ -97,6 +97,15 @@ Devolvé EXACTAMENTE: {"verdicts":[{"id":"...","verdict":"supported|unsupported|
       recordTextSpend(CONFIG.qaModel, res.usage, { kind: "text", pageId: skillId, label: "verify-grounding" });
       const raw = JSON.parse(res.choices[0]?.message?.content ?? "{}") as { verdicts?: { id?: string; verdict?: string; note?: string }[] };
       const byId = new Map((raw.verdicts ?? []).map((v) => [String(v.id), v] as const));
+      // ── ANTI FAIL-CLOSED (P0) ────────────────────────────────────────────────────────
+      // El Map se llavea con los ids que DEVUELVE el modelo. Si vuelve vacío, con menos veredictos o
+      // renombrando ids, toda claim sin match caía a "unsupported" → tallyGrounding bloqueaba la página,
+      // INDISTINGUIBLE de contenido realmente infundado. Un fallo del verificador NO es un veredicto:
+      // con cobertura insuficiente se reporta como fallo explícito y no se emite juicio de fidelidad.
+      const covered = checks.filter((c) => byId.has(c.claimId)).length;
+      if (checks.length > 0 && covered < Math.ceil(checks.length * 0.9)) {
+        return base({ outcome: "failed", model: CONFIG.qaModel, error: `verificador devolvió ${covered}/${checks.length} veredictos (cobertura insuficiente): no se emite juicio de fidelidad` });
+      }
       for (const c of checks) {
         const v = byId.get(c.claimId);
         c.verdict = v?.verdict === "supported" ? "supported" : v?.verdict === "contradicted" ? "contradicted" : "unsupported";

@@ -114,7 +114,18 @@ export async function groundModule(moduleId: string, opts: { persist?: boolean; 
       // 4) SUPERVISOR — cobertura/pertinencia + alineación psicométrica.
       r.step = "supervise";
       const rel = await timeAgent("supervisor", "supervise-chapter", () => superviseChapter(finalSeed));
-      r.relevance = { status: rel.relevanceStatus, score: rel.score, psychoAlignment: rel.psychoAlignment ?? 0, gaps: rel.gaps };
+      // ── ANTI VEREDICTO-FANTASMA (P0) ────────────────────────────────────────────────
+      // El base de fallo de superviseChapter devuelve relevanceStatus "thin" con score 0. Registrado
+      // tal cual, un FALLO del supervisor (sin llave, tope de costo, error del modelo) queda
+      // INDISTINGUIBLE de un capítulo genuinamente flojo. Un error no es un veredicto.
+      // (Fix durable pendiente: un estado `unknown` propio en RelevanceResult.)
+      const relFailed = rel.outcome !== "real";
+      const relNote = relFailed ? `SUPERVISOR SIN VEREDICTO (${rel.outcome}): ${rel.error ?? "sin detalle"}` : "";
+      if (relFailed) {
+        r.error = `${r.error ? `${r.error} · ` : ""}${relNote}`;
+      } else {
+        r.relevance = { status: rel.relevanceStatus, score: rel.score, psychoAlignment: rel.psychoAlignment ?? 0, gaps: rel.gaps };
+      }
 
       // 5) PERSISTIR CAPÍTULO (seed + procedencia).
       if (persist) {
@@ -131,7 +142,9 @@ export async function groundModule(moduleId: string, opts: { persist?: boolean; 
         };
         upsertPersistedChapter({
           seed: finalSeed, provenance, persistedAt: new Date().toISOString(),
-          relevance: { status: rel.relevanceStatus, score: rel.score, coverageScore: rel.coverageScore, contentScore: rel.contentScore, gaps: rel.gaps, psychoAlignment: rel.psychoAlignment, psychoGaps: rel.psychoGaps },
+          // Si el supervisor no emitió veredicto, se persiste el marcador al frente de `gaps` para que
+          // el cockpit/humano vea que este "thin" NO es un juicio real (ver ANTI VEREDICTO-FANTASMA).
+          relevance: { status: rel.relevanceStatus, score: rel.score, coverageScore: rel.coverageScore, contentScore: rel.contentScore, gaps: relFailed ? [relNote, ...rel.gaps] : rel.gaps, psychoAlignment: rel.psychoAlignment, psychoGaps: rel.psychoGaps },
         });
         r.persisted = true;
       }

@@ -47,3 +47,10 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Secrets (raiz): hasta ahora .env solo estaba ignorado por el .gitignore anidado de
+# artifacts/studio-engine, asi que un .env creado en la raiz, en api-server, studio o lib/db
+# era commiteable (lib/db maneja el connection string de Postgres).
+.env
+.env.*
+!.env.example
