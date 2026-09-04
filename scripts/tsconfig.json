@@ -1,9 +1,13 @@
 {
+  // Este paquete ya no tiene TypeScript: su contenido real son herramientas en .mjs
+  // (archivar-libros.mjs) y .sh/.ps1 (post-merge, sync-replit). El unico .ts que habia
+  // era un `console.log` de andamiaje, nunca invocado.
+  // `files: []` mantiene el `typecheck` del workspace en verde sin inventar fuentes:
+  // con `include: ["src"]` y el directorio vacio, tsc aborta con TS18003.
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
     "types": ["node"]
   },
-  "include": ["src"]
+  "files": []
 }

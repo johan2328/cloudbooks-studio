@@ -1,8 +1,0 @@
-uploads = []
-outputs = []
-
-[[generated]]
-id = "kxlI8fImubYsAJ7xVmFzP"
-uri = "file://artifacts/studio/public/hero-volume-still.png"
-type = "image"
-title = "hero volume still"

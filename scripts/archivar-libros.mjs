@@ -23,6 +23,13 @@
  *   node scripts/archivar-libros.mjs --estado        que hay archivado + vencimiento de la cuarentena
  *   node scripts/archivar-libros.mjs --buscar TEXTO  busca en el indice (por si hace falta recuperar)
  *   node scripts/archivar-libros.mjs --destino G:\X  cambia el disco/carpeta destino
+ *
+ *   node scripts/archivar-libros.mjs --cruft         archiva el PESO MUERTO DEL REPO (no del working
+ *                                                    root): validation-kit, backups fechados, POCs
+ *                                                    sueltos, arboles huerfanos. Solo copia.
+ *   node scripts/archivar-libros.mjs --cruft --mover ademas lo BORRA del repo, pero solo lo que no
+ *                                                    esta trackeado y solo si la copia se verifico.
+ *                                                    Lo trackeado se saca con `git rm`, en un commit.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -118,6 +125,104 @@ if (flag("--estado")) {
     console.log(`  ${c.padEnd(12)} ${String(arch.length).padStart(5)} archivos  ${mb(tot).padStart(8)} MB  [${estado}]`);
   }
   process.exit(0);
+}
+
+// ── Modo --cruft: peso muerto del REPO (distinto del working root) ───────────────
+/**
+ * Ojo: esto NO es el working root, es basura dentro del repo. Por eso va a su propia
+ * carpeta y tiene su propio indice. Regla de oro: se COPIA y se VERIFICA primero;
+ * borrar del disco exige --mover explicito. Lo TRACKEADO nunca se borra aca: eso es
+ * un `git rm` que pertenece a un commit, no a un script de archivado.
+ */
+const CRUFT = [
+  ["artifacts/studio-engine/validation-kit", "QA visual de jun-2026; cero referencias en codigo", false],
+  ["artifacts/studio-engine/_design-fixes-2026-08-20", "backup manual fechado", false],
+  ["artifacts/studio-engine/_practice-gate-2026-08-21", "backup manual fechado", false],
+  ["screenshots", "cero referencias en el repo", true],
+  ["studio", "arbol huerfano en la raiz; el codigo real usa artifacts/studio/public", true],
+  [".agents", "metadata de agente Replit; apunta a un PNG inexistente", true],
+  ["scripts/src/hello.ts", "console.log de 47 bytes, nunca invocado", true],
+];
+/** Scratch suelto en la raiz del engine: se resuelve por patron, no a mano. */
+const CRUFT_PATRONES = [
+  ["artifacts/studio-engine/src", /^_poc-.*\.ts$/, "POC suelto; entra al tsconfig y lleva rutas absolutas de otra maquina", false],
+  ["artifacts/studio-engine", /^build-.*\.ts$/, "script one-off de build", false],
+  // OJO: _raster2.mjs NO entra aca. Implementa el protocolo de verificacion de PDFs que exige
+  // CLAUDE.md (pdf-to-img, nunca el visor Chrome): se promovio a scripts/verificar-pdf.mjs.
+  ["artifacts/studio-engine", /^_cmp.*\.mjs$|^_regen-list\.json$/, "script one-off de comparacion", false],
+];
+
+if (flag("--cruft")) {
+  const MOVER = flag("--mover");
+  const destino = path.join(DESTINO, `repo-cruft-${hoy()}`);
+  console.log(`PESO MUERTO DEL REPO${DRY ? "  (DRY-RUN: no copia nada)" : ""}`);
+  console.log(`  origen:  ${REPO}`);
+  console.log(`  destino: ${destino}`);
+  console.log(`  borrado: ${MOVER ? "SI, tras verificar la copia (solo lo NO trackeado)" : "no (solo copia; usa --mover para liberar disco)"}\n`);
+
+  // Expandir patrones a items concretos.
+  const items = [...CRUFT];
+  for (const [dir, re, motivo, trackeado] of CRUFT_PATRONES) {
+    let ents = [];
+    try { ents = fs.readdirSync(path.join(REPO, dir)); } catch { /* sin dir */ }
+    for (const n of ents.filter((n) => re.test(n))) items.push([`${dir}/${n}`, motivo, trackeado]);
+  }
+
+  const idx = [["ruta_original", "trackeado", "motivo", "bytes", "fecha"].join(";")];
+  let totBytes = 0, totArch = 0, borrados = 0;
+  const fallos = [];
+
+  for (const [rel, motivo, trackeado] of items) {
+    const abs = path.join(REPO, rel);
+    if (!fs.existsSync(abs)) { console.log(`   ausente   ${rel}`); continue; }
+    const esDir = fs.statSync(abs).isDirectory();
+    const archivos = esDir ? listar(abs) : [{ rel: path.basename(abs), abs, size: fs.statSync(abs).size }];
+
+    let bytesItem = 0, okItem = true;
+    for (const f of archivos) {
+      const dst = esDir ? path.join(destino, rel, f.rel) : path.join(destino, rel);
+      const r = copiar(f.abs, dst);
+      if (!r.ok) { okItem = false; fallos.push(`${rel}/${f.rel}: ${r.error}`); continue; }
+      bytesItem += r.bytes;
+    }
+    totBytes += bytesItem; totArch += archivos.length;
+    idx.push([rel, trackeado ? "si" : "no", motivo, bytesItem, hoy()].join(";"));
+
+    // Borrar SOLO si: se pidio --mover, la copia entera salio bien, y NO esta trackeado.
+    let nota = "";
+    if (MOVER && !DRY && okItem && !trackeado) {
+      try { fs.rmSync(abs, { recursive: true, force: true }); borrados++; nota = "  -> BORRADO del repo"; }
+      catch (err) { fallos.push(`borrando ${rel}: ${String(err?.message ?? err)}`); }
+    } else if (MOVER && trackeado) nota = "  -> trackeado: se borra con `git rm`, no aca";
+
+    console.log(`   ${String(archivos.length).padStart(4)} arch  ${mb(bytesItem).padStart(8)} MB  ${rel}${nota}`);
+  }
+
+  if (!DRY) {
+    fs.mkdirSync(destino, { recursive: true });
+    fs.writeFileSync(path.join(destino, "INDICE-cruft.csv"), idx.join("\n"), "utf8");
+    fs.writeFileSync(path.join(destino, "LEEME.txt"),
+      [`PESO MUERTO DEL REPO CLOUDBOOKS`,
+       `Generado: ${hoy()}   Origen: ${REPO}`,
+       ``,
+       `Esto NO son libros: es material que vivia dentro del repo sin cumplir funcion`,
+       `(kit de QA visual, backups fechados, POCs sueltos, arboles huerfanos).`,
+       `Se archiva antes de borrarlo por si algo hacia falta.`,
+       ``,
+       `A diferencia de ..\\finales, esto es DESCARTABLE: si en 60 dias nada lo extrano,`,
+       `se puede borrar entero.`,
+       ``,
+       `INDICE-cruft.csv dice de donde salio cada cosa y por que se considero muerta.`,
+       `Para restaurar: copiar de vuelta a ${REPO}\\<ruta original>`,
+      ].join("\r\n"), "utf8");
+  }
+
+  console.log(`\nRESUMEN`);
+  console.log(`  items: ${items.length}   archivos: ${totArch}   total: ${mb(totBytes)} MB`);
+  if (MOVER) console.log(`  borrados del repo: ${borrados} items no trackeados`);
+  if (fallos.length) { console.log(`  FALLOS (${fallos.length}):`); for (const f of fallos.slice(0, 10)) console.log(`   - ${f}`); }
+  else console.log(`  sin errores`);
+  process.exit(fallos.length ? 1 : 0);
 }
 
 // ── Archivado ────────────────────────────────────────────────────────────────────
