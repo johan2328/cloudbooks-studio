@@ -1,6 +1,0 @@
-{
-  "hash": "82e25098f64037c4",
-  "generatedAt": "2026-08-16T10:14:25.811Z",
-  "anchored": false,
-  "hook": "Despliegue servicios de inferencia en contenedores, desde Azure Container Registry hasta App Service"
-}

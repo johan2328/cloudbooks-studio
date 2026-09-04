@@ -91,3 +91,8 @@ artifacts/studio-engine/build-*.ts
 artifacts/studio-engine/validation-kit/
 artifacts/studio-engine/_design-fixes-*/
 artifacts/studio-engine/_practice-gate-*/
+
+# Working root del engine (Fase 3 de la migracion): salida completa del motor,
+# fuera del arbol servido por Vite. Lo publicable se materializa en public/ con
+# POST /engine/publish-assets. Ver docs/ARCHITECTURE.md.
+.data/
