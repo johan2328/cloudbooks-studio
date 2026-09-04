@@ -54,3 +54,40 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# ── Fase 1 de la migracion de peso del repo (ver docs/ARCHITECTURE.md, deuda P0) ──
+# ESTADO DE RUNTIME del engine ("cubeta C"): lo regenera el pipeline y mutaba en CADA corrida.
+# Iban como TEXTO (LFS solo cubre png/pdf/jpg/webp), asi que cada corrida ensuciaba diffs de megas.
+# NO se ignora lo que codifica decision humana, verdad de negocio o dinero: _book-config.*,
+# _outline.*, _extra-sources.*, _approvals.*, _design-locks, _style-anchor, _certifications,
+# _credit-events, _credit-anchor, *-contract.* y _route-locks siguen versionados.
+artifacts/studio/public/assets/cloudbooks-engine/_authored*.json
+artifacts/studio/public/assets/cloudbooks-engine/_enriched-chapters*.json
+artifacts/studio/public/assets/cloudbooks-engine/_sources*.json
+artifacts/studio/public/assets/cloudbooks-engine/_pages*.json
+artifacts/studio/public/assets/cloudbooks-engine/_chapters*.json
+artifacts/studio/public/assets/cloudbooks-engine/_route-panel*.json
+artifacts/studio/public/assets/cloudbooks-engine/_psychometrics*.json
+artifacts/studio/public/assets/cloudbooks-engine/_relevance*.json
+artifacts/studio/public/assets/cloudbooks-engine/_claim-reviews*.json
+artifacts/studio/public/assets/cloudbooks-engine/_agent-runtime.json
+artifacts/studio/public/assets/cloudbooks-engine/_cert-sync-log.json
+artifacts/studio/public/assets/cloudbooks-engine/_evidence.json
+artifacts/studio/public/assets/cloudbooks-engine/_exam-signal*.json
+artifacts/studio/public/assets/cloudbooks-engine/_book-review.json
+artifacts/studio/public/assets/cloudbooks-engine/_corrida-timing.json
+artifacts/studio/public/assets/cloudbooks-engine/_library-activations.json
+artifacts/studio/public/assets/cloudbooks-engine/_active-book.json
+# _cost-ledger.json ya estaba sin trackear. OJO: es historial FINANCIERO no reproducible ->
+# necesita archivo/backup fuera de git (pendiente en la Fase 3), no se puede simplemente perder.
+artifacts/studio/public/assets/cloudbooks-engine/_cost-ledger.json
+
+# SCRATCH / POC del engine: nunca estuvo trackeado, solo ensuciaba `git status` (329 entradas).
+artifacts/studio-engine/src/_poc-*.ts
+artifacts/studio-engine/_cmp*.mjs
+artifacts/studio-engine/_raster*.mjs
+artifacts/studio-engine/_regen-list.json
+artifacts/studio-engine/build-*.ts
+artifacts/studio-engine/validation-kit/
+artifacts/studio-engine/_design-fixes-*/
+artifacts/studio-engine/_practice-gate-*/
