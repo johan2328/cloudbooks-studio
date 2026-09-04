@@ -37,6 +37,12 @@ export const CONFIG = {
   // modelos "kimi*" van a este endpoint; las imágenes/visión siguen en OpenAI. Key/baseURL desde .env.
   kimiKey: process.env.ENGINE_KIMI_KEY ?? "",
   kimiBaseUrl: process.env.ENGINE_KIMI_BASE_URL ?? "https://api.moonshot.ai/v1",
+  // AZURE gpt-image-2 (deployment propio del usuario). Si endpoint+key están seteados, TODA la generación de
+  // imagen va a este endpoint Azure (aislado del texto, que sigue en OpenAI/Kimi). El baseURL debe terminar en
+  // /openai/v1 (el SDK agrega /images/generations|edits). azureImageModel = nombre del DEPLOYMENT en Azure.
+  azureImageEndpoint: process.env.ENGINE_AZURE_IMAGE_ENDPOINT ?? "",
+  azureImageKey: process.env.ENGINE_AZURE_IMAGE_KEY ?? "",
+  azureImageModel: process.env.ENGINE_AZURE_IMAGE_MODEL ?? "",
   /** Esfuerzo de razonamiento de kimi-k3: low | high | max. "low" por LATENCIA: con fuente completa, "high"/"max" tardaban >10 min/cap. */
   kimiEffort: process.env.ENGINE_KIMI_EFFORT ?? "low",
   // REPARTO DE MODELOS (15-ago): AUTOR y VERIFICADOR/EXPERTO en kimi-k3 (razonamiento → contenido profundo +
@@ -103,6 +109,17 @@ export const CONFIG = {
     ? path.resolve(process.env.ENGINE_OUTPUT_ROOT)
     : path.resolve(here, "..", "..", "studio", "public", "assets", "cloudbooks-engine"),
   publicAssetsBase: "/assets/cloudbooks-engine",
+  /** RAIZ PUBLICADA (Fase 2' de la migracion de peso — ver docs/ARCHITECTURE.md).
+   *  El working root (`outputRoot`) contiene TODO lo que produce el motor (~1.4 GB: paginas
+   *  intermedias, exports, tomas descartadas). Lo que la TIENDA necesita servir es un subconjunto
+   *  chico (portadas + contratapas + muestras ≈ 76 MB). `publishAssets()` copia ese subconjunto
+   *  aca ESPEJANDO las rutas relativas, para que ninguna URL cambie.
+   *  Por defecto apunta al mismo lugar que outputRoot → hoy la publicacion es un no-op que solo
+   *  reporta el manifiesto. Cuando la Fase 3' mueva `ENGINE_OUTPUT_ROOT` fuera del arbol servido,
+   *  este valor queda apuntando al `public/` y el paso empieza a copiar de verdad. */
+  publishRoot: process.env.ENGINE_PUBLISH_ROOT
+    ? path.resolve(process.env.ENGINE_PUBLISH_ROOT)
+    : path.resolve(here, "..", "..", "studio", "public", "assets", "cloudbooks-engine"),
 } as const;
 
 export function pageOutputDir(pageId: string): string {

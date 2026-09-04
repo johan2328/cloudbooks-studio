@@ -19,6 +19,7 @@ import { resolveContract, domainIdForSeed } from "./contract/design-contract.js"
 import { exportBookPdf, exportBook, type ExportFormat } from "./export-pdf.js";
 import { getApprovals, setPageApproved, setPagesApproved, setBookApproved } from "./infographic-approvals.js";
 import { assembleBook, bookOutline, frontMatterPreviewHtml } from "./book/assemble-book.js";
+import { publishAssets } from "./book/publish-assets.js";
 import { getBookConfig, saveBookConfig, saveBookAsset, DEFAULT_CONFIG, type BookConfig } from "./book/book-config.js";
 import { extractPalette } from "./book/extract-palette.js";
 import { generateBookSection, type BookSection } from "./book/book-generate.js";
@@ -1140,6 +1141,17 @@ export function createApp(): Express {
   });
 
   // ── Composición del libro (BookConfig: bloques editables, colección, mapeo, estilo) ──
+  // PUBLICACION DE ASSETS: materializa en `publishRoot` SOLO lo que la tienda sirve (portada,
+  // contratapa, muestras y el config de cada libro PUBLICADO), espejando rutas para no cambiar URLs.
+  // `dryRun` devuelve el manifiesto sin copiar. Ver docs/ARCHITECTURE.md (Fase 2').
+  app.post("/engine/publish-assets", (req: Request, res: Response) => {
+    try {
+      const dryRun = Boolean((req.body as { dryRun?: boolean } | undefined)?.dryRun);
+      noStore(res);
+      res.json(publishAssets(dryRun));
+    } catch (err) { res.status(500).json({ ok: false, error: "publish_failed", detail: String(err) }); }
+  });
+
   app.get("/engine/book-config", (_req: Request, res: Response) => { noStore(res); res.json(getBookConfig()); });
   app.post("/engine/book-config", async (req: Request, res: Response) => {
     try { noStore(res); res.json(await saveBookConfig((req.body ?? {}) as Partial<BookConfig>)); }
@@ -1354,7 +1366,24 @@ export function createApp(): Express {
       const section = String((req.body as { section?: string })?.section ?? "") as BookSection;
       if (!["preface", "intro", "conclusions", "backcover", "collectionNote", "domainNote", "domainRows"].includes(section)) { res.status(400).json({ error: "bad_section" }); return; }
       noStore(res);
-      res.json(await generateBookSection(section));
+      const r = await generateBookSection(section);
+      // PERSISTIR server-side (antes solo devolvía → el ensamblado seguía usando el default del otro cert).
+      // Guarda el bloque en su ubicación de la config del libro activo.
+      if (r.ok) {
+        const cfg = getBookConfig();
+        if ((section === "preface" || section === "intro" || section === "conclusions") && r.html) {
+          await saveBookConfig({ blocks: { ...cfg.blocks, [section]: r.html } });
+        } else if (section === "backcover" && r.html) {
+          await saveBookConfig({ backCover: { ...cfg.backCover, html: r.html } });
+        } else if (section === "collectionNote" && r.note) {
+          await saveBookConfig({ collection: { ...cfg.collection, note: r.note } });
+        } else if (section === "domainNote" && r.note) {
+          await saveBookConfig({ domainMap: { ...cfg.domainMap, note: r.note } });
+        } else if (section === "domainRows" && r.rows) {
+          await saveBookConfig({ domainMap: { ...cfg.domainMap, rows: r.rows } });
+        }
+      }
+      res.json(r);
     } catch (err) { res.status(500).json({ error: "generate_failed", detail: String(err) }); }
   });
 

@@ -90,11 +90,21 @@ studio-engine ──► (cero deps de workspace)
 ### P0 · Peso del repo y salida dentro del frontend — **plan por fases (diseñado, NO ejecutado)**
 Hechos: `.git` ≈ **2.0 GB** (933 MB objetos + 1.1 GB LFS) para ~52k LOC · `artifacts/studio/public` ≈ **1.5 GB**, 852 archivos trackeados bajo `assets/cloudbooks-engine/` · **stores JSON de runtime trackeados como texto** que mutan en cada corrida (`_authored.json` 5.8 MB, `_sources.*` 2.6-3.3 MB) · LFS cubre imágenes/PDF pero no los JSON.
 
-**Migración propuesta, en 4 fases reversibles:**
-1. **Congelar el crecimiento (bajo riesgo).** Añadir al `.gitignore` los stores de runtime y el ruido (`_poc-*`, `validation-kit/`, backups fechados) y sacarlos del índice con `git rm --cached` (los archivos siguen en disco). El `.git` no adelgaza, pero deja de crecer y `git status` se vuelve legible.
-2. **Sacar la salida del árbol servido.** Introducir `ENGINE_OUTPUT_ROOT` fuera de `artifacts/studio/public/` (ya existe como variable) y hacer que `serveEngineAssets()` sirva desde ahí. Elimina la causa del acoplamiento y del `watch.ignored`.
-3. **Definir política de artefactos.** Qué se versiona (PDFs de release por LFS) vs qué es efímero (páginas intermedias, `_export`, `_poc`). Documentarlo acá.
-4. **Decidir (aparte) si se reescribe la historia.** `git filter-repo`/BFG achicaría el `.git`, pero **reescribe hashes**: sólo con el repo quieto y acuerdo explícito. Evaluar si el beneficio compensa.
+**Inventario (Fase 0, medido):** la **tienda sólo sirve 48 archivos / 76 MB** del store de 1360 MB (**5,6%**). Cuatro cubetas: **A** entregable público (76 MB) · **B** verdad de negocio (`_book-config.*`, outlines, aprobaciones, ledgers de dinero; ~0,4 MB) · **C** estado de runtime regenerable (~35 MB, mutaba en cada corrida) · **D** intermedios de producción (~1,25 GB, **caros de regenerar**: hay que *archivar*, no descartar).
+
+**Hallazgos de producción que reordenan el plan:**
+- `serveEngineAssets()` implementa **sólo `configureServer`** → es del **dev server**; en producción no existe.
+- `publicDir` no está override → **el build copia todo `public/` a `dist/`**: hoy cada deploy arrastra 1,4 GB.
+- El engine bindea `127.0.0.1` y 3 páginas del cockpit dependen de `/engine/*` → **el motor es una herramienta local**, no un servicio desplegado.
+- La tienda pública llama al engine sólo para precio/publicado/portada **con `.catch()` → degrada al mock**. `libro.tsx` no hace ningún fetch. En producción sin engine la tienda ya funciona **en modo demo**.
+
+→ **Consecuencia: la vieja "Fase 2" dependía de la vieja "Fase 3".** No se puede mover el working root fuera del árbol servido hasta que exista un paso que deposite ahí el subconjunto entregable. Orden corregido:
+
+1. ✅ **Fase 1 — Congelar el crecimiento (HECHA, commit `8a9e777`).** 34 archivos / 26,8 MB de la cubeta C destrackeados con `git rm --cached` (nada borrado del disco) + `.gitignore` del scratch. Se conservó a propósito lo que codifica decisión humana, negocio o dinero. **No achica el `.git`; frena el sangrado.**
+2. ✅ **Fase 2′ — Publicación explícita (HECHA, aditiva).** `publishAssets()` (`src/book/publish-assets.ts`, endpoint `POST /engine/publish-assets`, `{dryRun}`) recorre los `_book-config.*` **con `ficha.status === "publicado"`** y materializa portada + contratapa + muestras + el propio config en `CONFIG.publishRoot`, **espejando la ruta relativa para que ninguna URL cambie**. Hoy `publishRoot === outputRoot` → es no-op y su valor es el **manifiesto** (medido: **42 archivos / 62,9 MB**, con el AI-300 excluido por estar en borrador).
+3. ⏳ **Fase 3′ — Mover el working root.** Apuntar `ENGINE_OUTPUT_ROOT` fuera de `artifacts/studio/public/` (ej. `<repo>/.data/engine/`, ignorado), adaptar `serveEngineAssets()` para leer de ahí (conservando el chequeo de path-traversal), quitar el parche `watch.ignored` y correr `publish-assets` para poblar el `public/`. Resultado: `public/` pasa de **1,4 GB a ~63 MB**, el deploy adelgaza y el problema se vuelve **estructuralmente imposible**. Riesgo medio: verificar cockpit y tienda tras el movimiento.
+4. ⏳ **Archivar la cubeta D** (1,25 GB) fuera de git antes de ignorarla — **son láminas que costaron dinero**; ignorarlas sin archivarlas expone a perderlas con un `git clean`.
+5. 🔵 **Reescribir la historia (opcional, decisión aparte).** `git filter-repo`/BFG achicaría el `.git`, pero **reescribe hashes**: exige repo quieto, acuerdo explícito y mirror de backup. **Recomendación: no hacerlo por estética** — clonar con `--filter=blob:none` o `--depth` resuelve el 90% del dolor sin cirugía.
 
 ### P1 · Rigor de la arquitectura de IA
 Los tres bugs P0 de los gates ya fueron corregidos (QA de imagen que fallaba **abierto**, verificador que fallaba **cerrado** sin assert de cobertura, y supervisor cuyo error se registraba como veredicto "thin"). **Queda pendiente:**
