@@ -389,8 +389,9 @@ export default function LandingV34() {
     return () => obs.disconnect();
   }, []);
   const reveal = reduce ? {} : { initial: "hidden", whileInView: "show", viewport: { once: true, amount: 0.2 } };
-  const floatA = reduce ? {} : { animate: { y: [0, -8, 0] }, transition: { duration: 5, repeat: Infinity, ease: "easeInOut" } };
-  const floatB = reduce ? {} : { animate: { y: [0, 8, 0] }, transition: { duration: 6, repeat: Infinity, ease: "easeInOut" } };
+  // `as const`: sin el literal, `ease` se ensancha a `string` y no matchea el tipo `Easing` de framer-motion.
+  const floatA = reduce ? {} : { animate: { y: [0, -8, 0] }, transition: { duration: 5, repeat: Infinity, ease: "easeInOut" as const } };
+  const floatB = reduce ? {} : { animate: { y: [0, 8, 0] }, transition: { duration: 6, repeat: Infinity, ease: "easeInOut" as const } };
 
   return (
     <div className="lp19 min-h-screen" style={{ backgroundColor: C.bg, color: C.ink, fontFamily: "var(--app-font-sans)" }}>
