@@ -8,7 +8,7 @@
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "test": "node --import ./scripts/test-setup.mjs --import tsx --test \"src/**/*.test.ts\"",
     "verificar-pdf": "node scripts/verificar-pdf.mjs"
   },
   "dependencies": {

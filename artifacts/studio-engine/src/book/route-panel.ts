@@ -53,7 +53,10 @@ export interface PanelRun {
 //  grounding (el más ruidoso, 2.3) pasa a LINTER determinista (0 LLM) → cero varianza.
 // Roster PODADO (menos ruido, menos costo): lo OBJETIVO va a linters deterministas (grounding + técnico/seguridad);
 // premortem se elimina (vago, redundante); quedan las lentes SUBJETIVAS (visual, pedagogía, engagement, examen).
-const PANEL: { id: string; modality: "vision" | "text" | "lint"; runs: number }[] = [
+// Exportado para que el test de invariantes valide contra la lista REAL en vez de duplicarla:
+// los expertos con modality != "lint" fallan en runtime ("sin contrato para X", ver runExpert)
+// si su id no tiene entrada en AGENT_CONTRACTS.
+export const PANEL: { id: string; modality: "vision" | "text" | "lint"; runs: number }[] = [
   { id: "production-editor", modality: "vision", runs: 1 },       // visual (estable)
   { id: "typography", modality: "vision", runs: 1 },              // visual (estable)
   { id: "reader-engagement", modality: "text", runs: 1 },         // engagement (estable)
