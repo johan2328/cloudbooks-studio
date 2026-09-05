@@ -4,7 +4,7 @@ import {
   Check, Clock, Image as ImageIcon, FileText, Package, ListOrdered, Tag, Sparkles,
   Globe, BookOpen, Truck, CircleDashed, CheckCircle2, X, Eye, DollarSign, ChevronRight, ChevronDown, Cloud, Search, Plus, ArrowLeft, LogOut, ClipboardList, Wand2, Loader2, Save, Hash, RefreshCw,
 } from "lucide-react";
-import { FORMATS } from "@/lib/catalog";
+import { FORMATS } from "@/shared/formats";
 import { logoutEstudio } from "@/lib/estudio-auth";
 import {
   fetchLibraryTree, switchBook, enableBook, fetchBookConfig, saveBookConfig, generateFicha, fetchBookPreviews,

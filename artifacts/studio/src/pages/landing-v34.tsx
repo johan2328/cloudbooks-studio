@@ -419,9 +419,9 @@ export default function LandingV34() {
                 <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ backgroundColor: C.violetBtn }}>{count}</span>
               )}
             </button>
-            <button onClick={() => setLocation("/estudio")} className="group flex items-center gap-2 px-4 h-9 rounded-full text-sm transition-all" style={{ fontWeight: 600, color: C.bright, border: `1px solid ${C.violet}66` }}>
-              Estudio <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-            </button>
+            {/* El boton "Estudio" llevaba al cockpit interno de produccion desde el header
+                PUBLICO: no le sirve a un comprador y le anuncia a cada visitante que hay
+                un panel interno. El acceso sigue existiendo escribiendo /estudio. */}
           </div>
         </div>
       </header>

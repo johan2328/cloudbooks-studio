@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { CommercialNav, LegalRow } from "./landing";
+import { CommercialNav, LegalRow } from "@/components/commercial-nav";
 import { CheckCircle2, Mail, User, MessageSquare, Send, ArrowRight, Edit3, Eye, Shield, ChevronRight, Users, Briefcase, GraduationCap } from "lucide-react";
 
 export default function EmpresasPage() {

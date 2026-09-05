@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { CommercialNav, LegalRow } from "./landing";
+import { CommercialNav, LegalRow } from "@/components/commercial-nav";
 import { ArrowRight, ChevronRight, Users, Layers, Route } from "lucide-react";
 
 export default function NuestraLaborPage() {

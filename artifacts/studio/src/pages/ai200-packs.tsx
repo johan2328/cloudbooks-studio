@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useCart } from "@/lib/cart";
-import { CommercialNav, LegalRow } from "./landing";
+import { CommercialNav, LegalRow } from "@/components/commercial-nav";
 import { cn } from "@/lib/utils";
 import {
   BookOpen, Map, Package, CheckCircle2, ChevronRight,
@@ -53,11 +53,11 @@ export default function AI200Packs() {
           </div>
           <div className="flex items-center gap-3 mb-2 flex-wrap">
             <span className="text-xs font-black text-teal-400 font-mono bg-teal-400/10 border border-teal-400/20 px-2 py-0.5 rounded-sm">AI-200</span>
-            <span className="text-[9px] text-white/30">Azure AI Fundamentals</span>
+            <span className="text-[9px] text-white/30">Azure AI Developer</span>
           </div>
           <h1 className="text-3xl font-black text-white mb-2">AI-200 Certification Collection</h1>
           <p className="text-sm text-white/40 max-w-xl leading-relaxed">
-            Colección completa de preparación para la certificación Azure AI Fundamentals. Elige el paquete que mejor se adapta a tus necesidades.
+            Colección completa de preparación para la certificación Azure AI Developer (AI-200). Elige el paquete que mejor se adapta a tus necesidades.
           </p>
         </div>
       </div>
@@ -158,7 +158,7 @@ export default function AI200Packs() {
                 <div className="w-10 h-10 rounded-sm bg-teal-400/15 border border-teal-400/25 flex items-center justify-center">
                   <Package className="w-5 h-5 text-teal-400" />
                 </div>
-                <span className="text-[8px] font-bold bg-teal-400/20 text-teal-300 border border-teal-400/30 px-1.5 py-0.5 rounded-sm">BEST VALUE</span>
+                <span className="text-[8px] font-bold bg-teal-400/20 text-teal-300 border border-teal-400/30 px-1.5 py-0.5 rounded-sm">MEJOR VALOR</span>
               </div>
               <p className="text-[9px] font-bold text-teal-400/60 uppercase tracking-widest mb-1">Preparación completa</p>
               <h2 className="text-xl font-black text-white mb-3">Collection Pack</h2>

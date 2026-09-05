@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { CommercialNav, LegalRow } from "./landing";
+import { CommercialNav, LegalRow } from "@/components/commercial-nav";
 import {
   ChevronRight, ArrowRight, Layers, Wand2, Shield, Search,
   FileText, BarChart3, Package, Eye, PenLine, Database

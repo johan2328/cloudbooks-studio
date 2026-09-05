@@ -74,6 +74,13 @@ const STUDIO_PREFIXES = [
   "/contenido", "/contenido-base", "/catalogo", "/azure", "/ai-200",
 ];
 
+/* Paths del cockpit del MOTOR (corridas de libro). Distinto del Production Studio:
+   otro guard, otro backend y el unico que necesita el estado de corrida. */
+const ENGINE_PREFIXES = ["/estudio", "/publicacion"];
+
+const matchPrefix = (location: string, prefixes: string[]): boolean =>
+  prefixes.some((p) => location === p || location.startsWith(`${p}/`));
+
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   if (!user) return <Redirect to="/login" />;
@@ -216,23 +223,24 @@ function Router() {
  */
 function SectionProviders() {
   const [location] = useLocation();
-  const isStudio = STUDIO_PREFIXES.some(
-    p => location === p || location.startsWith(p + "/"),
-  );
 
-  if (isStudio) {
-    return (
-      <StudioProvider>
-        <Router />
-      </StudioProvider>
-    );
-  }
+  const seccion = matchPrefix(location, STUDIO_PREFIXES)
+    ? <StudioProvider><Router /></StudioProvider>
+    : <CartProvider><Router /><CartPanel /></CartProvider>;
+
+  // CorridaRunProvider SOLO en el cockpit del motor. Estaba montado globalmente, y su
+  // efecto de init llama a `unlockLibrary()` cuando no hay marcador de corrida: eso
+  // disparaba un POST /engine/library/unlock en CADA visita publica, incluida la home.
+  // En produccion es un fetch fallido silencioso (no hay engine), pero en desarrollo
+  // tocaba la fabrica al abrir la tienda. El unico consumidor real del contexto es
+  // /estudio/indesign; el badge acompania al resto del cockpit del motor.
+  if (!matchPrefix(location, ENGINE_PREFIXES)) return seccion;
 
   return (
-    <CartProvider>
-      <Router />
-      <CartPanel />
-    </CartProvider>
+    <CorridaRunProvider>
+      {seccion}
+      <CorridaBadge />
+    </CorridaRunProvider>
   );
 }
 
@@ -243,10 +251,7 @@ function App() {
         <TooltipProvider>
           <MotionConfig reducedMotion="user">
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <CorridaRunProvider>
-                <SectionProviders />
-                <CorridaBadge />
-              </CorridaRunProvider>
+              <SectionProviders />
             </WouterRouter>
             <Toaster />
           </MotionConfig>
