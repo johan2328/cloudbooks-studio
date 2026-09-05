@@ -120,7 +120,10 @@ export const PRODUCTS: Product[] = CERTS.flatMap(c => {
   const formats: Product[] = FORMATS.map(f => ({
     id: `${c.cert}-${slug(f.name)}`, cert: c.cert, certTitle: c.title, domain: c.domain,
     format: f.name, tag: f.tag, color: f.color, blurb: f.blurb,
-    price: 5.99, available: c.available, eta: c.eta, pack: false,
+    // 9.99 por formato: alineado con lo que publica el engine en backCover.price.
+    // Antes decia 5.99 y el engine 9.99, asi que el precio mostrado dependia de si
+    // la fabrica respondia o no. Este valor es el fallback; el engine sigue mandando.
+    price: 9.99, available: c.available, eta: c.eta, pack: false,
   }));
   const pack: Product = {
     id: `${c.cert}-collection-pack`, cert: c.cert, certTitle: c.title, domain: c.domain,

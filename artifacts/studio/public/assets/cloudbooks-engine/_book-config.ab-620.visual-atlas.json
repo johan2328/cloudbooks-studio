@@ -69,7 +69,7 @@
     "imageUrl": "/assets/cloudbooks-engine/ab-620/visual-atlas/_book/backcover.png",
     "html": "<p class=\"bc-blurb\">Olvídate de los manuales interminables. Este Visual Atlas convierte cada habilidad del AI-200 en una lámina —concepto, trampa y autocheck tipo examen— para que estudies por el camino corto y llegues a rendir con criterio, no con memoria. 9 rutas, 30 casos de escenario con respuestas y un glosario: el atlas de Desarrollo en Azure de Soluciones de IA, listo para el examen y para producción.</p>\n<p class=\"bc-lead\">Qué vas a dominar</p>\n<ul class=\"bc-list\"><li>Contenedores, bases de datos vectoriales, mensajería, seguridad y observabilidad en Azure.</li><li>Las trampas frecuentes del examen, explicadas: mito vs corrección.</li><li>Autochecks y 30 casos de escenario para medir tu avance real antes de rendir.</li><li>Una referencia visual que sirve en el examen y en el trabajo.</li></ul>",
     "isbn": "978-987-00000-0-0",
-    "price": "",
+    "price": "9.99",
     "overlay": {
       "top": 12,
       "left": 9,
