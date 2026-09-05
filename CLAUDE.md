@@ -46,7 +46,9 @@ El motor tiene un roster formal, cada agente gobernado por su **contrato**: rost
 - **Windows** es un camino soportado a mano: `start-dev.ps1` (el workspace strippea binarios nativos win32 a propósito).
 - Engine atado a `127.0.0.1`, CORS local, `ENGINE_TOKEN` inyectado por el proxy (nunca entra al bundle), chequeo de path-traversal en `serveEngineAssets()`.
 - **Secretos:** `.env` ignorado también desde la raíz (`.env`, `.env.*`, salvo `.env.example`). Nunca commitear claves; si una se expone, **rotarla**.
-- **Sin CI, sin ESLint/Prettier configurado y con 1 solo test** en todo el repo: el único gate real hoy es `typecheck`. Tratá cualquier cambio como no verificado por defecto.
+- **CI en `.github/workflows/ci.yml`**: cada push verifica clonar → `pnpm install --frozen-lockfile` → `typecheck` → build → tests → que no se cuele un `.env`. Clona **sin LFS** a propósito (los binarios sólo se copian como estáticos y así no se quema la cuota mensual de GitHub) y exporta `PORT`/`BASE_PATH`, sin los cuales `vite.config.ts` lanza.
+- **Sigue sin ESLint/Prettier y con 1 solo test** en todo el repo. El CI verifica que *compila*, no que *funciona*: tratá el comportamiento como no verificado por defecto.
+- **Variables de entorno**: hay un `.env.example` por paquete (`studio-engine`, `studio`, `api-server`, `lib/db`) con los defaults reales. Ojo con las que hacen *throw*: `PORT`/`BASE_PATH` en studio y `DATABASE_URL` en `lib/db` (lanza **al importarse**, no por request).
 
 ## Docs: cuáles mienten
 `replit.md` está **viejo** (describe otro producto, ni menciona el `studio-engine` ni el puerto 8790) y el `README.md` tiene **rutas absolutas a otra carpeta**. La fuente de verdad es este archivo + `docs/ARCHITECTURE.md` + `.claude/skills/`.
