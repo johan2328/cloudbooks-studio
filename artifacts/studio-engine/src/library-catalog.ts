@@ -4,6 +4,7 @@ import { CONFIG } from "./config.js";
 import { setActiveBook } from "./active-book.js";
 import { atomicWriteFileSync } from "./fs-safe.js";
 import { canonicalCerts, levelToEngine, type EnrichedCert } from "./certifications.js";
+import type { CertLevel, CertTrack } from "./types.js";
 
 /**
  * BIBLIOTECA MULTI-CLOUD (cloud → certificación → libro/formato).
@@ -34,10 +35,10 @@ export interface LibBook {
   /** Activado para producción (switcheable). Los no-activados salen en gris con tag "próx". */
   enabled?: boolean;
 }
-/** Nivel de la certificación (badge en cada tarjeta). */
-export type CertLevel = "fundamentals" | "associate" | "expert" | "specialty";
-/** Track / familia de producto (agrupa el catálogo en sub-secciones legibles). */
-export type CertTrack = "azure" | "ai" | "data" | "security" | "devops" | "m365" | "power-platform" | "dynamics";
+// CertLevel y CertTrack se movieron a types.ts (hoja sin imports) para romper el ciclo
+// real library-catalog <-> certifications. Se re-exportan para no cambiar el import de
+// quien ya los tomaba de aca.
+export type { CertLevel, CertTrack } from "./types.js";
 
 export interface LibCert {
   id: string;

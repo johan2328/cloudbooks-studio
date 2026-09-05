@@ -2,7 +2,7 @@ import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { CONFIG } from "./config.js";
 import { atomicWriteFileSync } from "./fs-safe.js";
-import type { CertTrack, CertLevel } from "./library-catalog.js";
+import type { CertTrack, CertLevel } from "./types.js";
 
 /**
  * CATÁLOGO CANÓNICO DE CERTIFICACIONES — fuente ÚNICA (engine). Reemplaza al viejo

@@ -761,3 +761,19 @@ export interface GenerateResult {
   htmlPath: string;
   bytes: number;
 }
+
+/* ── Taxonomía de certificaciones ──────────────────────────────────────────────
+   Vivían en `library-catalog.ts`, que las exportaba a `certifications.ts` — pero
+   `library-catalog` importa VALORES de `certifications` (canonicalCerts,
+   levelToEngine). Era un ciclo de importación REAL que sobrevivía sólo porque la
+   arista de vuelta era `import type`, que TypeScript borra al emitir.
+
+   Un ciclo que depende de que nadie necesite nunca un VALOR en esa dirección es
+   una bomba de tiempo: el día que alguien lo necesite, el módulo muere en carga
+   con "Cannot access 'X' before initialization". Viviendo acá —`types.ts` no
+   importa nada— el ciclo desaparece de raíz. */
+
+/** Nivel de la certificación (badge en cada tarjeta). */
+export type CertLevel = "fundamentals" | "associate" | "expert" | "specialty";
+/** Track / familia de producto (agrupa el catálogo en sub-secciones legibles). */
+export type CertTrack = "azure" | "ai" | "data" | "security" | "devops" | "m365" | "power-platform" | "dynamics";
