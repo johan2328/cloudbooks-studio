@@ -8,6 +8,28 @@ import { currentBook } from "./book-context.js";
 loadDotEnv();
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+/** Raíz del PAQUETE (`artifacts/studio-engine`), no el cwd de quien arrancó el proceso. */
+const pkgRoot = path.resolve(here, "..");
+
+/**
+ * Resuelve una ruta que viene del entorno. Absoluta se respeta; RELATIVA se resuelve
+ * contra la raíz del paquete, NUNCA contra `process.cwd()`.
+ *
+ * Por qué importa: `.env` trae `ENGINE_OUTPUT_ROOT=../../.data/engine`. Con el
+ * `path.resolve()` anterior eso dependía del directorio desde el que se lanzara el
+ * proceso, así que arrancar el engine desde la raíz del monorepo (o desde
+ * `artifacts/`) apuntaba a un directorio INEXISTENTE — y como `atomicWriteFileSync`
+ * hace `mkdirSync`, no fallaba: creaba el árbol vacío y lo iba llenando. El síntoma
+ * era una biblioteca vacía sin ningún error, con los libros intactos en otro lado.
+ *
+ * Arrancando como manda CLAUDE.md (cwd = este paquete) el path resuelto es idéntico
+ * al anterior: este cambio no mueve nada, solo elimina la dependencia del cwd.
+ */
+function envPath(v: string | undefined, fallback: string): string {
+  if (!v || !v.trim()) return fallback;
+  const raw = v.trim();
+  return path.isAbsolute(raw) ? path.normalize(raw) : path.resolve(pkgRoot, raw);
+}
 
 /** Resuelve un ejecutable de Chrome/Edge para el QA renderizado (headless). */
 function resolveChrome(): string | null {
@@ -105,9 +127,7 @@ export const CONFIG = {
   /** Umbral de "unidad densa": con esta cantidad de tarjetas o más, la lámina se vuelve SPREAD (pág 1 = las 6 primeras tarjetas; pág 2 = tarjetas restantes + trampas + autocheck). 6 o menos = una sola página. Corrida 37.2. */
   spreadMinModules: Number(process.env.ENGINE_SPREAD_MIN_MODULES) || 7,
   contractVersion: "engine-v1-2026-06",
-  outputRoot: process.env.ENGINE_OUTPUT_ROOT
-    ? path.resolve(process.env.ENGINE_OUTPUT_ROOT)
-    : path.resolve(here, "..", "..", "studio", "public", "assets", "cloudbooks-engine"),
+  outputRoot: envPath(process.env.ENGINE_OUTPUT_ROOT, path.resolve(here, "..", "..", "studio", "public", "assets", "cloudbooks-engine")),
   publicAssetsBase: "/assets/cloudbooks-engine",
   /** RAIZ PUBLICADA (Fase 2' de la migracion de peso — ver docs/ARCHITECTURE.md).
    *  El working root (`outputRoot`) contiene TODO lo que produce el motor (~1.4 GB: paginas
@@ -117,9 +137,7 @@ export const CONFIG = {
    *  Por defecto apunta al mismo lugar que outputRoot → hoy la publicacion es un no-op que solo
    *  reporta el manifiesto. Cuando la Fase 3' mueva `ENGINE_OUTPUT_ROOT` fuera del arbol servido,
    *  este valor queda apuntando al `public/` y el paso empieza a copiar de verdad. */
-  publishRoot: process.env.ENGINE_PUBLISH_ROOT
-    ? path.resolve(process.env.ENGINE_PUBLISH_ROOT)
-    : path.resolve(here, "..", "..", "studio", "public", "assets", "cloudbooks-engine"),
+  publishRoot: envPath(process.env.ENGINE_PUBLISH_ROOT, path.resolve(here, "..", "..", "studio", "public", "assets", "cloudbooks-engine")),
 } as const;
 
 export function pageOutputDir(pageId: string): string {
