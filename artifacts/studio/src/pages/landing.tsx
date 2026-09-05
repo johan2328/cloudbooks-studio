@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { useCart } from "@/lib/cart";
 import { cn } from "@/lib/utils";
+// useCart y los iconos del carrito/buscador (Globe, Search, ShoppingCart, X, Minus, Plus)
+// se fueron con la barra comercial a components/commercial-nav.tsx.
 import {
   BookOpen, Map, Package, ArrowRight, ChevronRight,
   CheckCircle2, Check, Clock, Database, Layers, Edit3, Eye, Shield, Package as Pkg,
-  Globe, Search, ShoppingCart, X, Minus, Plus, Users, Briefcase, GraduationCap,
+  Users, Briefcase, GraduationCap,
   FileText, Wand2, Beaker, ClipboardCheck, Sparkles,
 } from "lucide-react";
 

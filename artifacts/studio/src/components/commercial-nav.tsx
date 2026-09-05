@@ -59,7 +59,7 @@ export function LegalRow() {
 /* ─── Nav comercial compartida ──────────────────────────────────────────── */
 export function CommercialNav({ active }: { active?: string }) {
   const [, setLocation] = useLocation();
-  const { count, open: cartOpen, setOpen: setCartOpen } = useCart();
+  const { count, setOpen: setCartOpen } = useCart();
   const [searchOpen, setSearchOpen] = useState(false);
 
   return (

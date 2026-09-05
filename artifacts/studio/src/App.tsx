@@ -67,7 +67,14 @@ const queryClient = new QueryClient({
   },
 });
 
-/* Paths que pertenecen al Production Studio (requieren StudioProvider) */
+/* Paths que pertenecen al Production Studio (requieren StudioProvider).
+ *
+ * TRAMPA A LA VISTA: esta lista se mantiene A MANO y decide que providers se montan.
+ * "/ai-200" esta aca, y la ruta PUBLICA "/ai-200-packs" se salva de caer en la rama del
+ * cockpit solo porque `matchPrefix` exige coincidencia exacta o "/ai-200/". Si alguien
+ * "simplifica" eso a un `startsWith(p)`, /ai-200-packs pierde el CartProvider y revienta
+ * al renderizar CommercialNav, que llama useCart.
+ * En la fase 3 estos prefijos se DERIVAN de la definicion de rutas en vez de repetirse. */
 const STUDIO_PREFIXES = [
   "/studio", "/biblioteca", "/generacion", "/qa", "/qa-report", "/exportacion",
   "/contrato", "/estandares", "/actividad", "/composer", "/conectores", "/assets",
