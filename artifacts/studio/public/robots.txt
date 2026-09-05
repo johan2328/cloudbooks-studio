@@ -1,2 +1,27 @@
+# CloudBooks — indexacion.
+# La tienda publica si se indexa; lo que no debe indexarse es el cockpit interno
+# ni los assets crudos del motor (los _book-config.json llevan el front/back matter
+# real del libro: prefacio, guia de estudio, glosario).
 User-agent: *
 Allow: /
+
+# Cockpit de produccion (interno)
+Disallow: /estudio
+Disallow: /studio
+Disallow: /publicacion
+Disallow: /generacion
+Disallow: /qa
+Disallow: /qa-report
+Disallow: /composer
+Disallow: /exportacion
+Disallow: /contrato
+Disallow: /estandares
+Disallow: /actividad
+Disallow: /conectores
+Disallow: /contenido
+Disallow: /contenido-base
+Disallow: /assets/cloudbooks-engine
+
+# Flujo de reserva: no aporta nada en un buscador
+Disallow: /checkout
+Disallow: /mi-biblioteca

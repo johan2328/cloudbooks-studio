@@ -8,6 +8,7 @@ import { getProduct, formatDef, productsForCert, FORMATS, REVIEWS, RATING_DIST, 
 import { ownsBook } from "@/lib/library";
 import { getReviews, addReview, hasVotedHelpful, toggleHelpful, type UserReview } from "@/lib/reviews";
 import { fetchStorefront, fetchStorefrontCatalog, type EngineStorefront } from "@/lib/engine-api";
+import { fetchPublishedBook } from "@/lib/published-book";
 import { BookCover } from "@/components/book-cover";
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -103,8 +104,13 @@ export default function Libro() {
   useEffect(() => {
     let alive = true;
     const preview = new URLSearchParams(window.location.search).get("preview") === "1";
-    fetchStorefront(p.cert, slug(p.format), preview)
+    const bookId = slug(p.format);
+    // Engine primero (trae lo ultimo); si no responde -> ficha PUBLICADA estatica, que
+    // viaja dentro del build. Sin esto, en produccion la tienda mostraba muestras
+    // sinteticas y precio mock teniendo el producto real en public/.
+    fetchStorefront(p.cert, bookId, preview)
       .then(r => { if (alive) setStore(r.view ?? null); })
+      .catch(() => fetchPublishedBook(p.cert, bookId).then(v => { if (alive) setStore(v); }))
       .catch(() => { if (alive) setStore(null); });
     return () => { alive = false; };
   }, [p.id, p.cert, p.format]);

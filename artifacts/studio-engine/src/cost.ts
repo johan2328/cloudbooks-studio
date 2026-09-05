@@ -101,7 +101,21 @@ export function wouldExceedCap(nextCostUsd: number): boolean {
   return CONFIG.costCapUsd > 0 && monthSpent() + nextCostUsd > CONFIG.costCapUsd;
 }
 
-/** Registra CUALQUIER gasto de OpenAI (imagen/texto/visión) en el ledger. */
+/**
+ * Registra CUALQUIER gasto de OpenAI (imagen/texto/visión) en el ledger.
+ *
+ * ATOMICIDAD: el read→push→write ocurre entero en UN turno del event loop. No hay
+ * `await` en el medio, así que Node —mono-hilo— no puede intercalar otra llamada:
+ * dos generaciones en paralelo suman ambas entradas en vez de pisarse.
+ *
+ * Esto NO es decorativo: el ledger es historial financiero no reproducible y es la
+ * base de `monthSpent()`, del tope de gasto (`wouldExceedCap`) y del panel de costos.
+ * Cualquier refactor que meta un `await` entre `read()` y `write()` reintroduce una
+ * lost-update y pierde gasto en silencio. Si algún día hace falta cruzar un await,
+ * usar `withLock("cost-ledger", ...)` de `fs-safe.ts` — pero entonces el gasto deja
+ * de ser visible en el mismo tick para `wouldExceedCap`, que es lo que hoy evita
+ * pasarse del tope en una tanda concurrente.
+ */
 export function recordSpend(entry: { kind: string; model: string; costUsd: number; pageId?: string; label?: string }): void {
   const entries = read();
   entries.push({
