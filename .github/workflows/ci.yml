@@ -1,0 +1,81 @@
+# ── CI de CloudBooks ─────────────────────────────────────────────────────────
+# Por que existe: hasta ahora el UNICO gate era `pnpm typecheck` corrido a mano, y
+# se comprobo dos veces que puede estar roto sin que nadie se entere —primero en
+# rojo durante semanas porque el archivo que fallaba no estaba versionado, y
+# despues con el guard de `preinstall` bloqueando pnpm entero—. Esto cierra esa
+# clase de sorpresa: cada push verifica que el repo CLONA, INSTALA y COMPILA.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  # Un push nuevo cancela la corrida anterior de la misma rama.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Instalar, typecheck, build y tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Clonar
+        uses: actions/checkout@v4
+        with:
+          # SIN objetos LFS a proposito. Son ~65 MB de PNG de portadas y laminas
+          # que el build solo COPIA como estaticos: con los punteros de texto el
+          # build igual pasa, y asi cada corrida no consume la cuota mensual de
+          # ancho de banda LFS de GitHub (1 GB en el plan gratuito).
+          lfs: false
+
+      - name: Preparar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          # Misma version que declara .replit (modules = ["nodejs-24", ...]).
+          node-version: 24
+          cache: pnpm
+
+      - name: Instalar dependencias
+        # --frozen-lockfile falla si pnpm-lock.yaml no coincide con los
+        # package.json o con el workspace. Es lo que atrapa el caso "cambie el
+        # workspace y me olvide de regenerar el lockfile", que rompe el deploy.
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        # vite.config.ts LANZA si falta PORT o BASE_PATH, asi que el build no
+        # arranca sin las dos. En Replit las define .replit-artifact/artifact.toml.
+        env:
+          PORT: "5173"
+          BASE_PATH: "/"
+          NODE_ENV: production
+        run: pnpm -r --if-present run build
+
+      - name: Tests
+        # Hoy hay un solo archivo de test en todo el repo. Corre igual para que
+        # el dia que se agreguen no haya que acordarse de cablear nada.
+        run: pnpm -r --if-present run test
+
+      - name: Verificar que no se colo ningun .env
+        # Guarda de secretos: los .env estan gitignorados, pero un `git add -f`
+        # los meteria. Los .env.example SI deben existir y no se cuentan.
+        run: |
+          fugas=$(git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$' || true)
+          if [ -n "$fugas" ]; then
+            echo "Hay archivos .env versionados:"
+            echo "$fugas"
+            exit 1
+          fi
+          echo "Sin .env versionados."
