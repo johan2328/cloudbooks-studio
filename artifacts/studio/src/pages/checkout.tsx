@@ -1,16 +1,25 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowLeft, ShoppingCart, Lock, CreditCard, Check, Zap, Loader2, BookOpen, Mail, Wallet, BadgeCheck, KeyRound } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Check, Loader2, BookOpen, Mail, BellRing, Clock } from "lucide-react";
 import { useCart } from "@/lib/cart";
-import { addToLibrary, type OwnedBook } from "@/lib/library";
+import { joinWaitlist, type WaitlistEntry } from "@/lib/waitlist";
 import { formatDef, PACK_COLOR, fmtUSD } from "@/lib/catalog";
 import { BookCover } from "@/components/book-cover";
-import { SiVisa, SiMastercard, SiJcb, SiMercadopago } from "react-icons/si";
 
 /* ════════════════════════════════════════════════════════════════════════════
-   CHECKOUT — flujo de compra (PROTOTIPO). No realiza ningún cobro real.
-   // TODO_REAL: conectar Stripe + crear orden en backend.
+   RESERVA / LISTA DE ESPERA — las ventas todavía no están abiertas.
+
+   Esto ERA un checkout simulado y se convirtió deliberadamente: pedía número de
+   tarjeta con `autoComplete="cc-number"` (el navegador ofrecía la tarjeta REAL
+   del visitante), mostraba sellos de "Procesado por Stripe", "pago cifrado SSL",
+   "no almacenamos tu tarjeta" y "garantía de reembolso", y confirmaba una compra
+   diciendo "te enviamos el acceso a tu email" — sin cobrar, sin entregar y sin
+   enviar nada. Ninguna de esas afirmaciones era cierta.
+
+   Mientras no exista el backend de pagos, acá NO se piden datos de tarjeta ni se
+   promete nada. Se registra a quién avisar cuando abran las ventas.
+   // TODO_REAL: Stripe Elements + orden en backend → ver PAYMENTS_INTEGRATION.md
    ════════════════════════════════════════════════════════════════════════════ */
 
 const D = "'Space Grotesk','Inter',sans-serif";
@@ -30,24 +39,24 @@ export default function Checkout() {
   const [stage, setStage] = useState<Stage>("form");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [order, setOrder] = useState("");
-  const [bought, setBought] = useState<OwnedBook[]>([]);
-  const [method, setMethod] = useState<"card" | "paypal">("card");
+  const [reserved, setReserved] = useState<WaitlistEntry[]>([]);
 
   const total = cart.total;
-  const canPay = email.includes("@") && cart.count > 0;
+  const canReserve = email.includes("@") && cart.count > 0;
 
-  const pay = () => {
-    if (!canPay) return;
+  const reservar = () => {
+    if (!canReserve) return;
     setStage("processing");
-    const orderId = `CB-${Date.now().toString(36).toUpperCase()}`;
-    const items: OwnedBook[] = cart.items.map(i => ({ id: i.id, name: i.name, cert: i.cert, format: i.format, price: i.price, order: orderId, purchasedAt: new Date().toISOString() }));
+    const requestedAt = new Date().toISOString();
+    const entries: WaitlistEntry[] = cart.items.map(i => ({
+      id: i.id, name: i.name, cert: i.cert, format: i.format, price: i.price, email, requestedAt,
+    }));
     setTimeout(() => {
-      addToLibrary(items);
-      setOrder(orderId); setBought(items);
+      joinWaitlist(entries);
+      setReserved(entries);
       cart.clear();
       setStage("done");
-    }, 1300);
+    }, 700);
   };
 
   /* ── pantalla de éxito ── */
@@ -59,14 +68,14 @@ export default function Checkout() {
             className="w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-6" style={{ backgroundColor: `${C.green}1f`, border: `1px solid ${C.green}` }}>
             <Check className="w-8 h-8" style={{ color: C.green }} />
           </motion.div>
-          <h1 className="tracking-[-0.03em]" style={{ fontFamily: D, fontWeight: 700, fontSize: "clamp(1.8rem,4vw,2.6rem)" }}>¡Compra confirmada!</h1>
+          <h1 className="tracking-[-0.03em]" style={{ fontFamily: D, fontWeight: 700, fontSize: "clamp(1.8rem,4vw,2.6rem)" }}>Anotado</h1>
           <p className="mt-3 text-[15px]" style={{ color: C.inkSoft }}>
-            Pedido <span className="font-mono" style={{ color: C.bright }}>{order}</span>. Te enviamos el acceso a <span style={{ color: C.ink }}>{email}</span>.
+            Te avisamos a <span style={{ color: C.ink }}>{email}</span> cuando abramos las ventas. No hay ningún cobro: todavía no vendemos.
           </p>
           <div className="mt-7 rounded-2xl p-5 text-left" style={{ backgroundColor: C.card, border: `1px solid ${C.ink}14` }}>
-            <p className="font-mono text-[11px] uppercase tracking-[0.2em] mb-3" style={{ color: C.inkSoft }}>Ya tienes acceso a</p>
+            <p className="font-mono text-[11px] uppercase tracking-[0.2em] mb-3" style={{ color: C.inkSoft }}>Te avisamos por</p>
             <div className="flex flex-col gap-2.5">
-              {bought.map(b => (
+              {reserved.map(b => (
                 <div key={b.id} className="flex items-center gap-3">
                   <BookOpen className="w-4 h-4 shrink-0" style={{ color: C.violet }} />
                   <span className="text-[14px] flex-1" style={{ fontFamily: D, fontWeight: 600 }}>{b.name}</span>
@@ -76,10 +85,9 @@ export default function Checkout() {
             </div>
           </div>
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-            <button onClick={() => setLocation("/mi-biblioteca")} className="group flex items-center gap-2 text-white px-6 h-12 rounded-full text-sm transition-all hover:brightness-110" style={{ fontFamily: D, fontWeight: 600, backgroundColor: C.violetBtn }}>
-              <BookOpen className="w-4 h-4" /> Ir a Mi biblioteca
+            <button onClick={() => setLocation("/colecciones")} className="group flex items-center gap-2 text-white px-6 h-12 rounded-full text-sm transition-all hover:brightness-110" style={{ fontFamily: D, fontWeight: 600, backgroundColor: C.violetBtn }}>
+              <BookOpen className="w-4 h-4" /> Seguir explorando el catálogo
             </button>
-            <button onClick={() => setLocation("/colecciones")} className="px-5 h-12 rounded-full text-sm border transition-all hover:bg-white/5" style={{ fontFamily: D, fontWeight: 500, borderColor: `${C.ink}26`, color: C.ink }}>Seguir comprando</button>
           </div>
         </div>
       </Shell>
@@ -104,8 +112,8 @@ export default function Checkout() {
   return (
     <Shell setLocation={setLocation} cartCount={cart.count}>
       <div className="mx-auto max-w-[1040px] px-6 py-10">
-        <button onClick={() => setLocation("/colecciones")} className="inline-flex items-center gap-1.5 text-[13px] mb-6 transition-opacity hover:opacity-100" style={{ color: C.inkSoft, opacity: 0.8 }}><ArrowLeft className="w-4 h-4" /> Seguir comprando</button>
-        <h1 className="tracking-[-0.03em] mb-8" style={{ fontFamily: D, fontWeight: 700, fontSize: "clamp(1.9rem,4vw,2.8rem)" }}>Finalizar compra</h1>
+        <button onClick={() => setLocation("/colecciones")} className="inline-flex items-center gap-1.5 text-[13px] mb-6 transition-opacity hover:opacity-100" style={{ color: C.inkSoft, opacity: 0.8 }}><ArrowLeft className="w-4 h-4" /> Volver al catálogo</button>
+        <h1 className="tracking-[-0.03em] mb-8" style={{ fontFamily: D, fontWeight: 700, fontSize: "clamp(1.9rem,4vw,2.8rem)" }}>Reservar tu ejemplar</h1>
 
         <div className="grid lg:grid-cols-[1fr_360px] gap-6 items-start">
           {/* datos + pago */}
@@ -115,49 +123,23 @@ export default function Checkout() {
                 <Field label="Email"><input type="email" name="email" autoComplete="email" spellCheck={false} value={email} onChange={e => setEmail(e.target.value)} placeholder="tucorreo@ejemplo.com" className={inputCls} style={inputStyle} /></Field>
                 <Field label="Nombre"><input type="text" name="name" autoComplete="name" value={name} onChange={e => setName(e.target.value)} placeholder="Tu nombre" className={inputCls} style={inputStyle} /></Field>
               </div>
-              <p className="mt-2 text-[12px] flex items-center gap-1.5" style={{ color: C.inkSoft }}><Mail className="w-3.5 h-3.5" /> Aquí enviamos el acceso a tus libros.</p>
+              <p className="mt-2 text-[12px] flex items-center gap-1.5" style={{ color: C.inkSoft }}><Mail className="w-3.5 h-3.5" /> Aquí te avisamos cuando abramos las ventas.</p>
             </Card>
 
-            <Card step="2" title="Método de pago" icon={Lock}>
-              {/* selector de método */}
-              <div className="grid grid-cols-2 gap-3 mb-5">
-                {([["card", "Tarjeta", CreditCard], ["paypal", "PayPal", Wallet]] as const).map(([m, label, Ic]) => (
-                  <button key={m} onClick={() => setMethod(m)} className="h-12 rounded-xl flex items-center justify-center gap-2 text-sm transition-all"
-                    style={method === m ? { backgroundColor: `${C.violet}1f`, border: `1.5px solid ${C.violet}`, color: C.ink, fontFamily: D, fontWeight: 700 } : { backgroundColor: C.bg, border: `1px solid ${C.ink}1f`, color: C.inkSoft }}>
-                    <Ic className="w-4 h-4" /> {label}
-                  </button>
-                ))}
-              </div>
-
-              {method === "card" ? (
-                <div className="flex flex-col gap-4">
-                  {/* TODO_REAL: reemplazar por Stripe Elements (CardElement) */}
-                  <Field label="Número de tarjeta">
-                    <div className="relative">
-                      <CreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: C.inkSoft }} />
-                      <input inputMode="numeric" name="cc-number" autoComplete="cc-number" spellCheck={false} placeholder="1234 1234 1234 1234" className={inputCls + " pl-10"} style={inputStyle} />
-                    </div>
-                  </Field>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Field label="Vencimiento"><input name="cc-exp" autoComplete="cc-exp" placeholder="MM / AA" className={inputCls} style={inputStyle} /></Field>
-                    <Field label="CVC"><input inputMode="numeric" name="cc-csc" autoComplete="cc-csc" spellCheck={false} placeholder="123" className={inputCls} style={inputStyle} /></Field>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 flex-wrap pt-1">
-                    <div className="flex items-center gap-1.5 flex-wrap"><PayMark id="visa" /><PayMark id="mastercard" /><PayMark id="maestro" /><PayMark id="jcb" /><PayMark id="mercadopago" /></div>
-                    <span className="text-[11px] inline-flex items-center gap-1.5" style={{ color: C.inkSoft }}><Lock className="w-3 h-3" style={{ color: C.teal }} /> Procesado por Stripe</span>
-                  </div>
-                </div>
-              ) : (
-                /* TODO_REAL: reemplazar por el botón oficial del PayPal JS SDK */
-                <div className="rounded-xl p-5 text-center" style={{ backgroundColor: C.bg, border: `1px solid ${C.ink}1f` }}>
-                  <Wallet className="w-7 h-7 mx-auto mb-2" style={{ color: C.bright }} />
-                  <p className="text-[14px]" style={{ fontFamily: D, fontWeight: 600 }}>Pagar con PayPal</p>
-                  <p className="text-[12px] mt-1 max-w-xs mx-auto" style={{ color: C.inkSoft }}>Te redirigiremos a PayPal para completar el pago de forma segura. No compartimos tus datos con el vendedor.</p>
-                </div>
-              )}
-
-              <div className="mt-4 flex items-center gap-2 rounded-lg px-3 py-2.5 text-[12px]" style={{ backgroundColor: `${C.gold}12`, border: `1px solid ${C.gold}33`, color: C.gold }}>
-                <Lock className="w-3.5 h-3.5 shrink-0" /> Demo — no se realiza ningún cobro real. En producción se conecta con Stripe y PayPal.
+            {/* NO se piden datos de tarjeta: no hay backend de pagos, así que pedirlos
+                seria recolectar datos sensibles sin motivo ni forma de protegerlos. */}
+            <Card step="2" title="Todavía no vendemos" icon={Clock}>
+              <p className="text-[14px] leading-relaxed" style={{ color: C.inkSoft }}>
+                Estamos completando el catálogo antes de abrir las ventas. Cuando abramos, te escribimos
+                al email de arriba con el enlace de compra — <span style={{ color: C.ink }}>sin cobro previo
+                y sin compromiso</span>.
+              </p>
+              <ul className="mt-4 flex flex-col gap-2 text-[13px]" style={{ color: C.inkSoft }}>
+                <li className="flex items-start gap-2"><BellRing className="w-4 h-4 mt-0.5 shrink-0" style={{ color: C.violet }} /> Te avisamos una sola vez, cuando el libro esté disponible.</li>
+                <li className="flex items-start gap-2"><Mail className="w-4 h-4 mt-0.5 shrink-0" style={{ color: C.violet }} /> Usamos tu email solo para eso. Podés pedir que te saquemos cuando quieras.</li>
+              </ul>
+              <div className="mt-4 flex items-start gap-2 rounded-lg px-3 py-2.5 text-[12px]" style={{ backgroundColor: `${C.gold}12`, border: `1px solid ${C.gold}33`, color: C.gold }}>
+                <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5" /> No se te pide ningún dato de pago ni se realiza ningún cobro. Esta reserva no es una compra.
               </div>
             </Card>
           </div>
@@ -183,23 +165,24 @@ export default function Checkout() {
               })}
             </div>
             <div className="mt-4 pt-4 flex items-center justify-between" style={{ borderTop: `1px solid ${C.ink}14` }}>
-              <span className="text-sm" style={{ color: C.inkSoft }}>Total</span>
+              <span className="text-sm" style={{ color: C.inkSoft }}>Precio previsto</span>
               <span style={{ fontFamily: D, fontWeight: 700, fontSize: "1.6rem" }}>{fmtUSD(total)}</span>
             </div>
-            <button onClick={pay} disabled={!canPay || stage === "processing"}
+            <p className="mt-1 text-[11px]" style={{ color: `${C.ink}55` }}>Referencial: no se cobra ahora y puede cambiar antes del lanzamiento.</p>
+            <button onClick={reservar} disabled={!canReserve || stage === "processing"}
               className="mt-4 w-full h-12 rounded-full text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110"
               style={{ backgroundColor: C.violetBtn, color: "#fff", fontFamily: D, fontWeight: 700 }}>
-              {stage === "processing" ? <><Loader2 className="w-4 h-4 animate-spin" /> Procesando…</> : method === "paypal" ? <><Wallet className="w-4 h-4" /> Continuar con PayPal</> : <><Lock className="w-4 h-4" /> Pagar {fmtUSD(total)}</>}
+              {stage === "processing"
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Anotando…</>
+                : <><BellRing className="w-4 h-4" /> Avisarme cuando esté disponible</>}
             </button>
             {!email.includes("@") && <p className="mt-2 text-[12px] text-center" style={{ color: C.inkSoft }}>Ingresa tu email para continuar.</p>}
-            {/* sellos de confianza */}
+            {/* Qué es cierto hoy. NO poner sellos de pago/entrega: no hay cobro ni entrega. */}
             <div className="mt-5 pt-4 flex flex-col gap-2 text-[12px]" style={{ borderTop: `1px solid ${C.ink}14`, color: C.inkSoft }}>
-              <span className="flex items-center gap-2"><Lock className="w-3.5 h-3.5 shrink-0" style={{ color: C.teal }} /> Pago cifrado SSL de extremo a extremo</span>
-              <span className="flex items-center gap-2"><KeyRound className="w-3.5 h-3.5 shrink-0" style={{ color: C.teal }} /> No almacenamos los datos de tu tarjeta</span>
-              <span className="flex items-center gap-2"><BadgeCheck className="w-3.5 h-3.5 shrink-0" style={{ color: C.teal }} /> Garantía de satisfacción · reembolso</span>
-              <span className="flex items-center gap-2"><Zap className="w-3.5 h-3.5 shrink-0" style={{ color: C.teal }} /> Acceso inmediato tras la compra</span>
+              <span className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 shrink-0" style={{ color: C.teal }} /> Sin cobro: las ventas todavía no están abiertas</span>
+              <span className="flex items-center gap-2"><BellRing className="w-3.5 h-3.5 shrink-0" style={{ color: C.teal }} /> Un solo aviso, cuando el libro esté listo</span>
+              <span className="flex items-center gap-2"><Mail className="w-3.5 h-3.5 shrink-0" style={{ color: C.teal }} /> Tu email solo se usa para ese aviso</span>
             </div>
-            <p className="mt-3 text-[11px] text-center" style={{ color: `${C.ink}55` }}>Pagos procesados de forma segura por Stripe y PayPal</p>
           </div>
         </div>
       </div>
@@ -207,32 +190,9 @@ export default function Checkout() {
   );
 }
 
-/* ── marcas de tarjeta (SVG de react-icons / simple-icons, sin descargas) ──
-   Maestro no está en la librería: comparte el símbolo de Mastercard, se tinta
-   en el azul de Maestro. */
-const PAYMARK = {
-  visa:        { src: "/badges/visa.svg",        Icon: SiVisa,        color: "#1434CB", label: "Visa" },
-  mastercard:  { src: "/badges/mastercard.svg",  Icon: SiMastercard,  color: "#EB001B", label: "Mastercard" },
-  maestro:     { src: "/badges/maestro.svg",     Icon: SiMastercard,  color: "#0099DF", label: "Maestro" },
-  jcb:         { src: "/badges/jcb.svg",          Icon: SiJcb,         color: "#0B4EA2", label: "JCB" },
-  mercadopago: { src: "/badges/mercadopago.svg", Icon: SiMercadopago, color: "#009EE3", label: "Mercado Pago" },
-} as const;
-function PayMark({ id }: { id: keyof typeof PAYMARK }) {
-  const { src, Icon, color, label } = PAYMARK[id];
-  const [err, setErr] = useState(false);
-  return (
-    <span
-      className="inline-flex items-center justify-center rounded-[5px]"
-      style={{ width: 46, height: 30, background: "#fff", border: "1px solid rgba(0,0,0,0.10)", boxShadow: "0 1px 2px rgba(0,0,0,0.20)" }}
-      title={label}
-      aria-label={label}
-    >
-      {err
-        ? <Icon size={20} color={color} aria-hidden />
-        : <img src={src} alt={label} onError={() => setErr(true)} style={{ height: 22, width: "auto", maxWidth: 40, display: "block", objectFit: "contain" }} />}
-    </span>
-  );
-}
+/* Las marcas de tarjeta (Visa/Mastercard/Maestro/JCB/Mercado Pago) se quitaron junto
+   con el formulario de pago: anunciaban medios de cobro que no existen. Vuelven con
+   el backend real, cuando sean ciertas. Los SVG siguen en public/badges/. */
 
 /* ── chrome ── */
 function Shell({ children, setLocation, cartCount }: { children: React.ReactNode; setLocation: (p: string) => void; cartCount: number }) {
@@ -245,7 +205,7 @@ function Shell({ children, setLocation, cartCount }: { children: React.ReactNode
             <span className="font-mono text-[11px] uppercase tracking-[0.25em]" style={{ color: C.violet }}>Editorial</span>
           </button>
           <div className="flex items-center gap-2 text-[13px]" style={{ color: C.inkSoft }}>
-            <Lock className="w-3.5 h-3.5" style={{ color: C.teal }} /> Compra segura
+            <Clock className="w-3.5 h-3.5" style={{ color: C.teal }} /> Reserva sin cobro
             {cartCount > 0 && <span className="ml-2 inline-flex items-center gap-1"><ShoppingCart className="w-3.5 h-3.5" /> {cartCount}</span>}
           </div>
         </div>

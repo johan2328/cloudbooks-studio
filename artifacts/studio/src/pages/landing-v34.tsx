@@ -691,7 +691,7 @@ export default function LandingV34() {
 
           <motion.div variants={up} className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm" style={{ color: C.inkSoft }}>
             <span className="flex items-center gap-2"><TrendingUp className="w-4 h-4" style={{ color: C.gold }} /><b style={{ color: C.ink }}>{SOC.passRate}</b> aprueba a la primera{/* TODO_REAL */}</span>
-            <span className="flex items-center gap-2"><ShieldCheck className="w-4 h-4" style={{ color: C.green }} />Garantía de satisfacción{/* TODO_REAL */}</span>
+            <span className="flex items-center gap-2"><ShieldCheck className="w-4 h-4" style={{ color: C.green }} />Auditoría humana en cada libro</span>
             <span className="flex items-center gap-2"><RefreshCw className="w-4 h-4" style={{ color: C.gold }} />Reediciones gratuitas al actualizarse la certificación</span>
           </motion.div>
         </motion.div>

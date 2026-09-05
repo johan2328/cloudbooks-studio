@@ -44,9 +44,10 @@ const FAQ_GROUPS = [
     cat: "Compra y acceso",
     items: [
       { q: "¿Puedo comprar un solo formato?", a: "Sí. Cada formato cuesta USD 5.99, o llevate el Collection Pack completo a USD 19.99." },
-      { q: "¿Cómo recibo los libros?", a: "Acceso digital inmediato tras la compra, en cada uno de los formatos de la colección, desde Mi biblioteca." },
-      { q: "¿El Collection Pack incluye actualizaciones?", a: "Sí. Mientras la certificación esté vigente, si se actualiza reeditamos los libros y te los reenviamos sin costo." },
-      { q: "¿Hay garantía o reembolso?", a: "Sí, ofrecemos garantía de satisfacción. [Ajustar al detalle de tu política real.]" /* TODO_REAL */ },
+      { q: "¿Cómo recibo los libros?", a: "Todavía no abrimos las ventas. Podés dejarnos tu email desde la ficha de cualquier libro y te avisamos cuando estén disponibles; el acceso será digital, en cada uno de los formatos de la colección." },
+      { q: "¿El Collection Pack incluye actualizaciones?", a: "Esa es la intención: mientras la certificación esté vigente, si se actualiza reeditamos los libros y te los reenviamos sin costo. Lo confirmamos en los términos al abrir las ventas." },
+      // TODO_REAL: definir la política de reembolso ANTES de vender y reflejarla acá y en /aviso-legal.
+      { q: "¿Hay garantía o reembolso?", a: "Todavía no vendemos, así que aún no hay una política de reembolso vigente. Vamos a publicarla junto con los términos cuando abramos las ventas." },
     ],
   },
 ];

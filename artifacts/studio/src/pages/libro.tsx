@@ -286,8 +286,9 @@ export default function Libro() {
               {p.pack
                 ? <p className="text-[12px] mb-1" style={{ color: C.green }}>Ahorras frente a comprar los 6 por separado</p>
                 : <p className="text-[12px] mb-1" style={{ color: C.inkSoft }}>o llévate los 6 formatos por USD 19.99</p>}
+              {/* Las ventas no están abiertas: no se promete entrega, se promete aviso. */}
               <div className="flex items-center gap-2 text-[13px] mt-2 mb-4" style={{ color: C.teal }}>
-                <Zap className="w-4 h-4" /> Acceso inmediato tras la compra
+                <Zap className="w-4 h-4" /> Reservá y te avisamos al abrir las ventas
               </div>
 
               {p.pack && !packAvailable ? (
