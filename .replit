@@ -23,7 +23,7 @@ timeoutMs = 20000
 localPort = 8080
 externalPort = 80
 
-# El puerto 8081 servia mockup-sandbox, que salio del workspace (ver pnpm-workspace.yaml).
+# El puerto 8081 servia mockup-sandbox, paquete eliminado del repo.
 
 [[ports]]
 localPort = 18425

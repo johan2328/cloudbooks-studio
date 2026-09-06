@@ -36,12 +36,6 @@ minimumReleaseAgeExclude:
 
 packages:
   - artifacts/*
-  # mockup-sandbox era el canvas de componentes de Replit, no producto: su registry
-  # autogenerado esta vacio y el directorio que escanea (src/components/mockups) no
-  # existe, asi que todo request devuelve "No component found". Entraba igual al
-  # `build` y al `typecheck` de la raiz, y duplica shadcn con versiones de @radix-ui
-  # ya divergidas de artifacts/studio. Se excluye; el codigo sigue en el repo.
-  - '!artifacts/mockup-sandbox'
   - lib/*
   # lib/integrations no existe: el glob no matchea nada. Se deja documentado en vez
   # de un patron muerto que sugiere una capa de integraciones inexistente.

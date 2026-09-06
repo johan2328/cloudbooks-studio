@@ -12,7 +12,6 @@
 | `artifacts/studio-engine` | **motor de libros** (`/engine/*`, tsx, OpenAI/Azure, puppeteer, pdf-lib) | **8790** (bind `127.0.0.1`) |
 | `artifacts/studio` | frontend React+Vite: cockpit interno **y** tienda | Vite (`PORT` **obligatorio**) |
 | `artifacts/api-server` | backend Express+Drizzle/Postgres, OpenAPI-first (`/api`) | 8080 |
-| `artifacts/mockup-sandbox` | sandbox aislado de mockups | Vite |
 | `lib/api-spec · api-zod · api-client-react · db` | contrato OpenAPI + generados (Orval) + esquema Drizzle | — |
 
 **Fronteras reales:** `studio → api-client-react` (HTTP `/api`); `api-server → api-zod, db`; **`studio-engine` no tiene deps de workspace**; `studio → engine` NO es dependencia: es **proxy de Vite** `/engine → 127.0.0.1:8790` + middleware `serveEngineAssets()`. No hay paquete `ui`/`types` compartido (shadcn y el catálogo de certs están duplicados — ver ARCHITECTURE).
@@ -27,7 +26,7 @@
 - **Costo:** `GET /engine/cost` es un **estimado interno** (ledger propio), NO el saldo real del proveedor. Verificar saldo real antes de un lote grande.
 
 ## Arquitectura de AGENTES (lo que hace único a este repo)
-El motor tiene un roster formal, cada agente gobernado por su **contrato**: roster `src/agents/registry.ts`; `src/agents/contracts.ts` es un **mirror de documentación que puede driftear** — salvo el **panel de expertos**, que sí lo lee en runtime. El prompt *live* de los demás está **inline en su `.ts`**. Sin DAG: pipelines secuenciales por endpoint, instrumentados con `timeAgent`.
+El motor tiene un roster formal, cada agente gobernado por su **contrato**: roster `src/agents/registry.ts`; `src/agents/contracts.ts` **NO es sólo documentación**: `book/route-panel.ts:155` lo lee como **system prompt VIVO** de los 5 expertos LLM del panel, y `agents/agents-rollup.ts:77` lo sirve como doc en `GET /engine/agents`. El mismo objeto cumple los dos roles sin distinción de tipo, así que "actualizar el mirror" de un agente del panel **cambia producción**. Lo cubre `agents/agents.test.ts` (si falta el prompt de un experto, el panel corría con uno menos, en silencio). El prompt *live* de los demás está **inline en su `.ts`**. Sin DAG: pipelines secuenciales por endpoint, instrumentados con `timeAgent`.
 - **Grounding Atlas:** Buscador → Autor → Verificador → Supervisor (`src/grounding/*.ts`).
 - **Grounding Master:** Psicometrista → Autor doc → Enriquecedor → Verificadores → Supervisor (voz/pedagogía en `src/book/editorial-contract.ts`).
 - **Lámina:** Autor-infografía (`image/build-infographic-prompt.ts`) → Ilustrador (`image/generate-upper-visual.ts`) → **Inspector de visión** (`image/infographic-qa.ts`) → Crítico de arte. Look = **`src/contract/design-contract.ts`**.
@@ -47,7 +46,7 @@ El motor tiene un roster formal, cada agente gobernado por su **contrato**: rost
 - Engine atado a `127.0.0.1`, CORS local, `ENGINE_TOKEN` inyectado por el proxy (nunca entra al bundle), chequeo de path-traversal en `serveEngineAssets()`.
 - **Secretos:** `.env` ignorado también desde la raíz (`.env`, `.env.*`, salvo `.env.example`). Nunca commitear claves; si una se expone, **rotarla**.
 - **CI en `.github/workflows/ci.yml`**: cada push verifica clonar → `pnpm install --frozen-lockfile` → `typecheck` → build → tests → que no se cuele un `.env`. Clona **sin LFS** a propósito (los binarios sólo se copian como estáticos y así no se quema la cuota mensual de GitHub) y exporta `PORT`/`BASE_PATH`, sin los cuales `vite.config.ts` lanza.
-- **Sigue sin ESLint/Prettier y con 1 solo test** en todo el repo. El CI verifica que *compila*, no que *funciona*: tratá el comportamiento como no verificado por defecto.
+- **Sigue sin ESLint/Prettier.** Tests: **53 casos en 3 archivos** del engine (`engine.test.ts`, `agents/agents.test.ts`, `contract/design-contract.test.ts`), corridos con `node:test` y **aislados en un tmpdir** (`scripts/test-setup.mjs`) para que nunca toquen el estado real. **Cero tests en el frontend** (no hay runner instalado). El CI verifica que *compila*; el comportamiento sólo está cubierto donde hay test.
 - **Variables de entorno**: hay un `.env.example` por paquete (`studio-engine`, `studio`, `api-server`, `lib/db`) con los defaults reales. Ojo con las que hacen *throw*: `PORT`/`BASE_PATH` en studio y `DATABASE_URL` en `lib/db` (lanza **al importarse**, no por request).
 
 ## Docs: cuáles mienten
