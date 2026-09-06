@@ -208,7 +208,15 @@ function block(title: string, html: string): string {
 
 /** Página de copyright: sin rótulo, info en gris suave al pie, centrada y enmarcada. */
 function copyrightSheet(cfg: BookConfig): string {
-  return `<div class="sheet pg copyr"><div class="copyr-box">${cfg.blocks.copyright}</div></div>`;
+  // ANTI-SANGRADO CROSS-CERT: la sub-línea de identidad ("Visual Atlas — <CERT> · <título>") SIEMPRE
+  // se deriva del cert activo, no del string persistido (que por diseño nunca se regenera y puede
+  // quedar con el default de otro libro). Reemplaza cualquier <p class="cp-sub">…</p> guardado.
+  const b = BOOK();
+  const html = cfg.blocks.copyright.replace(
+    /<p class="cp-sub">[\s\S]*?<\/p>/i,
+    `<p class="cp-sub">${esc(b.series)} — ${esc(b.cert)} · ${esc(b.title)}</p>`,
+  );
+  return `<div class="sheet pg copyr"><div class="copyr-box">${html}</div></div>`;
 }
 
 function coverSheet(cfg: BookConfig, laminas: number, dominios: number): string {

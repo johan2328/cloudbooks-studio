@@ -8,6 +8,7 @@ import { atomicWriteFileSync, withLock } from "../fs-safe.js";
 import { getOutline, getSkill } from "../skills/ai-200-outline.js";
 import { ensureSkillSources } from "../skills/skill-sources.js";
 import { listSources } from "./source-store.js";
+import { getExtraSources } from "./extra-sources.js";
 import type { AuthoredDraft, AuthoredPage, CitationKind, Claim, Source } from "../types.js";
 
 /** Slug del módulo de una URL de MS Learn (…/modules/<slug>/…). */
@@ -28,7 +29,13 @@ export function relevantSources(skillId: string, sources: Source[]): Source[] {
   const ownSlug = moduleSlug(skill?.url);
   const dom = getOutline().domains.find((d) => d.skills.some((s) => s.id === skillId));
   const domainSlugs = new Set((dom?.skills ?? []).map((s) => moduleSlug(s.url)).filter(Boolean));
+  // Buffer 2: docs de producto curados POR-SKILL (viven FUERA de /modules/, ej. /azure/…). Sin esto, un cert
+  // cuyo temario está en la documentación (no en learning paths /training/modules/) queda SIN fuentes y el
+  // autor falla con no_sources. Mismo criterio que scopedCorpus. Skills sin extras → comportamiento idéntico.
+  const norm = (u?: string | null): string => (u ?? "").replace(/\/+$/, "");
+  const extras = new Set(getExtraSources(skillId).map(norm));
   const score = (s: Source): number => {
+    if (extras.size > 0 && extras.has(norm(s.url))) return 3;   // extra curada de la skill = fuente propia (score máximo)
     const slug = moduleSlug(s.url);
     if (ownSlug && slug === ownSlug) return 3;
     if (slug && domainSlugs.has(slug)) return 2;

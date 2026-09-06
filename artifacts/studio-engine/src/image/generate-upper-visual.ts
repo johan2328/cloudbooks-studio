@@ -1,6 +1,6 @@
 import { toFile } from "openai";
 import { CONFIG } from "../config.js";
-import { getOpenAI } from "../openai-client.js";
+import { getImageClient } from "../openai-client.js";
 import { wouldExceedCap, recordSpend } from "../cost.js";
 
 export type ImageOutcome = "real" | "no_key" | "capped" | "failed";
@@ -41,10 +41,12 @@ export async function generateUpperVisual(
   const quality = opts?.quality ?? CONFIG.imageQuality;
   const costUsd = opts?.costUsd ?? CONFIG.imageCostUsd;
   const refImages = opts?.refImages ?? [];
-  const client = getOpenAI();
+  const client = getImageClient();
   if (!client) {
     return { outcome: "no_key", buffer: null, attempts: 0, costUsd: 0, errorKind: null, error: "OPENAI_API_KEY ausente" };
   }
+  // En Azure el `model` es el nombre del DEPLOYMENT (no el id del modelo). Si está configurado, se usa ese.
+  const imageModel = (CONFIG.azureImageEndpoint && CONFIG.azureImageModel) ? CONFIG.azureImageModel : CONFIG.imageModel;
   if (wouldExceedCap(costUsd)) {
     return { outcome: "capped", buffer: null, attempts: 0, costUsd: 0, errorKind: null, error: "Tope mensual de costo alcanzado" };
   }
@@ -59,7 +61,7 @@ export async function generateUpperVisual(
       // look del master). Sin referencia → images.generate normal.
       const resp = refImages.length > 0
         ? await client.images.edit({
-            model: CONFIG.imageModel,
+            model: imageModel,
             image: await Promise.all(refImages.map((b, i) => toFile(b, `ref${i}.png`, { type: "image/png" }))),
             prompt,
             size: size as "1024x1024" | "1536x1024" | "1024x1536" | "auto",
@@ -67,7 +69,7 @@ export async function generateUpperVisual(
             n: 1,
           })
         : await client.images.generate({
-            model: CONFIG.imageModel,
+            model: imageModel,
             prompt,
             size: size as "1024x1024" | "1536x1024" | "1024x1536" | "auto",
             quality: quality as "low" | "medium" | "high" | "auto",

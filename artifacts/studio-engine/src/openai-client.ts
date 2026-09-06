@@ -4,6 +4,30 @@ import { CONFIG } from "./config.js";
 let oaiClient: OpenAI | null = null;
 let kimiClient: OpenAI | null = null;
 let routedClient: OpenAI | null = null;
+let azureImageClient: OpenAI | null = null;
+
+/**
+ * Cliente para GENERAR IMÁGENES. Si hay un deployment de Azure gpt-image-2 configurado
+ * (endpoint+key en .env), TODA la generación de imagen va a ese endpoint Azure — aislado del
+ * texto (que sigue en OpenAI/Kimi vía getOpenAI). Sin Azure configurado, cae al cliente OpenAI normal.
+ * Auth doble (apiKey Bearer + header `api-key`) para tolerar ambos modos del endpoint v1 de Azure.
+ */
+export function getImageClient(): OpenAI | null {
+  if (CONFIG.azureImageEndpoint && CONFIG.azureImageKey) {
+    if (!azureImageClient) {
+      const base = CONFIG.azureImageEndpoint
+        .replace(/\/+$/, "")
+        .replace(/\/images\/(generations|edits).*$/i, ""); // tolera que peguen la URL completa
+      azureImageClient = new OpenAI({
+        apiKey: CONFIG.azureImageKey,
+        baseURL: base,
+        defaultHeaders: { "api-key": CONFIG.azureImageKey },
+      });
+    }
+    return azureImageClient;
+  }
+  return getOpenAI();
+}
 
 function baseOpenAI(): OpenAI | null {
   if (!CONFIG.openaiKey) return null;

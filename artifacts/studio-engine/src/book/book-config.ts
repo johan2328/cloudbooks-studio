@@ -44,17 +44,17 @@ export const DEFAULT_CONFIG: BookConfig = {
   cover: { mode: "generated", imageUrl: null, palette: [] },
   blocks: {
     copyright: `<p class="cp-brand">CloudBooks</p>
-<p class="cp-sub">Visual Atlas — AI-200 · Desarrollo en Azure de Soluciones de IA</p>
+<p class="cp-sub">Visual Atlas — CloudBooks</p>
 <p>© 2026 CloudBooks. Todos los derechos reservados. Ninguna parte de esta obra puede reproducirse sin autorización escrita del editor.</p>
 <p>Microsoft, Azure y los nombres de servicios son marcas de Microsoft Corporation. Esta obra es material de estudio independiente.</p>
 <p>Primera edición · 2026.</p>`,
     preface: `<p>Estudiar para una certificación cloud suele significar leer cientos de páginas y memorizar lo que no se entiende. Este atlas nace de la idea contraria: <strong>una skill, una lámina</strong>, pensada para fijar el concepto y su trampa de un vistazo.</p>
-<p>Cada página condensa lo esencial de un objetivo del examen AI-200 en una infografía: el concepto desarmado, el error frecuente y una verificación tipo examen. No reemplaza la documentación oficial — la <em>destila</em> para que rinda en el examen y en el trabajo real.</p>
+<p>Cada página condensa lo esencial de un objetivo del examen en una infografía: el concepto desarmado, el error frecuente y una verificación tipo examen. No reemplaza la documentación oficial — la <em>destila</em> para que rinda en el examen y en el trabajo real.</p>
 <p>Úsalo como un mapa: no para leerlo de corrido, sino para ubicarte rápido, volver a lo que flaquea y llegar al examen con criterio en lugar de memoria. Cada lámina es una parada; las trampas, los desvíos donde caen los demás. Si entiendes por qué cada corrección es correcta, ya tienes media certificación.</p>
-<p>El AI-200 cubre bastante terreno —contenedores, bases de datos vectoriales, mensajería e integración de servicios backend, con la seguridad y la observabilidad que un caso real exige— y por eso un mapa visual rinde más que un manual extenso: muestra el bosque sin perderte en cada árbol.</p>
+<p>El examen cubre bastante terreno —varios dominios técnicos, con la seguridad y la observabilidad que un caso real exige— y por eso un mapa visual rinde más que un manual extenso: muestra el bosque sin perderte en cada árbol.</p>
 <p>Recórrelo a tu ritmo, marca las láminas que más te cuesten y vuelve a ellas seguido. Cuando una trampa te resulte obvia de solo verla, esa batalla ya está ganada.</p>
 <p>Cada ruta abre con una <strong>introducción</strong> que sintetiza lo que vas a encontrar, y al final del libro hay un <strong>glosario</strong> con los términos clave: si una lámina te pierde en la abstracción, vuelve al glosario para reorientarte.</p>`,
-    intro: `<p>Este libro convierte cada skill del examen <strong>AI-200</strong> en una <strong>lámina visual</strong>: el concepto, sus matices y la trampa donde caen la mayoría, listos para fijar de un vistazo. La mayoría de las unidades entran en una página; las más densas se despliegan en dos páginas enfrentadas para que cada bloque respire.</p>
+    intro: `<p>Este libro convierte cada skill del examen en una <strong>lámina visual</strong>: el concepto, sus matices y la trampa donde caen la mayoría, listos para fijar de un vistazo. La mayoría de las unidades entran en una página; las más densas se despliegan en dos páginas enfrentadas para que cada bloque respire.</p>
 <ul class="feat">
   <li><strong>Pregunta guía</strong> — la idea que organiza la lámina.</li>
   <li><strong>Bloques numerados</strong> — el concepto desarmado en diagramas (hasta ocho por unidad, según lo que la fuente enseñe).</li>
@@ -81,13 +81,13 @@ export const DEFAULT_CONFIG: BookConfig = {
   routeIntros: {},
   backCover: { mode: "auto", imageUrl: null, html: "", isbn: "978-987-00000-0-0", price: "", overlay: { top: 12, left: 9, width: 55, color: "#0F1B3D", align: "left" } },
   collection: {
-    note: "La colección completa AI-200 en CloudBooks — suma los otros formatos a tu preparación.",
+    note: "La colección completa en CloudBooks — suma los otros formatos a tu preparación.",
     items: [],
   },
   domainMap: {
-    note: "El examen AI-200 se organiza en dominios con peso distinto. Esta tabla mapea cada skill a su dominio y marca dónde poner el foco: priorizá los dominios de mayor peso y las skills con trampas frecuentes.",
+    note: "El examen se organiza en dominios con peso distinto. Esta tabla mapea cada skill a su dominio y marca dónde poner el foco: prioriza los dominios de mayor peso y las skills con trampas frecuentes.",
     rows: [
-      { skill: "Soluciones contenerizadas en Azure", domain: "Dominio 1", notes: "Empezá por acá: dominá Azure Container Registry —registro, push, tags vs digest, identidad administrada y Private Endpoints— y cómo se despliega en AKS y Container Apps. Es la base de todo el examen y donde más se cae, por confundir los tiers o creer que la tag :latest es inmutable. Si entendés cuándo conviene Premium y por qué, ya partís con ventaja." },
+      { skill: "Primera skill del dominio 1", domain: "Dominio 1", notes: "Placeholder neutro: esta fila se reemplaza al generar el mapa de dominios real del libro (POST /engine/book-section/generate {section:'domainMap'}). No debe llegar al PDF." },
     ],
   },
   sections: { copyright: true, preface: true, collection: false, domainMap: true, intro: true, studyGuide: true, routeIntros: true, conclusions: true, scenarioReview: true, glossary: true, bibliography: true, backCover: true },

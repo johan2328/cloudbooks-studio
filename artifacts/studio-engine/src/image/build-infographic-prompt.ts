@@ -43,14 +43,14 @@ export function isSpread(seed: PageSeed): boolean {
 }
 
 function headerBlock(seed: PageSeed, partLabel?: string): string {
-  return `TITLE: "${seed.title}"${partLabel ? ` — with a small "${partLabel}" badge immediately to the right of the title (a small SOLID deep-navy #06133E rounded box with WHITE bold text, ~the title's cap-height)` : ""} (render the title in DEEP NAVY #06133E, bold, large — the FULL title COMPLETE on one line, never cut off).
+  return `TITLE: "${seed.title}"${partLabel ? ` — with a small "${partLabel}" badge immediately to the right of the title (a small SOLID deep-navy #06133E rounded box with WHITE bold text, ~the title's cap-height)` : ""} (render the title in DEEP NAVY #06133E, bold, large — the FULL title COMPLETE; if the title is long, REDUCE the font size and/or WRAP it onto a SECOND line so the ENTIRE title fits within the canvas width — NEVER truncate, clip or drop any word, e.g. never render "Machine" without its "Learning").
 CONTEXT (one line): ${seed.context}
 GUIDE BAR (light blue, the band already has its own "PREGUNTA GUÍA" label from the contract — do NOT repeat "Pregunta guía" in the question text). The band is ONE row: [blue map-pin] [PREGUNTA GUÍA] | question — the pin and label stay at the LEFT, vertically centered, and the question text stays in its OWN column to the RIGHT of the divider on the same baseline; if it wraps, it stays in that right column and NEVER flows under the pin icon. Question: "${seed.guideQuestion}"`;
 }
 
 /** Header de la PÁGINA 2 de un spread: MISMO título grande que la pág 1 + badge "2/2" idéntico al "1/2"; SIN ícono grande de hero, SIN contexto, SIN pregunta guía. */
 function slimHeaderBlock(seed: PageSeed): string {
-  return `HEADER (this is page 2 of a 2-page spread): render the page TITLE "${seed.title}" EXACTLY like page 1 — DEEP NAVY #06133E, bold, the SAME LARGE SIZE as the title on page 1, full and complete on one line — with a small "2 / 2" badge immediately to its right that is IDENTICAL in size and style to the "1 / 2" badge on page 1 (the same small SOLID deep-navy #06133E rounded box with WHITE bold text). IMPORTANT: on this page do NOT draw the big hero/domain icon, do NOT draw a context line, and do NOT draw the "PREGUNTA GUÍA" guide bar (those go ONLY on page 1). Just this title line (same height as page 1's title row), then the content below.`;
+  return `HEADER (this is page 2 of a 2-page spread): render the page TITLE "${seed.title}" EXACTLY like page 1 — DEEP NAVY #06133E, bold, the SAME LARGE SIZE as the title on page 1, full and complete — reducing the font size and/or wrapping onto a second line if the title is long so the ENTIRE title fits and NO word is ever cut — with a small "2 / 2" badge immediately to its right that is IDENTICAL in size and style to the "1 / 2" badge on page 1 (the same small SOLID deep-navy #06133E rounded box with WHITE bold text). IMPORTANT: on this page do NOT draw the big hero/domain icon, do NOT draw a context line, and do NOT draw the "PREGUNTA GUÍA" guide bar (those go ONLY on page 1). Just this title line (same height as page 1's title row), then the content below.`;
 }
 
 /** Bloque de tarjetas numeradas. `startNum` = número/acento de la primera (1 en pág 1, 7 en pág 2). */

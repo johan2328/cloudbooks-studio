@@ -13,13 +13,18 @@ import { infographicQa, type InfographicQa } from "./image/infographic-qa.js";
 import { renderInfographicPage, renderInfographicSpread } from "./render/render-infographic-page.js";
 import { writeThumb } from "./image/thumb.js";
 
-const anchorImgPath = (): string => path.join(CONFIG.outputRoot, "_style-anchor.png");
-const anchorMetaPath = (): string => path.join(CONFIG.outputRoot, "_style-anchor.json");
+// Ancla de estilo PER-CERT+FORMATO (no global). Antes vivía en CONFIG.outputRoot y era
+// compartida por todos los libros → el master del AB-620 se filtró al AI-300 (láminas con
+// estilo ajeno + página 01 fría). Ahora cada libro tiene su propia ancla bajo su carpeta.
+const bookRoot = (): string => path.join(CONFIG.outputRoot, CONFIG.certId, CONFIG.format);
+const anchorImgPath = (): string => path.join(bookRoot(), "_style-anchor.png");
+const anchorMetaPath = (): string => path.join(bookRoot(), "_style-anchor.json");
 
 /** Fija una página aprobada como MASTER de estilo (ancla). Las demás heredan su look. */
 export async function setStyleAnchor(pageId: string): Promise<{ ok: boolean; masterPageId?: string }> {
   const src = path.join(pageOutputDir(pageId), "infographic.png");
   if (!existsSync(src)) return { ok: false };
+  await fs.mkdir(bookRoot(), { recursive: true });
   await fs.copyFile(src, anchorImgPath());
   await atomicWriteFile(anchorMetaPath(), JSON.stringify({ masterPageId: pageId, at: new Date().toISOString() }, null, 2), "style-anchor");
   return { ok: true, masterPageId: pageId };
@@ -61,7 +66,7 @@ type PartResult = {
 };
 
 /** Genera UNA imagen (single | A | B): prompt por parte, idempotencia/manifest/thumb por parte. */
-async function generateImagePart(seed: PageSeed, pageId: string, dir: string, publicBase: string, part: InfographicPart, force: boolean): Promise<PartResult> {
+async function generateImagePart(seed: PageSeed, pageId: string, dir: string, publicBase: string, part: InfographicPart, force: boolean, extraRefs?: Buffer[]): Promise<PartResult> {
   const suffix = part === "single" ? "" : `-${part}`;
   const imgFile = path.join(dir, `infographic${suffix}.png`);
   const imageUrl = `${publicBase}/infographic${suffix}.png`;
@@ -70,11 +75,16 @@ async function generateImagePart(seed: PageSeed, pageId: string, dir: string, pu
 
   const anchor = loadAnchor();
   const useAnchor = !!anchor && anchor.masterPageId !== pageId;
+  const hasPageRef = (extraRefs?.length ?? 0) > 0; // ref extra = página A de ESTE spread (para que B copie su título/encuadre exacto)
   const { prompt: basePrompt, promptVersion } = buildInfographicPrompt(seed, part);
-  const prompt = useAnchor
-    ? `${basePrompt}\n\nSTYLE REFERENCE (CRITICAL): the attached image is a STYLE SAMPLE ONLY. COPY its visual style — palette, icon style and stroke weight, numbered badges, card borders and corner radius, title color, band header icons, guide pin and typography. But IGNORE its text, tables and specific content ENTIRELY: do NOT reproduce, copy or carry over ANY table, label, number or data from the reference. Render ONLY the content specified in the page spec above. If a section is not a comparison, do NOT add a table just because the reference had one.`
-    : basePrompt;
-  const contentHash = crypto.createHash("sha256").update(prompt + (useAnchor ? `|anchor:${anchor!.masterPageId}` : "")).digest("hex").slice(0, 16);
+  // Orden de imágenes adjuntas = [anchor?, ...extraRefs]. El prompt las nombra por ese orden.
+  const refClauses: string[] = [];
+  if (useAnchor) refClauses.push(`The ${hasPageRef ? "FIRST" : ""} attached image is a STYLE SAMPLE ONLY. COPY its visual style — palette, icon style and stroke weight, numbered badges, card borders and corner radius, title color, band header icons, guide pin and typography. But IGNORE its text, tables and specific content ENTIRELY: do NOT reproduce, copy or carry over ANY table, label, number or data from it. Render ONLY the content specified in the page spec above. If a section is not a comparison, do NOT add a table just because it had one.`);
+  if (hasPageRef) refClauses.push(`The ${useAnchor ? "SECOND" : ""} attached image is PAGE 1 of THIS SAME two-page spread. Reproduce its TITLE BAR EXACTLY — same font family, same WEIGHT (do NOT render it bolder, heavier or larger), same size and cap-height, same deep-navy color, same badge style. Match its overall container treatment: if page 1 has NO outer frame/border enclosing the cards, do NOT draw one either. Copy ONLY its title bar and framing — NOT its specific card content.`);
+  const prompt = refClauses.length ? `${basePrompt}\n\nREFERENCE IMAGES (CRITICAL): ${refClauses.join(" ")}` : basePrompt;
+  const refBuffers = [...(useAnchor ? [anchor!.buffer] : []), ...(extraRefs ?? [])];
+  const pageRefHash = hasPageRef ? crypto.createHash("sha256").update(Buffer.concat(extraRefs!)).digest("hex").slice(0, 8) : "";
+  const contentHash = crypto.createHash("sha256").update(prompt + (useAnchor ? `|anchor:${anchor!.masterPageId}` : "") + (hasPageRef ? `|pref:${pageRefHash}` : "")).digest("hex").slice(0, 16);
 
   // Idempotencia POR PARTE: misma verdad + mismo contrato + imagen en disco → reusar (sin gasto).
   if (!force && existsSync(imgFile) && existsSync(manifestFile)) {
@@ -93,7 +103,7 @@ async function generateImagePart(seed: PageSeed, pageId: string, dir: string, pu
   let costUsd = 0;
   let currentPrompt = prompt;
   for (let roll = 0; roll < maxRolls; roll++) {
-    const res = await generateUpperVisual(currentPrompt, { size: CONFIG.infographicSize, quality: CONFIG.infographicQuality, costUsd: CONFIG.infographicCostUsd, refImages: useAnchor ? [anchor!.buffer] : undefined });
+    const res = await generateUpperVisual(currentPrompt, { size: CONFIG.infographicSize, quality: CONFIG.infographicQuality, costUsd: CONFIG.infographicCostUsd, refImages: refBuffers.length ? refBuffers : undefined });
     attempts++;
     if (res.outcome !== "real" || !res.buffer) {
       if (res.outcome === "no_key" || res.outcome === "capped") return { part, outcome: res.outcome, attempts, costUsd, qa: null, reused: false, imageUrl: "", contentHash, error: res.error };
@@ -167,7 +177,10 @@ export async function generateInfographicPage(pageId: string, force = false, par
   // SPREAD (unidad densa) sin parte explícita → generar A y B.
   if (!part && isSpread(seed)) {
     const a = await generateImagePart(seed, pageId, dir, publicBase, "A", force);
-    const b = await generateImagePart(seed, pageId, dir, publicBase, "B", force);
+    // B usa la imagen de A como 2ª referencia → título con el MISMO peso/tamaño y sin marco distinto.
+    let pageARef: Buffer[] | undefined;
+    try { const aFile = path.join(dir, "infographic-A.png"); if (existsSync(aFile)) pageARef = [readFileSync(aFile)]; } catch { /* sin ref de A → B cae al comportamiento previo */ }
+    const b = await generateImagePart(seed, pageId, dir, publicBase, "B", force, pageARef);
     const urlA = `${publicBase}/infographic-A.png`, urlB = `${publicBase}/infographic-B.png`;
     await atomicWriteFile(path.join(dir, "page.html"), renderInfographicSpread(seed, urlA, urlB), "page.html");
     return writeCombinedManifest(pageId, dir, publicBase, a, b);
